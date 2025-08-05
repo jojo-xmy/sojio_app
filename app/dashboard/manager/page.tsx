@@ -1,0 +1,81 @@
+"use client";
+import { useState, useEffect } from 'react';
+import { TaskCard } from '@/components/TaskCard';
+import { tasks } from '@/data/tasks';
+import { useRouter } from 'next/navigation';
+import { useUserStore } from '@/store/userStore';
+import { getAttendanceByTaskId, calculateTaskStatus } from '@/lib/attendance';
+import { Task } from '@/types/task';
+import { TaskCreateForm } from '@/components/TaskCreateForm';
+
+export default function ManagerDashboard() {
+  const router = useRouter();
+  const user = useUserStore(s => s.user);
+  const [tasksWithAttendance, setTasksWithAttendance] = useState<Task[]>(tasks);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+
+  // 加载所有任务的打卡状态
+  useEffect(() => {
+    loadAllAttendanceStatus();
+  }, [user]);
+
+  async function loadAllAttendanceStatus() {
+    if (!user) return;
+    
+    const tasksWithStatus = await Promise.all(
+      tasks.map(async (task) => {
+        const attendanceRecords = await getAttendanceByTaskId(task.id);
+        const taskStatus = calculateTaskStatus(attendanceRecords, task.assignedCleaners);
+        
+        // 计算总体打卡状态：如果有任何人已退勤，显示"已退勤"；如果有任何人已出勤，显示"已出勤"；否则显示"未打卡"
+        let overallStatus: 'none' | 'checked_in' | 'checked_out' = 'none';
+        const hasCheckedOut = attendanceRecords.some(record => record.status === 'checked_out');
+        const hasCheckedIn = attendanceRecords.some(record => record.status === 'checked_in');
+        
+        if (hasCheckedOut) {
+          overallStatus = 'checked_out';
+        } else if (hasCheckedIn) {
+          overallStatus = 'checked_in';
+        }
+        
+        return {
+          ...task,
+          attendanceStatus: overallStatus,
+          status: taskStatus
+        };
+      })
+    );
+    
+    setTasksWithAttendance(tasksWithStatus);
+  }
+
+  return (
+    <div style={{ maxWidth: 600, margin: '2rem auto' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <h2 style={{ fontSize: 20, fontWeight: 600 }}>全部清扫任务</h2>
+        <button 
+          onClick={() => setShowCreateForm(true)}
+          style={{ padding: '8px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, fontSize: 16, cursor: 'pointer' }}
+        >
+          新建任务
+        </button>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {tasksWithAttendance.map(task => (
+          <TaskCard key={task.id} {...task} showDetail={false} onClick={() => router.push(`/task/${task.id}`)} />
+        ))}
+        {tasksWithAttendance.length === 0 && <div style={{ color: '#888' }}>暂无任务</div>}
+      </div>
+      
+      <TaskCreateForm 
+        isOpen={showCreateForm} 
+        onClose={() => setShowCreateForm(false)}
+        onTaskCreated={() => {
+          // TODO: 刷新任务列表，从数据库获取最新数据
+          console.log('任务创建成功，需要刷新列表');
+          loadAllAttendanceStatus();
+        }}
+      />
+    </div>
+  );
+} 

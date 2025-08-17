@@ -1,4 +1,4 @@
-import { Task } from '@/types/task';
+import { Task, TaskStatus } from '@/types/task';
 
 export const tasks: Task[] = [
   {
@@ -7,10 +7,26 @@ export const tasks: Task[] = [
     checkInTime: '15:00',
     date: '2025-06-09',
     assignedCleaners: ['Yamada Taro', 'Nguyen Linh'],
-    status: '未打卡',
+    status: 'assigned',
     description: '清扫3楼A房，重点卫生间和床单更换。',
     note: '请提前联系前台领取钥匙。',
     images: ['https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=200', 'https://images.unsplash.com/photo-1464983953574-0892a716854b?w=200'],
+    attendanceStatus: 'none',
+    acceptedBy: [],
+    createdBy: 'manager-001',
+    createdAt: '2025-06-08T10:00:00Z',
+    updatedAt: '2025-06-08T10:00:00Z',
+    hotelAddress: '京都府京都市中京区',
+    roomNumber: '3A',
+    lockPassword: '1234',
+    specialInstructions: '客人有特殊清洁要求',
+    inventory: {
+      towel: 4,
+      soap: 2,
+      shampoo: 2,
+      conditioner: 2,
+      toiletPaper: 2
+    }
   },
   {
     id: '124',
@@ -18,10 +34,25 @@ export const tasks: Task[] = [
     checkInTime: '16:00',
     date: '2025-06-09',
     assignedCleaners: ['Yamada Taro'],
-    status: '进行中',
+    status: 'in_progress',
     description: '清扫2楼B房，补充备品。',
     note: '',
     images: [],
+    attendanceStatus: 'checked_in',
+    acceptedBy: ['Yamada Taro'],
+    createdBy: 'manager-001',
+    createdAt: '2025-06-08T09:00:00Z',
+    updatedAt: '2025-06-09T14:30:00Z',
+    hotelAddress: '大阪府大阪市中央区',
+    roomNumber: '2B',
+    lockPassword: '5678',
+    inventory: {
+      towel: 2,
+      soap: 1,
+      shampoo: 1,
+      conditioner: 1,
+      toiletPaper: 1
+    }
   },
   {
     id: '125',
@@ -29,9 +60,79 @@ export const tasks: Task[] = [
     checkInTime: '14:00',
     date: '2025-06-10',
     assignedCleaners: ['Nguyen Linh'],
-    status: '已完成',
+    status: 'completed',
     description: '退房后全屋消毒。',
     note: '已上传照片。',
     images: ['https://images.unsplash.com/photo-1519125323398-675f0ddb6308?w=200'],
+    attendanceStatus: 'checked_out',
+    acceptedBy: ['Nguyen Linh'],
+    completedAt: '2025-06-10T16:00:00Z',
+    createdBy: 'manager-001',
+    createdAt: '2025-06-08T08:00:00Z',
+    updatedAt: '2025-06-10T16:00:00Z',
+    hotelAddress: '東京都新宿区',
+    roomNumber: '5C',
+    lockPassword: '9999',
+    inventory: {
+      towel: 3,
+      soap: 2,
+      shampoo: 2,
+      conditioner: 2,
+      toiletPaper: 2
+    }
   },
+  {
+    id: '126',
+    hotelName: 'Yokohama Hotel',
+    checkInTime: '15:00',
+    date: '2025-06-11',
+    assignedCleaners: ['Sato Hanako'],
+    status: 'open',
+    description: '新客人入住前的深度清洁。',
+    note: '客人对清洁度要求很高。',
+    images: [],
+    attendanceStatus: 'none',
+    acceptedBy: [],
+    createdBy: 'owner-001',
+    createdAt: '2025-06-09T11:00:00Z',
+    updatedAt: '2025-06-09T11:00:00Z',
+    hotelAddress: '神奈川県横浜市西区',
+    roomNumber: '1A',
+    lockPassword: '1111',
+    inventory: {
+      towel: 4,
+      soap: 2,
+      shampoo: 2,
+      conditioner: 2,
+      toiletPaper: 3
+    }
+  },
+  {
+    id: '127',
+    hotelName: 'Sapporo Lodge',
+    checkInTime: '16:00',
+    date: '2025-06-12',
+    assignedCleaners: ['Yamada Taro', 'Nguyen Linh'],
+    status: 'confirmed',
+    description: '滑雪季节结束后的全面清洁。',
+    note: '设备需要特别维护。',
+    images: ['https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=200'],
+    attendanceStatus: 'checked_out',
+    acceptedBy: ['Yamada Taro', 'Nguyen Linh'],
+    completedAt: '2025-06-12T18:00:00Z',
+    confirmedAt: '2025-06-12T19:00:00Z',
+    createdBy: 'manager-001',
+    createdAt: '2025-06-10T10:00:00Z',
+    updatedAt: '2025-06-12T19:00:00Z',
+    hotelAddress: '北海道札幌市中央区',
+    roomNumber: 'Ski-1',
+    lockPassword: '2222',
+    inventory: {
+      towel: 6,
+      soap: 3,
+      shampoo: 3,
+      conditioner: 3,
+      toiletPaper: 4
+    }
+  }
 ]; 

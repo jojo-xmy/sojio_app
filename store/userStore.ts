@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 export interface UserProfile {
   id: number;
@@ -12,10 +13,22 @@ interface UserState {
   user: UserProfile | null;
   setUser: (user: UserProfile) => void;
   clearUser: () => void;
+  isInitialized: boolean;
+  setInitialized: (initialized: boolean) => void;
 }
 
-export const useUserStore = create<UserState>((set) => ({
-  user: null,
-  setUser: (user) => set({ user }),
-  clearUser: () => set({ user: null }),
-})); 
+export const useUserStore = create<UserState>()(
+  persist(
+    (set) => ({
+      user: null,
+      setUser: (user) => set({ user }),
+      clearUser: () => set({ user: null }),
+      isInitialized: false,
+      setInitialized: (initialized) => set({ isInitialized: initialized }),
+    }),
+    {
+      name: 'hug-user-storage', // 存储键名
+      partialize: (state) => ({ user: state.user }), // 只持久化用户信息
+    }
+  )
+); 

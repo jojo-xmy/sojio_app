@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { TaskActionButtons } from '@/components/TaskActionButtons';
 import { TaskStatusBadge } from '@/components/TaskStatusBadge';
 import { TaskCard } from '@/components/TaskCard';
+import { LoginStatusCheck } from '@/components/LoginStatusCheck';
 import { Task, TaskStatus } from '@/types/task';
 import { tasks } from '@/data/tasks';
 import { useUserStore } from '@/store/userStore';
@@ -35,6 +36,9 @@ export default function TestStatusTransitionPage() {
   return (
     <div style={{ maxWidth: 800, margin: '2rem auto', padding: 24 }}>
       <h1 style={{ fontSize: 24, fontWeight: 600, marginBottom: 24 }}>状态转换测试</h1>
+      
+      {/* 登录状态检查 */}
+      <LoginStatusCheck />
       
       {/* 用户信息 */}
       <div style={{ 

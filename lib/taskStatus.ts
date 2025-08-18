@@ -1,5 +1,11 @@
 import { TaskStatus, TASK_STATUS_TRANSITIONS, canTransitionTask, UserRole } from '@/types/task';
 import { supabase } from './supabase';
+import { sendTaskNotification, NotificationData } from './notifications';
+import { 
+  createMessageTemplate, 
+  NotificationTemplateType,
+  shouldReceiveNotification 
+} from './notificationTemplates';
 
 // 状态转换验证
 export function canTransitionTo(currentStatus: TaskStatus, newStatus: TaskStatus): boolean {
@@ -65,8 +71,8 @@ export async function transitionTask(
 
     console.log(`任务 ${taskId} 状态从 ${currentStatus} 转换为 ${newStatus}`);
     
-    // TODO: 这里可以添加LINE通知逻辑
-    // await sendLineNotification(taskId, currentStatus, newStatus, userId);
+    // 发送LINE通知
+    await sendStatusChangeNotification(taskId, currentStatus, newStatus, userId, userRole, additionalData);
     
     return { success: true };
   } catch (error) {
@@ -75,6 +81,92 @@ export async function transitionTask(
       success: false, 
       error: `状态转换失败: ${error}` 
     };
+  }
+}
+
+// 发送状态变更通知
+async function sendStatusChangeNotification(
+  taskId: string,
+  fromStatus: TaskStatus,
+  toStatus: TaskStatus,
+  userId: string,
+  userRole: UserRole,
+  additionalData?: Record<string, any>
+) {
+  try {
+    // 获取任务信息
+    const { data: task } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('id', taskId)
+      .single();
+
+    if (!task) {
+      console.error('任务不存在，无法发送通知');
+      return;
+    }
+
+    // 获取用户信息
+    const { data: user } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (!user) {
+      console.error('用户不存在，无法发送通知');
+      return;
+    }
+
+    // 确定通知类型
+    const notificationType = getNotificationType(fromStatus, toStatus);
+    if (!notificationType) {
+      console.log('无需发送通知的状态转换');
+      return;
+    }
+
+    // 创建通知数据
+    const notificationData: NotificationData = {
+      taskId,
+      taskName: task.hotel_name,
+      fromStatus,
+      toStatus,
+      userId,
+      userName: user.name,
+      userRole,
+      timestamp: new Date().toISOString(),
+      additionalData: {
+        ...additionalData,
+        lockPassword: task.lock_password,
+        roomNumber: task.room_number,
+        hotelAddress: task.hotel_address
+      }
+    };
+
+    // 发送通知
+    await sendTaskNotification(notificationData);
+    console.log(`已发送 ${notificationType} 通知`);
+
+  } catch (error) {
+    console.error('发送通知失败:', error);
+  }
+}
+
+// 根据状态转换确定通知类型
+function getNotificationType(fromStatus: TaskStatus, toStatus: TaskStatus): NotificationTemplateType | null {
+  switch (toStatus) {
+    case 'assigned':
+      return 'task_assigned';
+    case 'accepted':
+      return 'task_accepted';
+    case 'in_progress':
+      return 'task_started';
+    case 'completed':
+      return 'task_completed';
+    case 'confirmed':
+      return 'task_confirmed';
+    default:
+      return null;
   }
 }
 

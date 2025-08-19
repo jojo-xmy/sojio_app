@@ -21,18 +21,14 @@ export interface LineMessageTemplate {
 
 // 通知配置
 export interface NotificationConfig {
-  lineChannelAccessToken?: string;
-  lineChannelSecret?: string;
   enableNotifications: boolean;
   debugMode: boolean;
 }
 
 // 默认配置
 const defaultConfig: NotificationConfig = {
-  enableNotifications: false,
+  enableNotifications: true,
   debugMode: true,
-  lineChannelAccessToken: process.env.NEXT_PUBLIC_LINE_CHANNEL_ACCESS_TOKEN,
-  lineChannelSecret: process.env.NEXT_PUBLIC_LINE_CHANNEL_SECRET,
 };
 
 // 通知服务类
@@ -43,34 +39,28 @@ export class NotificationService {
     this.config = { ...defaultConfig, ...config };
   }
 
-  // 发送LINE消息
+  // 发送LINE消息 - 通过后端API
   async sendLineMessage(userId: string, message: LineMessageTemplate): Promise<boolean> {
     if (!this.config.enableNotifications) {
       console.log('通知功能已禁用');
       return false;
     }
 
-    if (!this.config.lineChannelAccessToken) {
-      console.error('LINE Channel Access Token 未配置');
-      return false;
-    }
-
     try {
-      const response = await fetch('https://api.line.me/v2/bot/message/push', {
+      const response = await fetch('/api/line/send-message', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.config.lineChannelAccessToken}`,
         },
         body: JSON.stringify({
-          to: userId,
-          messages: [message],
+          userId,
+          message,
         }),
       });
 
       if (!response.ok) {
-        const error = await response.text();
-        console.error('LINE消息发送失败:', error);
+        const error = await response.json();
+        console.error('发送LINE消息失败:', error);
         return false;
       }
 
@@ -86,8 +76,7 @@ export class NotificationService {
   async sendTaskStatusNotification(notification: NotificationData): Promise<boolean> {
     const message = this.createTaskStatusMessage(notification);
     
-    // TODO: 这里需要从数据库获取用户的LINE ID
-    // 暂时使用模拟的LINE用户ID
+    // 获取用户的LINE ID
     const lineUserId = await this.getUserLineId(notification.userId);
     
     if (!lineUserId) {

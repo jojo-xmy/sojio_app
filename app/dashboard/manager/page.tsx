@@ -7,6 +7,7 @@ import { useUserStore } from '@/store/userStore';
 import { getAttendanceByTaskId, calculateTaskStatus } from '@/lib/attendance';
 import { Task } from '@/types/task';
 import { TaskCreateForm } from '@/components/TaskCreateForm';
+import { RoleSelector } from '@/components/RoleSelector';
 
 export default function ManagerDashboard() {
   const router = useRouter();
@@ -51,14 +52,56 @@ export default function ManagerDashboard() {
 
   return (
     <div style={{ maxWidth: 600, margin: '2rem auto' }}>
+      <RoleSelector showLogout={true} compactMode={false} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <h2 style={{ fontSize: 20, fontWeight: 600 }}>全部清扫任务</h2>
-        <button 
-          onClick={() => setShowCreateForm(true)}
-          style={{ padding: '8px 20px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, fontSize: 16, cursor: 'pointer' }}
-        >
-          新建任务
-        </button>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button 
+            onClick={() => router.push('/admin/registration-applications')}
+            style={{ 
+              padding: '8px 20px', 
+              background: '#10b981', 
+              color: '#fff', 
+              border: 'none', 
+              borderRadius: 6, 
+              fontWeight: 600, 
+              fontSize: 16, 
+              cursor: 'pointer' 
+            }}
+          >
+            审核申请
+          </button>
+          <button 
+            onClick={() => router.push('/dashboard/manager/schedule')}
+            style={{ 
+              padding: '8px 20px', 
+              background: '#f59e0b', 
+              color: '#fff', 
+              border: 'none', 
+              borderRadius: 6, 
+              fontWeight: 600, 
+              fontSize: 16, 
+              cursor: 'pointer' 
+            }}
+          >
+            任务安排
+          </button>
+          <button 
+            onClick={() => setShowCreateForm(true)}
+            style={{ 
+              padding: '8px 20px', 
+              background: '#2563eb', 
+              color: '#fff', 
+              border: 'none', 
+              borderRadius: 6, 
+              fontWeight: 600, 
+              fontSize: 16, 
+              cursor: 'pointer' 
+            }}
+          >
+            新建任务
+          </button>
+        </div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {tasksWithAttendance.map(task => (

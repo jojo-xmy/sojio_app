@@ -7,6 +7,7 @@ export interface UserProfile {
   katakana: string;
   role: string;
   avatar: string;
+  lineUserId?: string; // 添加LINE用户ID用于多角色支持
 }
 
 interface UserState {

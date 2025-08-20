@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { processLineLogin, processLineRegistration, generateLineAuthUrl, parseState } from '@/lib/lineAuth';
+import { supabase } from '@/lib/supabase';
 
 // 处理LINE OAuth登录
 export async function GET(request: NextRequest) {
@@ -66,6 +67,36 @@ export async function GET(request: NextRequest) {
       console.log('Redirecting to registration page:', redirectUrl.toString());
       
       return NextResponse.redirect(redirectUrl);
+    } else if (authMode === 'check_roles') {
+      // 角色检测模式：检查用户是否已有注册的角色
+      console.log('Processing LINE role check with code:', code);
+      const userProfile = await processLineRegistration(code);
+      console.log('LINE role check successful, user profile:', userProfile);
+      
+      // 检查该LINE用户是否已有注册的角色
+      const { data: existingRoles, error } = await supabase
+        .from('user_profiles')
+        .select('id, name, katakana, role')
+        .eq('line_user_id', userProfile.userId);
+      
+      const redirectUrl = new URL('/login', request.url);
+      redirectUrl.searchParams.set('lineUserId', userProfile.userId);
+      
+      if (existingRoles && existingRoles.length > 0) {
+        // 找到已有角色，显示角色选择器
+        redirectUrl.searchParams.set('hasRoles', 'true');
+        console.log(`Found ${existingRoles.length} existing roles for user:`, userProfile.userId);
+      } else {
+        // 没有找到角色，跳转到注册页面
+        redirectUrl.searchParams.set('hasRoles', 'false');
+        redirectUrl.searchParams.set('displayName', userProfile.displayName);
+        if (userProfile.pictureUrl) {
+          redirectUrl.searchParams.set('pictureUrl', userProfile.pictureUrl);
+        }
+        console.log('No existing roles found for user:', userProfile.userId);
+      }
+      
+      return NextResponse.redirect(redirectUrl);
     } else {
       // 登录模式：处理完整登录流程
       console.log('Processing LINE login with code:', code);
@@ -87,8 +118,10 @@ export async function GET(request: NextRequest) {
       response.cookies.set('user_info', JSON.stringify({
         id: user.id,
         name: user.name,
+        katakana: user.katakana,
         role: user.role,
-        avatar: user.avatar
+        avatar: user.avatar,
+        lineUserId: user.line_user_id
       }), {
         httpOnly: false,
         secure: process.env.NODE_ENV === 'production', // 开发环境不强制HTTPS

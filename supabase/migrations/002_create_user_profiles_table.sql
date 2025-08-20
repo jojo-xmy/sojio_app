@@ -4,7 +4,7 @@
 -- 创建user_profiles表
 CREATE TABLE IF NOT EXISTS user_profiles (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  line_user_id TEXT UNIQUE NOT NULL,
+  line_user_id TEXT NOT NULL,
   name TEXT NOT NULL,
   katakana TEXT,
   avatar TEXT,
@@ -24,9 +24,6 @@ CREATE TRIGGER IF NOT EXISTS update_user_profiles_updated_at
     FOR EACH ROW 
     EXECUTE FUNCTION update_updated_at_column();
 
--- 插入一些测试数据（可选）
-INSERT INTO user_profiles (line_user_id, name, katakana, role, avatar) VALUES
-  ('U1234567890abcdef', '山田太郎', 'ヤマダタロウ', 'cleaner', 'https://example.com/avatar1.jpg'),
-  ('U2345678901bcdefg', '佐藤花子', 'サトウハナコ', 'manager', 'https://example.com/avatar2.jpg'),
-  ('U3456789012cdefgh', '鈴木一郎', 'スズキイチロウ', 'owner', 'https://example.com/avatar3.jpg')
-ON CONFLICT (line_user_id) DO NOTHING; 
+-- 添加复合唯一约束，确保同一LINE账号在同一角色下只有一个档案
+ALTER TABLE user_profiles ADD CONSTRAINT IF NOT EXISTS user_profiles_line_user_id_role_unique 
+  UNIQUE (line_user_id, role); 

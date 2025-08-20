@@ -2,6 +2,7 @@
 import { useUserStore } from '@/store/userStore';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { RoleSelector } from '@/components/RoleSelector';
 
 export default function OwnerDashboard() {
   const { user } = useUserStore();
@@ -24,6 +25,7 @@ export default function OwnerDashboard() {
 
   return (
     <div style={{ maxWidth: 800, margin: '2rem auto', padding: 24 }}>
+      <RoleSelector showLogout={true} compactMode={false} />
       <div style={{ marginBottom: 32 }}>
         <h1 style={{ fontSize: 28, fontWeight: 600, marginBottom: 8 }}>
           房东仪表板
@@ -79,6 +81,52 @@ export default function OwnerDashboard() {
         borderRadius: 12, 
         border: '1px solid #e2e8f0' 
       }}>
+        <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 16 }}>快速操作</h2>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+          gap: 16 
+        }}>
+          <button 
+            onClick={() => router.push('/dashboard/owner/hotels')}
+            style={{ 
+              background: '#3b82f6', 
+              color: 'white', 
+              padding: '12px 16px', 
+              borderRadius: 8, 
+              border: 'none', 
+              cursor: 'pointer',
+              fontSize: 14,
+              fontWeight: 500
+            }}
+          >
+            管理酒店
+          </button>
+          <button 
+            onClick={() => router.push('/dashboard/owner/tasks')}
+            style={{ 
+              background: '#10b981', 
+              color: 'white', 
+              padding: '12px 16px', 
+              borderRadius: 8, 
+              border: 'none', 
+              cursor: 'pointer',
+              fontSize: 14,
+              fontWeight: 500
+            }}
+          >
+            查看任务
+          </button>
+        </div>
+      </div>
+
+      <div style={{ 
+        background: 'white', 
+        padding: 24, 
+        borderRadius: 12, 
+        border: '1px solid #e2e8f0',
+        marginTop: 24
+      }}>
         <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 16 }}>最近任务</h2>
         <div style={{ color: '#666' }}>
           <p>• 京都Villa - 3楼A房 (已完成)</p>
@@ -87,23 +135,7 @@ export default function OwnerDashboard() {
         </div>
       </div>
 
-      <div style={{ marginTop: 24, textAlign: 'center' }}>
-        <button
-          onClick={() => router.push('/login')}
-          style={{
-            padding: '12px 24px',
-            background: '#ef4444',
-            color: 'white',
-            border: 'none',
-            borderRadius: 8,
-            cursor: 'pointer',
-            fontSize: 14,
-            fontWeight: 600
-          }}
-        >
-          退出登录
-        </button>
-      </div>
+
     </div>
   );
 } 

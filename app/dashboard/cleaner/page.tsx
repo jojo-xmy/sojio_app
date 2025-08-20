@@ -1,11 +1,13 @@
 "use client";
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { TaskCard } from '@/components/TaskCard';
 import { tasks } from '@/data/tasks';
 import { TaskDetailPanel } from '@/components/TaskDetailPanel';
 import { useUserStore } from '@/store/userStore';
 import { getUserLatestAttendance, getAttendanceByTaskId, calculateTaskStatus } from '@/lib/attendance';
 import { Task } from '@/types/task';
+import { RoleSelector } from '@/components/RoleSelector';
 
 // 假设当前登录用户为 'Yamada Taro'，后续可从 userStore 获取
 const currentUser = 'Yamada Taro';
@@ -49,7 +51,42 @@ export default function CleanerDashboard() {
 
   return (
     <div style={{ maxWidth: 600, margin: '2rem auto' }}>
-      <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 16 }}>我的清扫任务</h2>
+      <RoleSelector showLogout={true} compactMode={false} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <h2 style={{ fontSize: 20, fontWeight: 600 }}>我的清扫任务</h2>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button 
+            onClick={() => router.push('/dashboard/cleaner/availability')}
+            style={{ 
+              padding: '8px 20px', 
+              background: '#10b981', 
+              color: '#fff', 
+              border: 'none', 
+              borderRadius: 6, 
+              fontWeight: 600, 
+              fontSize: 16, 
+              cursor: 'pointer' 
+            }}
+          >
+            可用性设置
+          </button>
+          <button 
+            onClick={() => router.push('/dashboard/cleaner/tasks')}
+            style={{ 
+              padding: '8px 20px', 
+              background: '#3b82f6', 
+              color: '#fff', 
+              border: 'none', 
+              borderRadius: 6, 
+              fontWeight: 600, 
+              fontSize: 16, 
+              cursor: 'pointer' 
+            }}
+          >
+            查看所有任务
+          </button>
+        </div>
+      </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
         {tasksWithAttendance.map(task => (
           <TaskCard

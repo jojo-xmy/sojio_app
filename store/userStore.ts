@@ -11,7 +11,7 @@ export interface UserProfile {
 
 interface UserState {
   user: UserProfile | null;
-  setUser: (user: UserProfile) => void;
+  setUser: (user: UserProfile | null) => void;
   clearUser: () => void;
   isInitialized: boolean;
   setInitialized: (initialized: boolean) => void;

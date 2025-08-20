@@ -12,10 +12,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const lineToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+    const lineToken = process.env.LINE_MESSAGING_CHANNEL_ACCESS_TOKEN;
     if (!lineToken) {
       return NextResponse.json(
-        { error: 'LINE Channel Access Token 未配置' },
+        { error: 'LINE Messaging Channel Access Token 未配置' },
         { status: 500 }
       );
     }

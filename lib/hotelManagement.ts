@@ -337,7 +337,9 @@ export async function getTaskScheduleView(startDate: string, endDate: string): P
       date,
       status,
       assigned_cleaners,
-      hotels!inner(id, name)
+      room_number,
+      description,
+      created_at
     `)
     .gte('date', startDate)
     .lte('date', endDate)
@@ -355,7 +357,16 @@ export async function getTaskScheduleView(startDate: string, endDate: string): P
 export async function getPendingTasks(): Promise<any[]> {
   const { data, error } = await supabase
     .from('tasks')
-    .select('*')
+    .select(`
+      id,
+      hotel_name,
+      date,
+      status,
+      assigned_cleaners,
+      room_number,
+      description,
+      created_at
+    `)
     .in('status', ['draft', 'open'])
     .order('date', { ascending: true });
 

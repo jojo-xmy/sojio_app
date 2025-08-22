@@ -29,8 +29,8 @@ export default function RegistrationApplicationsPage() {
       return;
     }
 
-    // 只有manager可以访问审核页面
-    if (user.role !== 'manager') {
+    // 只有owner和manager可以访问审核页面
+    if (user.role !== 'owner' && user.role !== 'manager') {
       router.push('/dashboard');
       return;
     }

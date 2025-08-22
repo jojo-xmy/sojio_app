@@ -1,3 +1,4 @@
+import type { TaskStatus } from './task';
 // 酒店管理相关类型定义
 
 // 酒店接口

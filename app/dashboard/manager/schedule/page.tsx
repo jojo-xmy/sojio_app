@@ -51,16 +51,21 @@ export default function TaskSchedulePage() {
       const startDate = selectedDate;
       const endDate = selectedDate; // 暂时只显示单日视图
       
+      console.log('正在加载任务安排数据:', { startDate, endDate });
+      
       const [schedule, pending] = await Promise.all([
         getTaskScheduleView(startDate, endDate),
         getPendingTasks()
       ]);
       
+      console.log('任务安排数据:', schedule);
+      console.log('待安排任务:', pending);
+      
       setScheduleData(schedule);
       setPendingTasks(pending);
     } catch (err) {
-      setError('加载任务安排数据失败');
       console.error('加载任务安排数据失败:', err);
+      setError(`加载任务安排数据失败: ${err instanceof Error ? err.message : '未知错误'}`);
     } finally {
       setLoading(false);
     }

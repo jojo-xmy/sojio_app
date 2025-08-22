@@ -10,7 +10,7 @@ export type TaskStatus =
 
 // 任务状态显示名称映射
 export const TASK_STATUS_DISPLAY: Record<TaskStatus, string> = {
-  draft: '草稿',
+  draft: '任务创建中',
   open: '待分配',
   assigned: '已分配',
   accepted: '已接受',

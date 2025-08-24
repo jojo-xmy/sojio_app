@@ -2,12 +2,15 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 export interface UserProfile {
-  id: number;
+  id: string; // 数据库中是uuid类型
+  line_user_id: string;
   name: string;
-  katakana: string;
-  role: string;
-  avatar: string;
-  lineUserId?: string; // 添加LINE用户ID用于多角色支持
+  katakana?: string;
+  avatar?: string;
+  role: 'owner' | 'manager' | 'cleaner';
+  phone?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface UserState {

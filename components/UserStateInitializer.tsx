@@ -30,11 +30,14 @@ export const UserStateInitializer: React.FC = () => {
             if (payload) {
               // 从JWT payload中获取用户信息
               setUser({
-                id: parseInt(payload.userId),
+                id: payload.userId,
+                line_user_id: payload.userId,
                 name: '用户', // 这里可以从数据库获取详细信息
                 katakana: '',
-                role: payload.role,
-                avatar: ''
+                role: payload.role as 'cleaner' | 'manager' | 'owner',
+                avatar: '',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
               });
             }
           }

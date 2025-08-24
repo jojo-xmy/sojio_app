@@ -8,12 +8,14 @@ import { getAttendanceByTaskId, calculateTaskStatus } from '@/lib/attendance';
 import { Task } from '@/types/task';
 import { TaskCreateForm } from '@/components/TaskCreateForm';
 import { RoleSelector } from '@/components/RoleSelector';
+import { TaskCalendar } from '@/components/TaskCalendar';
 
 export default function ManagerDashboard() {
   const router = useRouter();
   const user = useUserStore(s => s.user);
   const [tasksWithAttendance, setTasksWithAttendance] = useState<Task[]>(tasks);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('calendar');
 
   // 加载所有任务的打卡状态
   useEffect(() => {
@@ -42,7 +44,8 @@ export default function ManagerDashboard() {
         return {
           ...task,
           attendanceStatus: overallStatus,
-          status: taskStatus
+          // 保持原始的任务状态，不覆盖
+          // status: taskStatus
         };
       })
     );
@@ -51,11 +54,26 @@ export default function ManagerDashboard() {
   }
 
   return (
-    <div style={{ maxWidth: 600, margin: '2rem auto' }}>
+    <div style={{ maxWidth: 1200, margin: '2rem auto', padding: '0 1rem' }}>
       <RoleSelector showLogout={true} compactMode={false} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 600 }}>全部清扫任务</h2>
+        <h2 style={{ fontSize: 20, fontWeight: 600 }}>任务管理</h2>
         <div style={{ display: 'flex', gap: 12 }}>
+          <button 
+            onClick={() => setViewMode(viewMode === 'list' ? 'calendar' : 'list')}
+            style={{ 
+              padding: '8px 20px', 
+              background: '#6b7280', 
+              color: '#fff', 
+              border: 'none', 
+              borderRadius: 6, 
+              fontWeight: 600, 
+              fontSize: 16, 
+              cursor: 'pointer' 
+            }}
+          >
+            {viewMode === 'list' ? '日历视图' : '列表视图'}
+          </button>
           <button 
             onClick={() => router.push('/admin/registration-applications')}
             style={{ 
@@ -70,21 +88,6 @@ export default function ManagerDashboard() {
             }}
           >
             审核申请
-          </button>
-          <button 
-            onClick={() => router.push('/dashboard/manager/schedule')}
-            style={{ 
-              padding: '8px 20px', 
-              background: '#f59e0b', 
-              color: '#fff', 
-              border: 'none', 
-              borderRadius: 6, 
-              fontWeight: 600, 
-              fontSize: 16, 
-              cursor: 'pointer' 
-            }}
-          >
-            任务安排
           </button>
           <button 
             onClick={() => setShowCreateForm(true)}
@@ -103,12 +106,16 @@ export default function ManagerDashboard() {
           </button>
         </div>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {tasksWithAttendance.map(task => (
-          <TaskCard key={task.id} {...task} showDetail={false} onClick={() => router.push(`/task/${task.id}`)} />
-        ))}
-        {tasksWithAttendance.length === 0 && <div style={{ color: '#888' }}>暂无任务</div>}
-      </div>
+      {viewMode === 'calendar' ? (
+        <TaskCalendar className="w-full" />
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {tasksWithAttendance.map(task => (
+            <TaskCard key={task.id} {...task} showDetail={false} onClick={() => router.push(`/task/${task.id}`)} />
+          ))}
+          {tasksWithAttendance.length === 0 && <div style={{ color: '#888' }}>暂无任务</div>}
+        </div>
+      )}
       
       <TaskCreateForm 
         isOpen={showCreateForm} 

@@ -14,6 +14,7 @@ const currentUser = 'Yamada Taro';
 
 export default function CleanerDashboard() {
   const user = useUserStore(s => s.user);
+  const router = useRouter();
   const myTasks = tasks.filter(task => task.assignedCleaners.includes(currentUser));
   const [selectedId, setSelectedId] = useState<string | null>(myTasks[0]?.id || null);
   const [tasksWithAttendance, setTasksWithAttendance] = useState<Task[]>(myTasks);
@@ -36,7 +37,8 @@ export default function CleanerDashboard() {
         return {
           ...task,
           attendanceStatus: latestStatus,
-          status: taskStatus
+          // 保持原始的任务状态，不覆盖
+          // status: taskStatus
         };
       })
     );

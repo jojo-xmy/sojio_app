@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
-import { createTask, Task } from './tasks';
+import { createTask } from './tasks';
+import { Task } from '@/types/task';
 
 export interface TaskImage {
   id: string;
@@ -22,7 +23,14 @@ export async function createTaskWithImages(taskData: {
     console.log('开始创建任务:', taskData);
     
     // 1. 创建任务（插入 tasks 表），获取返回的 UUID id
-    const task = await createTask(taskData);
+    const task = await createTask({
+      hotelName: taskData.hotel_name,
+      date: taskData.date,
+      checkInTime: taskData.check_in_time || '',
+      assignedCleaners: taskData.assigned_cleaners,
+      description: taskData.description || undefined,
+      createdBy: taskData.created_by
+    });
     if (!task) {
       console.error('任务创建失败');
       return { task: null, images: [] };

@@ -28,10 +28,10 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user?.lineUserId) {
-      fetchUserRoles(user.lineUserId);
+    if (user?.line_user_id) {
+      fetchUserRoles(user.line_user_id);
     } else {
-      // 如果没有lineUserId，设置loading为false，这样至少可以显示退出按钮
+      // 如果没有line_user_id，设置loading为false，这样至少可以显示退出按钮
       setLoading(false);
     }
   }, [user]);
@@ -53,7 +53,7 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
   };
 
   const switchRole = async (role: UserRole) => {
-    if (!user?.lineUserId) return;
+    if (!user?.line_user_id) return;
     
     try {
       const response = await fetch('/api/auth/user-roles', {
@@ -62,7 +62,7 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          lineUserId: user.lineUserId,
+          lineUserId: user.line_user_id,
           role: role.role
         }),
       });
@@ -179,17 +179,17 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
                 onClick={() => switchRole(role)}
                 style={{
                   padding: compactMode ? '0.5rem 1rem' : '0.75rem 1.25rem',
-                  background: user?.id === parseInt(role.id) 
+                  background: user?.id === role.id 
                     ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' 
                     : 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
-                  color: user?.id === parseInt(role.id) ? 'white' : '#374151',
-                  border: user?.id === parseInt(role.id) ? '2px solid #2563eb' : '2px solid #d1d5db',
+                  color: user?.id === role.id ? 'white' : '#374151',
+                  border: user?.id === role.id ? '2px solid #2563eb' : '2px solid #d1d5db',
                   borderRadius: '8px',
                   fontSize: compactMode ? '0.875rem' : '1rem',
                   cursor: 'pointer',
                   transition: 'all 0.2s',
-                  fontWeight: user?.id === parseInt(role.id) ? '700' : '500',
-                  boxShadow: user?.id === parseInt(role.id) 
+                  fontWeight: user?.id === role.id ? '700' : '500',
+                  boxShadow: user?.id === role.id 
                     ? '0 2px 4px rgba(59, 130, 246, 0.3)' 
                     : '0 1px 3px rgba(0, 0, 0, 0.1)',
                   display: 'flex',
@@ -197,14 +197,14 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
                   gap: '0.375rem'
                 }}
                 onMouseOver={(e) => {
-                  if (user?.id !== parseInt(role.id)) {
+                  if (user?.id !== role.id) {
                     e.currentTarget.style.background = 'linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%)';
                     e.currentTarget.style.transform = 'translateY(-1px)';
                     e.currentTarget.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.15)';
                   }
                 }}
                 onMouseOut={(e) => {
-                  if (user?.id !== parseInt(role.id)) {
+                  if (user?.id !== role.id) {
                     e.currentTarget.style.background = 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)';
                     e.currentTarget.style.transform = 'translateY(0)';
                     e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
@@ -215,7 +215,7 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
                   {getRoleIcon(role.role)}
                 </span>
                 {getRoleDisplayName(role.role)}
-                {user?.id === parseInt(role.id) && (
+                {user?.id === role.id && (
                   <span style={{ fontSize: '0.75rem', marginLeft: '0.25rem' }}>✓</span>
                 )}
               </button>

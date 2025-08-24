@@ -7,7 +7,7 @@ export default function TestTaskCardPage() {
     checkInTime: '15:00',
     date: '2025-06-09',
     assignedCleaners: ['Yamada Taro', 'Nguyen Linh'],
-    status: '未打卡',
+    status: 'assigned' as const,
   };
 
   return (

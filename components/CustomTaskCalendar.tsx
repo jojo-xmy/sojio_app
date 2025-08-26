@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from 'react';
 import { useUserStore } from '@/store/userStore';
-import { TaskAssignmentModal } from '@/components/TaskAssignmentModal';
 import { TaskStatusBadge } from '@/components/TaskStatusBadge';
 import { TaskStatus } from '@/types/task';
 import { getCalendarTasks, getAvailableCleanersForDate, assignTaskToCleaners } from '@/lib/calendar';
@@ -17,8 +16,10 @@ export function CustomTaskCalendar({ className }: CustomTaskCalendarProps) {
   const [events, setEvents] = useState<TaskCalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<TaskCalendarEvent | null>(null);
-  const [showAssignmentModal, setShowAssignmentModal] = useState(false);
   const [availableCleaners, setAvailableCleaners] = useState<AvailableCleaner[]>([]);
+  const [selectedCleanerIds, setSelectedCleanerIds] = useState<string[]>([]);
+  const [assignNotes, setAssignNotes] = useState('');
+  const [assigning, setAssigning] = useState(false);
 
   // 加载日历数据
   const loadCalendarData = useCallback(async (startDate: Date, endDate: Date) => {
@@ -59,29 +60,22 @@ export function CustomTaskCalendar({ className }: CustomTaskCalendarProps) {
     }
   }, [user]);
 
-  // 处理任务点击
+  // 处理任务点击（右侧面板展示并加载可用清洁员）
   const handleTaskClick = useCallback(async (event: TaskCalendarEvent) => {
     console.log('任务被点击:', event);
     setSelectedEvent(event);
     
-    // 如果是未分配的任务，加载可用清洁员
-    if (event.task.status === 'draft' || !event.assignedCleaners?.length) {
-      console.log('加载可用清洁员...');
-      try {
-                 const dateStr = (event.task as any).check_in_date || event.task.checkInDate;
-        console.log('查询日期:', dateStr);
-        const cleaners = await getAvailableCleanersForDate(dateStr);
-        console.log('CustomTaskCalendar - 获取到的可用清洁员:', cleaners);
-        setAvailableCleaners(cleaners);
-        console.log('CustomTaskCalendar - 设置availableCleaners后:', cleaners);
-        setShowAssignmentModal(true);
-      } catch (error) {
-        console.error('获取可用清洁员失败:', error);
-        alert('获取可用清洁员失败');
-      }
-    } else {
-      console.log('任务已分配，显示任务详情');
-      // 对于已分配的任务，可以显示任务详情或其他操作
+    console.log('加载可用清洁员...');
+    try {
+      const dateStr = (event.task as any).check_in_date || event.task.checkInDate;
+      console.log('查询日期:', dateStr);
+      const cleaners = await getAvailableCleanersForDate(dateStr);
+      console.log('CustomTaskCalendar - 获取到的可用清洁员:', cleaners);
+      setAvailableCleaners(cleaners);
+      setSelectedCleanerIds([]);
+    } catch (error) {
+      console.error('获取可用清洁员失败:', error);
+      alert('获取可用清洁员失败');
     }
   }, []);
 
@@ -95,6 +89,7 @@ export function CustomTaskCalendar({ className }: CustomTaskCalendarProps) {
 
     try {
       console.log('调用assignTaskToCleaners...');
+      setAssigning(true);
       const result = await assignTaskToCleaners(
         selectedEvent.task.id,
         cleanerIds,
@@ -111,15 +106,21 @@ export function CustomTaskCalendar({ className }: CustomTaskCalendarProps) {
         const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
         await loadCalendarData(startDate, endDate);
         
-        setShowAssignmentModal(false);
-        setSelectedEvent(null);
         alert('任务分配成功！');
+        setSelectedCleanerIds([]);
+        if (selectedEvent) {
+          const dateStr = (selectedEvent.task as any).check_in_date || selectedEvent.task.checkInDate;
+          const cleaners = await getAvailableCleanersForDate(dateStr);
+          setAvailableCleaners(cleaners);
+        }
       } else {
         alert(`分配失败: ${result.error}`);
       }
     } catch (error) {
       console.error('分配任务失败:', error);
       alert('分配任务失败');
+    } finally {
+      setAssigning(false);
     }
   }, [selectedEvent, user, currentDate, loadCalendarData]);
 
@@ -225,17 +226,20 @@ export function CustomTaskCalendar({ className }: CustomTaskCalendarProps) {
         </div>
       </div>
 
-      {/* 星期标题 */}
-      <div className="grid grid-cols-7 gap-1 mb-2">
+      {/* 主体：左侧日历 + 右侧任务面板 */}
+      <div className="flex gap-4">
+        <div className="flex-1">
+          {/* 星期标题 */}
+          <div className="grid grid-cols-7 gap-1 mb-2">
         {['日', '一', '二', '三', '四', '五', '六'].map(day => (
           <div key={day} className="p-2 text-center font-medium text-gray-600 text-sm">
             {day}
           </div>
         ))}
-      </div>
+          </div>
 
-      {/* 日历网格 */}
-      <div className="grid grid-cols-7 gap-1">
+          {/* 日历网格 */}
+          <div className="grid grid-cols-7 gap-1">
         {calendarGrid.map((week, weekIndex) =>
           week.map((day, dayIndex) => (
             <div
@@ -293,22 +297,169 @@ export function CustomTaskCalendar({ className }: CustomTaskCalendarProps) {
             </div>
           ))
         )}
+          </div>
+        </div>
+
+        {/* 右侧任务面板（布局内） */}
+        <div className="w-[360px] shrink-0 border-l pl-4">
+          {!selectedEvent ? (
+            <div className="text-gray-500 h-full flex items-center">选择一个任务以查看详情并进行分配</div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="text-lg font-semibold">{(selectedEvent.task as any).hotel_name || (selectedEvent.task as any).hotelName}</div>
+                  <div className="text-sm text-gray-600">房间：{(selectedEvent.task as any).room_number || (selectedEvent.task as any).roomNumber || '未指定'}</div>
+                </div>
+                <button
+                  className="text-gray-500 hover:text-gray-700"
+                  onClick={() => { setSelectedEvent(null); setAvailableCleaners([]); setSelectedCleanerIds([]); setAssignNotes(''); }}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="bg-gray-50 rounded p-3 text-sm space-y-1">
+                <div>日期：{(selectedEvent.task as any).checkInDate || (selectedEvent.task as any).check_in_date}</div>
+                <div>时间：{(selectedEvent.task as any).check_in_time || (selectedEvent.task as any).checkInTime || '未指定'}</div>
+                <div className="flex items-center gap-2">状态：<TaskStatusBadge status={selectedEvent.task.status} size="small" /></div>
+                {selectedEvent.assignedCleaners && selectedEvent.assignedCleaners.length > 0 && (
+                  <div>已分配：{selectedEvent.assignedCleaners.map(c => c.name).join(', ')}</div>
+                )}
+              </div>
+
+              <div>
+                <div className="font-medium mb-2">可用清洁员（{availableCleaners.length}）</div>
+                {availableCleaners.length === 0 ? (
+                  <div className="text-gray-500 text-sm">该日期没有可用清洁员</div>
+                ) : (
+                  <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                    {availableCleaners.map(c => (
+                      <label key={c.id} className={`flex items-center justify-between p-2 border rounded cursor-pointer ${selectedCleanerIds.includes(c.id) ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedCleanerIds.includes(c.id)}
+                            onChange={() => setSelectedCleanerIds(prev => prev.includes(c.id) ? prev.filter(id => id !== c.id) : [...prev, c.id])}
+                            className="w-4 h-4 text-blue-600"
+                          />
+                          <div>
+                            <div className="font-medium text-sm">{c.name}</div>
+                            <div className="text-xs text-gray-500">当前任务 {c.currentTaskCount}/{c.maxTaskCapacity}</div>
+                          </div>
+                        </div>
+                        <div className={`text-xs ${c.currentTaskCount < c.maxTaskCapacity ? 'text-green-600' : 'text-red-600'}`}>
+                          {c.currentTaskCount < c.maxTaskCapacity ? '可用' : '已满'}
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <div className="text-sm text-gray-700 mb-1">备注（可选）</div>
+                <textarea
+                  value={assignNotes}
+                  onChange={(e) => setAssignNotes(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded resize-none text-sm"
+                  rows={3}
+                  placeholder="添加分配备注..."
+                />
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  disabled={assigning || selectedCleanerIds.length === 0}
+                  onClick={() => handleTaskAssignment(selectedCleanerIds, assignNotes)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {assigning ? '分配中...' : '确认分配'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* 任务分配模态框 */}
-      {showAssignmentModal && selectedEvent && (
-        <TaskAssignmentModal
-          isOpen={showAssignmentModal}
-          onClose={() => {
-            setShowAssignmentModal(false);
-            setSelectedEvent(null);
-          }}
-          task={selectedEvent}
-          availableCleaners={availableCleaners}
-          onAssign={handleTaskAssignment}
-        />
+      {/* 右侧固定任务侧栏 */}
+      {selectedEvent && (
+        <div className="fixed inset-y-0 right-0 w-[360px] bg-white border-l shadow-xl p-4 z-[9999] pointer-events-auto overflow-y-auto">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <div className="text-lg font-semibold">{(selectedEvent.task as any).hotel_name || (selectedEvent.task as any).hotelName}</div>
+              <div className="text-sm text-gray-600">房间：{(selectedEvent.task as any).room_number || (selectedEvent.task as any).roomNumber || '未指定'}</div>
+            </div>
+            <button
+              className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+              onClick={() => { setSelectedEvent(null); setAvailableCleaners([]); setSelectedCleanerIds([]); setAssignNotes(''); }}
+              aria-label="close"
+            >
+              ×
+            </button>
+          </div>
+
+          <div className="bg-gray-50 rounded p-3 text-sm space-y-1 mb-4">
+            <div>日期：{(selectedEvent.task as any).checkInDate || (selectedEvent.task as any).check_in_date}</div>
+            <div>时间：{(selectedEvent.task as any).check_in_time || (selectedEvent.task as any).checkInTime || '未指定'}</div>
+            <div className="flex items-center gap-2">状态：<TaskStatusBadge status={selectedEvent.task.status} size="small" /></div>
+            {selectedEvent.assignedCleaners && selectedEvent.assignedCleaners.length > 0 && (
+              <div>已分配：{selectedEvent.assignedCleaners.map(c => c.name).join(', ')}</div>
+            )}
+          </div>
+
+          <div className="mb-4">
+            <div className="font-medium mb-2">可用清洁员（{availableCleaners.length}）</div>
+            {availableCleaners.length === 0 ? (
+              <div className="text-gray-500 text-sm">该日期没有可用清洁员</div>
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                {availableCleaners.map(c => (
+                  <label key={c.id} className={`flex items-center justify-between p-2 border rounded cursor-pointer ${selectedCleanerIds.includes(c.id) ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedCleanerIds.includes(c.id)}
+                        onChange={() => setSelectedCleanerIds(prev => prev.includes(c.id) ? prev.filter(id => id !== c.id) : [...prev, c.id])}
+                        className="w-4 h-4 text-blue-600"
+                      />
+                      <div>
+                        <div className="font-medium text-sm">{c.name}</div>
+                        <div className="text-xs text-gray-500">当前任务 {c.currentTaskCount}/{c.maxTaskCapacity}</div>
+                      </div>
+                    </div>
+                    <div className={`text-xs ${c.currentTaskCount < c.maxTaskCapacity ? 'text-green-600' : 'text-red-600'}`}>
+                      {c.currentTaskCount < c.maxTaskCapacity ? '可用' : '已满'}
+                    </div>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="mb-4">
+            <div className="text-sm text-gray-700 mb-1">备注（可选）</div>
+            <textarea
+              value={assignNotes}
+              onChange={(e) => setAssignNotes(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded resize-none text-sm"
+              rows={3}
+              placeholder="添加分配备注..."
+            />
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              disabled={assigning || selectedCleanerIds.length === 0}
+              onClick={() => handleTaskAssignment(selectedCleanerIds, assignNotes)}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {assigning ? '分配中...' : '确认分配'}
+            </button>
+          </div>
+        </div>
       )}
-      {(() => { console.log('CustomTaskCalendar - 渲染状态:', { showAssignmentModal, selectedEvent, availableCleaners }); return null; })()}
+      {(() => { console.log('CustomTaskCalendar - 渲染状态(侧栏):', { selectedEvent, availableCleaners, selectedCleanerIds }); return null; })()}
     </div>
   );
 }

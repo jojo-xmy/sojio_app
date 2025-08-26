@@ -91,6 +91,9 @@ export function TaskCalendar({ className }: TaskCalendarProps) {
     if (event.task.status === 'draft' || !event.assignedCleaners?.length) {
       try {
         const dateStr = event.task.date;
+        if (!dateStr) {
+          throw new Error('任务日期未设置');
+        }
         const cleaners = await getAvailableCleanersForDate(dateStr);
         setAvailableCleaners(cleaners);
         setShowAssignmentModal(true);

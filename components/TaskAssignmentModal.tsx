@@ -1,3 +1,4 @@
+// components/TaskAssignmentModal.tsx
 "use client";
 import React, { useState } from 'react';
 import { TaskCalendarEvent, AvailableCleaner } from '@/types/calendar';
@@ -17,6 +18,7 @@ export function TaskAssignmentModal({
   availableCleaners,
   onAssign
 }: TaskAssignmentModalProps) {
+  console.log('TaskAssignmentModal - props:', { isOpen, task, availableCleaners });
   const [selectedCleaners, setSelectedCleaners] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -82,7 +84,7 @@ export function TaskAssignmentModal({
             </div>
             <div>
               <span className="text-gray-600">日期：</span>
-              <span>{task.task.date}</span>
+              <span>{task.task.checkInDate || task.task.date}</span>
             </div>
             <div>
               <span className="text-gray-600">时间：</span>
@@ -97,7 +99,13 @@ export function TaskAssignmentModal({
 
         {/* 可用清洁员列表 */}
         <div className="mb-6">
-          <h3 className="font-medium mb-3">可用清洁员</h3>
+          <h3 className="font-medium mb-3">可用清洁员 ({availableCleaners.length})</h3>
+          {(() => { 
+            console.log('TaskAssignmentModal - availableCleaners:', availableCleaners);
+            console.log('TaskAssignmentModal - availableCleaners.length:', availableCleaners.length);
+            console.log('TaskAssignmentModal - availableCleaners[0]:', availableCleaners[0]);
+            return null; 
+          })()}
           {availableCleaners.length === 0 ? (
             <div className="text-gray-500 text-center py-4">
               该日期没有可用的清洁员

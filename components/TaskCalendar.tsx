@@ -1,3 +1,4 @@
+// components/TaskCalendar.tsx
 "use client";
 import React, { useState, useEffect, useCallback } from 'react';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
@@ -5,7 +6,7 @@ import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { TaskCalendarEvent, AvailableCleaner } from '@/types/calendar';
-import { getCalendarTasks, getAvailableCleanersForDate, assignTaskToCleaners } from '@/lib/calendar.js';
+import { getCalendarTasks, getAvailableCleanersForDate, assignTaskToCleaners } from '@/lib/calendar';
 import { useUserStore } from '@/store/userStore';
 import { TaskAssignmentModal } from '@/components/TaskAssignmentModal';
 import { TaskStatusBadge } from '@/components/TaskStatusBadge';
@@ -135,7 +136,7 @@ export function TaskCalendar({ className }: TaskCalendarProps) {
     
     return (
       <div 
-        className={`p-2 text-xs cursor-pointer rounded border transition-colors hover:shadow-sm w-full mb-1 ${
+        className={`p-1 text-xs cursor-pointer rounded border transition-colors hover:shadow-sm w-full mb-1 ${
           isUnassigned 
             ? 'bg-red-50 text-red-800 border-red-300 hover:bg-red-100' 
             : isCompleted
@@ -144,10 +145,17 @@ export function TaskCalendar({ className }: TaskCalendarProps) {
         }`}
         title={`${event.title} - ${event.task.status}`}
         style={{ 
-          minHeight: '40px',
+          minHeight: '32px',
+          height: 'auto',
           maxWidth: '100%', 
-          overflow: 'hidden',
-          display: 'block'
+          overflow: 'visible',
+          display: 'block',
+          position: 'relative',
+          zIndex: 10
+        }}
+        onClick={(e) => {
+          e.stopPropagation();
+          handleEventClick(event);
         }}
       >
         <div className="font-medium truncate mb-1 text-[10px] leading-tight">{event.title}</div>
@@ -216,7 +224,8 @@ export function TaskCalendar({ className }: TaskCalendarProps) {
         dayPropGetter={(date) => ({
           style: {
             minHeight: '120px',
-            height: 'auto'
+            height: 'auto',
+            overflow: 'visible'
           }
         })}
         // 自定义样式
@@ -250,6 +259,7 @@ export function TaskCalendar({ className }: TaskCalendarProps) {
           min-height: 120px !important;
           padding: 4px !important;
           overflow: visible !important;
+          position: relative !important;
         }
         
         /* 重置默认事件样式，让我们的自定义组件生效 */
@@ -261,11 +271,14 @@ export function TaskCalendar({ className }: TaskCalendarProps) {
           min-height: auto !important;
           max-width: none !important;
           overflow: visible !important;
+          position: relative !important;
+          z-index: 10 !important;
         }
         
         .custom-calendar .rbc-event-content {
           padding: 0 !important;
           margin: 0 !important;
+          overflow: visible !important;
         }
         
         .custom-calendar .rbc-show-more {
@@ -274,11 +287,14 @@ export function TaskCalendar({ className }: TaskCalendarProps) {
           font-size: 10px !important;
           padding: 1px 3px !important;
           border-radius: 2px !important;
+          z-index: 5 !important;
         }
         
         /* 确保事件容器不会溢出 */
         .custom-calendar .rbc-event-wrapper {
           overflow: visible !important;
+          position: relative !important;
+          z-index: 10 !important;
         }
         
         /* 调整日期单元格内容区域 */
@@ -290,6 +306,29 @@ export function TaskCalendar({ className }: TaskCalendarProps) {
         .custom-calendar .rbc-event > div {
           width: 100% !important;
           height: auto !important;
+          overflow: visible !important;
+        }
+        
+        /* 修复事件重叠问题 */
+        .custom-calendar .rbc-event {
+          margin-bottom: 2px !important;
+        }
+        
+        /* 确保日期单元格可以容纳多个事件 */
+        .custom-calendar .rbc-date-cell {
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: stretch !important;
+        }
+        
+        /* 修复点击事件穿透问题 */
+        .custom-calendar .rbc-event * {
+          pointer-events: auto !important;
+        }
+        
+        /* 确保事件在hover时有正确的层级 */
+        .custom-calendar .rbc-event:hover {
+          z-index: 20 !important;
         }
       `}</style>
     </div>

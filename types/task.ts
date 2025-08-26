@@ -34,14 +34,18 @@ export const TASK_STATUS_COLOR: Record<TaskStatus, string> = {
 export interface Task {
   id: string;
   hotelName: string;
-  date: string;
-  checkInTime: string;
+  checkInDate: string;    // 入住日期
+  checkInTime: string;    // 入住时间
+  checkOutDate?: string;  // 退房日期
   assignedCleaners: string[];
   status: TaskStatus;
   description?: string;
   note?: string;
   images?: string[];
   attendanceStatus?: 'none' | 'checked_in' | 'checked_out';
+  
+  // 兼容性字段（废弃但保留）
+  date?: string;
   
   // 新增字段
   acceptedBy?: string[];        // 已接受任务的清洁员

@@ -1,3 +1,4 @@
+// app/dashboard/manager/schedule/page.tsx
 "use client";
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';

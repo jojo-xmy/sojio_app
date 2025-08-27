@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
 import { RoleSelector } from '@/components/RoleSelector';
 import { TaskCalendar } from '@/components/TaskCalendar';
+import { TaskCreateForm } from '@/components/TaskCreateForm';
 
 
 export default function OwnerDashboard() {
@@ -12,6 +13,7 @@ export default function OwnerDashboard() {
   const [viewMode, setViewMode] = useState<'dashboard' | 'calendar'>('dashboard');
   const [tasksWithAttendance, setTasksWithAttendance] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   // 加载房东的任务数据（用于仪表板统计）
   const loadOwnerTasksStats = useCallback(async () => {
@@ -171,6 +173,21 @@ export default function OwnerDashboard() {
           gap: 16 
         }}>
           <button 
+            onClick={() => setShowCreateForm(true)}
+            style={{ 
+              background: '#f59e0b', 
+              color: 'white', 
+              padding: '12px 16px', 
+              borderRadius: 8, 
+              border: 'none', 
+              cursor: 'pointer',
+              fontSize: 14,
+              fontWeight: 500
+            }}
+          >
+            新建入住任务
+          </button>
+          <button 
             onClick={() => setViewMode('calendar')}
             style={{ 
               background: '#3b82f6', 
@@ -247,7 +264,16 @@ export default function OwnerDashboard() {
         )}
       </div>
 
-
+      {/* 任务创建表单 */}
+      <TaskCreateForm 
+        isOpen={showCreateForm} 
+        onClose={() => setShowCreateForm(false)}
+        onTaskCreated={() => {
+          // 刷新任务列表
+          loadOwnerTasksStats();
+          console.log('房东任务创建成功，刷新统计数据');
+        }}
+      />
     </div>
   );
 } 

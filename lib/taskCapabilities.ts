@@ -35,6 +35,10 @@ export interface TaskCapabilities {
   canAcceptTask: boolean;
   canRejectTask: boolean;
   showTaskAcceptance: boolean;
+  // 经理专用
+  canEditTaskDetails: boolean;
+  canPublishTask: boolean;
+  showTaskPublish: boolean;
   // LINE Bot 预留
   showAcknowledgementBanner: boolean;
   requiresCleanerAckOnManagerEdit: boolean;
@@ -78,6 +82,9 @@ export function getTaskCapabilities(
     canAcceptTask: false,
     canRejectTask: false,
     showTaskAcceptance: false,
+    canEditTaskDetails: false,
+    canPublishTask: false,
+    showTaskPublish: false,
     showAcknowledgementBanner: false,
     requiresCleanerAckOnManagerEdit: false,
     visibleBlocks: ['meta','status']
@@ -109,14 +116,25 @@ export function getTaskCapabilities(
   }
 
   if (role === 'manager') {
-    if (status === 'draft' || status === 'open') {
+    if (status === 'draft') {
+      // draft状态：经理可以编辑备注、确认清扫日期，并发布任务
       caps.canEditTaskMeta = true;
+      caps.canEditTaskDetails = true;
+      caps.canPublishTask = true;
+      caps.showTaskPublish = true;
+      if (!caps.visibleBlocks.includes('taskEdit')) caps.visibleBlocks.push('taskEdit');
+      if (!caps.visibleBlocks.includes('taskPublish')) caps.visibleBlocks.push('taskPublish');
+    } else if (status === 'open') {
+      // open状态：经理可以分配清洁工
       caps.canAssign = true;
       caps.canOpenAssignmentModal = true;
       if (!caps.visibleBlocks.includes('assignmentAction')) caps.visibleBlocks.push('assignmentAction');
     } else if (status === 'assigned' || status === 'accepted') {
+      // 已分配状态：经理可以补/改分配，并且接受后仍可修改备注
       caps.canAssign = true; // 允许补/改分配
       caps.canOpenAssignmentModal = true;
+      caps.canEditTaskDetails = true; // 接受后仍可修改备注
+      if (!caps.visibleBlocks.includes('taskEdit')) caps.visibleBlocks.push('taskEdit');
       if (!caps.visibleBlocks.includes('assignmentAction')) caps.visibleBlocks.push('assignmentAction');
     }
     if (status === 'completed') {

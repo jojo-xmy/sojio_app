@@ -36,6 +36,9 @@ export async function getTaskById(id: string): Promise<Task | null> {
 export async function createTask(taskData: {
   hotelName: string;
   date: string;
+  checkInDate?: string;
+  checkOutDate?: string;
+  guestCount?: number;
   checkInTime: string;
   assignedCleaners: string[];
   description?: string;
@@ -49,6 +52,9 @@ export async function createTask(taskData: {
   const newTask = {
     hotel_name: taskData.hotelName,
     date: taskData.date,
+    check_in_date: taskData.checkInDate || taskData.date,
+    check_out_date: taskData.checkOutDate || null,
+    guest_count: taskData.guestCount || 1,
     check_in_time: taskData.checkInTime,
     assigned_cleaners: taskData.assignedCleaners,
     description: taskData.description || null,
@@ -172,52 +178,114 @@ export async function getTasksByStatus(status: TaskStatus): Promise<Task[]> {
   return data || [];
 }
 
-// 更新任务详情
+// 发布任务（draft -> open状态转换）
+export async function publishTask(taskId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase
+      .from('tasks')
+      .update({
+        status: 'open',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', taskId)
+      .eq('status', 'draft'); // 只有draft状态的任务可以发布
+
+    if (error) {
+      throw error;
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('发布任务失败:', error);
+    return { success: false, error: error instanceof Error ? error.message : '发布任务失败' };
+  }
+}
+
+// 接受任务（assigned -> accepted状态转换）
+export async function acceptTask(taskId: string, cleanerId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase
+      .from('tasks')
+      .update({
+        status: 'accepted',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', taskId)
+      .eq('status', 'assigned'); // 只有assigned状态的任务可以接受
+
+    if (error) {
+      throw error;
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('接受任务失败:', error);
+    return { success: false, error: error instanceof Error ? error.message : '接受任务失败' };
+  }
+}
+
+// 拒绝任务（assigned -> open状态转换）
+export async function rejectTask(taskId: string, cleanerId: string, reason?: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    // 将任务状态改回open，需要重新分配
+    const { error } = await supabase
+      .from('tasks')
+      .update({
+        status: 'open',
+        assigned_cleaners: [],
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', taskId)
+      .eq('status', 'assigned'); // 只有assigned状态的任务可以拒绝
+
+    if (error) {
+      throw error;
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('拒绝任务失败:', error);
+    return { success: false, error: error instanceof Error ? error.message : '拒绝任务失败' };
+  }
+}
+
+// 更新任务详情（备注、清扫日期等）
 export async function updateTaskDetails(
   taskId: string, 
-  updates: Partial<{
-    hotelName: string;
-    date: string;
-    checkInTime: string;
-    assignedCleaners: string[];
-    description: string;
-    note: string;
-    hotelAddress: string;
-    roomNumber: string;
-    lockPassword: string;
-    specialInstructions: string;
-    inventory: Record<string, number>;
-  }>
-): Promise<{ success: boolean; error?: string }> {
-  const updateData: any = {
-    updated_at: new Date().toISOString()
-  };
-
-  // 转换字段名
-  if (updates.hotelName) updateData.hotel_name = updates.hotelName;
-  if (updates.date) updateData.date = updates.date;
-  if (updates.checkInTime) updateData.check_in_time = updates.checkInTime;
-  if (updates.assignedCleaners) updateData.assigned_cleaners = updates.assignedCleaners;
-  if (updates.description !== undefined) updateData.description = updates.description;
-  if (updates.note !== undefined) updateData.note = updates.note;
-  if (updates.hotelAddress !== undefined) updateData.hotel_address = updates.hotelAddress;
-  if (updates.roomNumber !== undefined) updateData.room_number = updates.roomNumber;
-  if (updates.lockPassword !== undefined) updateData.lock_password = updates.lockPassword;
-  if (updates.specialInstructions !== undefined) updateData.special_instructions = updates.specialInstructions;
-  if (updates.inventory) updateData.inventory = updates.inventory;
-
-  const { error } = await supabase
-    .from('tasks')
-    .update(updateData)
-    .eq('id', taskId);
-  
-  if (error) {
-    console.error('Error updating task details:', error);
-    return { success: false, error: error.message };
+  updates: {
+    note?: string;
+    cleaningDate?: string;
+    roomNumber?: string;
+    lockPassword?: string;
   }
-  
-  return { success: true };
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const updateData: any = {
+      updated_at: new Date().toISOString()
+    };
+
+    if (updates.note !== undefined) updateData.note = updates.note;
+    if (updates.cleaningDate !== undefined) updateData.cleaning_date = updates.cleaningDate;
+    if (updates.roomNumber !== undefined) updateData.room_number = updates.roomNumber;
+    if (updates.lockPassword !== undefined) updateData.lock_password = updates.lockPassword;
+
+    const { error } = await supabase
+      .from('tasks')
+      .update(updateData)
+      .eq('id', taskId);
+
+    if (error) {
+      throw error;
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('更新任务详情失败:', error);
+    return { success: false, error: error instanceof Error ? error.message : '更新任务详情失败' };
+  }
 }
+
+
 
 // 删除任务
 export async function deleteTask(taskId: string): Promise<{ success: boolean; error?: string }> {

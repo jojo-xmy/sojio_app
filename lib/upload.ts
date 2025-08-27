@@ -14,6 +14,9 @@ export interface TaskImage {
 export async function createTaskWithImages(taskData: {
   hotel_name: string;
   date: string;
+  check_in_date?: string;
+  check_out_date?: string;
+  guest_count?: number;
   check_in_time: string | null;
   assigned_cleaners: string[];
   description: string | null;
@@ -26,6 +29,9 @@ export async function createTaskWithImages(taskData: {
     const task = await createTask({
       hotelName: taskData.hotel_name,
       date: taskData.date,
+      checkInDate: taskData.check_in_date || taskData.date,
+      checkOutDate: taskData.check_out_date,
+      guestCount: taskData.guest_count,
       checkInTime: taskData.check_in_time || '',
       assignedCleaners: taskData.assigned_cleaners,
       description: taskData.description || undefined,

@@ -50,9 +50,18 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({ isOpen, onClose,
         description: formData.details,
         created_by: user.id.toString()
       };
-
       // 使用新的完整流程创建任务和上传图片
-      const result = await createTaskWithImages(taskData, selectedImages);
+      const result = await createTaskWithImages({
+        hotel_name: formData.hotelName,
+        date: formData.checkInDate, // 使用 check_in_date 作为 date
+        check_in_date: formData.checkInDate,
+        check_out_date: formData.checkOutDate,
+        guest_count: formData.guestCount,
+        check_in_time: formData.hasCheckIn === 'yes' ? '15:00' : null,
+        assigned_cleaners: formData.assignedCleaners,
+        description: formData.details || null,
+        created_by: user.id.toString()
+      }, selectedImages);
       
       if (result.task) {
         console.log('任务创建成功:', result.task);
@@ -64,7 +73,9 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({ isOpen, onClose,
         // 重置表单
         setFormData({
           hotelName: '',
-          date: '',
+          checkInDate: '',
+          checkOutDate: '',
+          guestCount: 1,
           hasCheckIn: 'yes',
           assignedCleaners: [],
           details: ''
@@ -81,7 +92,7 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({ isOpen, onClose,
     }
   };
 
-  const handleInputChange = (field: string, value: string | string[]) => {
+  const handleInputChange = (field: string, value: string | string[] | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -133,13 +144,39 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({ isOpen, onClose,
             />
           </div>
 
-          {/* 日期 */}
+          {/* 入住日期 */}
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>日期 *</label>
+            <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>入住日期 *</label>
             <input
               type="date"
-              value={formData.date}
-              onChange={(e) => handleInputChange('date', e.target.value)}
+              value={formData.checkInDate}
+              onChange={(e) => handleInputChange('checkInDate', e.target.value)}
+              required
+              style={{ width: '100%', padding: 8, border: '1px solid #ddd', borderRadius: 4 }}
+            />
+          </div>
+
+          {/* 退房日期 */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>退房日期 *</label>
+            <input
+              type="date"
+              value={formData.checkOutDate}
+              onChange={(e) => handleInputChange('checkOutDate', e.target.value)}
+              required
+              style={{ width: '100%', padding: 8, border: '1px solid #ddd', borderRadius: 4 }}
+            />
+          </div>
+
+          {/* 入住人数 */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>入住人数 *</label>
+            <input
+              type="number"
+              min="1"
+              max="10"
+              value={formData.guestCount}
+              onChange={(e) => handleInputChange('guestCount', parseInt(e.target.value) || 1)}
               required
               style={{ width: '100%', padding: 8, border: '1px solid #ddd', borderRadius: 4 }}
             />

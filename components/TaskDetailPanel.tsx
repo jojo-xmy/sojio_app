@@ -12,6 +12,7 @@ import { getTaskCapabilities } from '@/lib/taskCapabilities';
 import { TaskCard } from '@/components/TaskCard';
 import { useTask } from '@/lib/useTask';
 import { getAvailableCleanersForDate, assignTaskToCleaners } from '@/lib/calendar';
+import { publishTask, acceptTask, rejectTask, updateTaskDetails } from '@/lib/tasks';
 
 interface TaskDetailPanelProps {
   task: Task;
@@ -28,6 +29,13 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
   const [assigning, setAssigning] = useState(false);
   const [selectedCleaners, setSelectedCleaners] = useState<string[]>([]);
   const [assignmentNotes, setAssignmentNotes] = useState('');
+  const [editingTask, setEditingTask] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    note: task.note || '',
+    cleaningDate: task.cleaningDate || '',
+    roomNumber: task.roomNumber || '',
+    lockPassword: task.lockPassword || ''
+  });
   // 备品统计（保留，暂不抽离）
   const [inventory, setInventory] = useState({ towel: '', soap: '' });
   const [inventorySubmitted, setInventorySubmitted] = useState(false);
@@ -68,6 +76,83 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
       alert('分配任务失败');
     } finally {
       setAssigning(false);
+    }
+  };
+
+  // 处理任务编辑保存
+  const handleEditSave = async () => {
+    try {
+      const result = await updateTaskDetails(task.id, {
+        note: editFormData.note,
+        cleaningDate: editFormData.cleaningDate,
+        roomNumber: editFormData.roomNumber,
+        lockPassword: editFormData.lockPassword
+      });
+
+      if (result.success) {
+        await refresh();
+        onAttendanceUpdate?.();
+        setEditingTask(false);
+        alert('任务详情更新成功！');
+      } else {
+        alert(result.error || '更新失败');
+      }
+    } catch (error) {
+      console.error('更新任务详情失败:', error);
+      alert('更新任务详情失败');
+    }
+  };
+
+  // 处理任务发布
+  const handlePublishTask = async () => {
+    try {
+      const result = await publishTask(task.id);
+      if (result.success) {
+        await refresh();
+        onAttendanceUpdate?.();
+        alert('任务发布成功！');
+      } else {
+        alert(result.error || '发布失败');
+      }
+    } catch (error) {
+      console.error('发布任务失败:', error);
+      alert('发布任务失败');
+    }
+  };
+
+  // 处理任务接受
+  const handleAcceptTask = async () => {
+    if (!user) return;
+    try {
+      const result = await acceptTask(task.id, user.id.toString());
+      if (result.success) {
+        await refresh();
+        onAttendanceUpdate?.();
+        alert('任务接受成功！');
+      } else {
+        alert(result.error || '接受失败');
+      }
+    } catch (error) {
+      console.error('接受任务失败:', error);
+      alert('接受任务失败');
+    }
+  };
+
+  // 处理任务拒绝
+  const handleRejectTask = async () => {
+    if (!user) return;
+    try {
+      const result = await rejectTask(task.id, user.id.toString());
+      if (result.success) {
+        await refresh();
+        onAttendanceUpdate?.();
+        alert('任务已拒绝');
+      } else {
+        alert(result.error || '拒绝失败');
+      }
+    } catch (error) {
+      console.error('拒绝任务失败:', error);
+      alert('拒绝任务失败');
     }
   };
 
@@ -121,6 +206,164 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
         viewMode={'detail'}
         capabilities={caps}
         renderBlocks={{
+          taskEdit: caps.canEditTaskDetails ? (
+            <div style={{ marginTop: 12 }}>
+              {!editingTask ? (
+                <button
+                  onClick={() => setEditingTask(true)}
+                  style={{ 
+                    padding: '8px 16px', 
+                    background: '#6b7280', 
+                    color: '#fff', 
+                    border: 'none', 
+                    borderRadius: 6, 
+                    fontWeight: 600, 
+                    fontSize: 14, 
+                    cursor: 'pointer' 
+                  }}
+                >
+                  编辑任务详情
+                </button>
+              ) : (
+                <div style={{ 
+                  border: '1px solid #e5e7eb', 
+                  borderRadius: 8, 
+                  padding: 16, 
+                  backgroundColor: '#f9fafb' 
+                }}>
+                  <h4 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>编辑任务详情</h4>
+                  
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 4 }}>
+                      备注
+                    </label>
+                    <textarea
+                      value={editFormData.note}
+                      onChange={(e) => setEditFormData({...editFormData, note: e.target.value})}
+                      style={{ 
+                        width: '100%', 
+                        padding: 8, 
+                        border: '1px solid #d1d5db', 
+                        borderRadius: 6, 
+                        fontSize: 14,
+                        minHeight: 60
+                      }}
+                      placeholder="输入任务备注"
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 4 }}>
+                      清扫日期
+                    </label>
+                    <input
+                      type="date"
+                      value={editFormData.cleaningDate}
+                      onChange={(e) => setEditFormData({...editFormData, cleaningDate: e.target.value})}
+                      style={{ 
+                        width: '100%', 
+                        padding: 8, 
+                        border: '1px solid #d1d5db', 
+                        borderRadius: 6, 
+                        fontSize: 14
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 4 }}>
+                      房间号
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.roomNumber}
+                      onChange={(e) => setEditFormData({...editFormData, roomNumber: e.target.value})}
+                      style={{ 
+                        width: '100%', 
+                        padding: 8, 
+                        border: '1px solid #d1d5db', 
+                        borderRadius: 6, 
+                        fontSize: 14
+                      }}
+                      placeholder="输入房间号"
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 4 }}>
+                      门锁密码
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.lockPassword}
+                      onChange={(e) => setEditFormData({...editFormData, lockPassword: e.target.value})}
+                      style={{ 
+                        width: '100%', 
+                        padding: 8, 
+                        border: '1px solid #d1d5db', 
+                        borderRadius: 6, 
+                        fontSize: 14
+                      }}
+                      placeholder="输入门锁密码"
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                    <button
+                      onClick={() => setEditingTask(false)}
+                      style={{ 
+                        padding: '8px 16px', 
+                        background: '#f3f4f6', 
+                        color: '#374151', 
+                        border: 'none', 
+                        borderRadius: 6, 
+                        fontWeight: 500, 
+                        cursor: 'pointer' 
+                      }}
+                    >
+                      取消
+                    </button>
+                    <button
+                      onClick={handleEditSave}
+                      style={{ 
+                        padding: '8px 16px', 
+                        background: '#10b981', 
+                        color: '#fff', 
+                        border: 'none', 
+                        borderRadius: 6, 
+                        fontWeight: 500, 
+                        cursor: 'pointer' 
+                      }}
+                    >
+                      保存
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : null,
+          taskPublish: caps.showTaskPublish ? (
+            <div style={{ marginTop: 12 }}>
+              <button
+                onClick={handlePublishTask}
+                style={{ 
+                  padding: '8px 16px', 
+                  background: '#f59e0b', 
+                  color: '#fff', 
+                  border: 'none', 
+                  borderRadius: 6, 
+                  fontWeight: 600, 
+                  fontSize: 14, 
+                  cursor: 'pointer' 
+                }}
+              >
+                发布任务
+              </button>
+              <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+                发布后任务将变为"待分配"状态
+              </div>
+            </div>
+          ) : null,
           assignmentAction: caps.canOpenAssignmentModal ? (
             <button
               onClick={async () => {
@@ -150,11 +393,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
           taskAcceptance: caps.showTaskAcceptance ? (
             <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
               <button
-                onClick={async () => {
-                  // TODO: 实现接受任务逻辑
-                  console.log('接受任务:', task.id);
-                  alert('任务接受功能开发中...');
-                }}
+                onClick={handleAcceptTask}
                 style={{ 
                   flex: 1,
                   padding: '8px 16px', 
@@ -170,11 +409,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                 接受任务
               </button>
               <button
-                onClick={async () => {
-                  // TODO: 实现拒绝任务逻辑
-                  console.log('拒绝任务:', task.id);
-                  alert('任务拒绝功能开发中...');
-                }}
+                onClick={handleRejectTask}
                 style={{ 
                   flex: 1,
                   padding: '8px 16px', 

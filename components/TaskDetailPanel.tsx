@@ -4,6 +4,14 @@ import { Task } from '@/types/task';
 import { useUserStore } from '@/store/userStore';
 import { getUserAttendanceByTaskId, checkIn, checkOut, Attendance, getAttendanceByTaskId, getUserLatestAttendance } from '@/lib/attendance';
 import { uploadImagesToExistingTask, getTaskImages, TaskImage } from '@/lib/upload';
+import { AttendanceSummary } from '@/components/AttendanceSummary';
+import { AttendanceActions } from '@/components/AttendanceActions';
+import { ImageUpload } from '@/components/ImageUpload';
+import { AttachmentGallery } from '@/components/AttachmentGallery';
+import { getTaskCapabilities } from '@/lib/taskCapabilities';
+import { TaskCard } from '@/components/TaskCard';
+import { useTask } from '@/lib/useTask';
+import { getAvailableCleanersForDate, assignTaskToCleaners } from '@/lib/calendar';
 
 interface TaskDetailPanelProps {
   task: Task;
@@ -12,91 +20,57 @@ interface TaskDetailPanelProps {
 
 export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttendanceUpdate }) => {
   const user = useUserStore(s => s.user);
-  // 打卡状态
-  const [attendance, setAttendance] = useState<Attendance | null>(null);
-  const [allAttendances, setAllAttendances] = useState<Attendance[]>([]);
-  const [currentStatus, setCurrentStatus] = useState<'none' | 'checked_in' | 'checked_out'>('none');
+  const { allAttendances, currentStatus, images: taskImages, refresh } = useTask(task);
   const [loading, setLoading] = useState(false);
-  // 图片上传
-  const [taskImages, setTaskImages] = useState<TaskImage[]>([]);
   const [uploading, setUploading] = useState(false);
-  // 备品统计
+  const [showAssignPanel, setShowAssignPanel] = useState(false);
+  const [availableCleaners, setAvailableCleaners] = useState<any[]>([]);
+  const [assigning, setAssigning] = useState(false);
+  const [selectedCleaners, setSelectedCleaners] = useState<string[]>([]);
+  const [assignmentNotes, setAssignmentNotes] = useState('');
+  // 备品统计（保留，暂不抽离）
   const [inventory, setInventory] = useState({ towel: '', soap: '' });
   const [inventorySubmitted, setInventorySubmitted] = useState(false);
 
-  // 加载打卡状态和图片
-  useEffect(() => {
-    if (user) {
-      loadAttendanceStatus();
-      loadTaskImages();
-    }
-  }, [user, task.id]);
+  useEffect(() => { /* useTask 内部已处理加载 */ }, [task.id, user?.id]);
 
-  async function loadAttendanceStatus() {
+  // 处理清洁工选择
+  const handleCleanerToggle = (cleanerId: string) => {
+    setSelectedCleaners(prev => 
+      prev.includes(cleanerId)
+        ? prev.filter(id => id !== cleanerId)
+        : [...prev, cleanerId]
+    );
+  };
+
+  // 处理分配任务
+  const handleAssignSubmit = async () => {
+    if (selectedCleaners.length === 0) {
+      alert('请至少选择一个清洁员');
+      return;
+    }
+
     if (!user) return;
-    
-    // 加载当前用户的最新打卡状态
-    const latestStatus = await getUserLatestAttendance(task.id, user.id.toString());
-    setCurrentStatus(latestStatus);
-    
-    // 如果是manager，加载所有用户的打卡记录
-    if (user.role === 'manager') {
-      const allAttendanceRecords = await getAttendanceByTaskId(task.id);
-      setAllAttendances(allAttendanceRecords);
-    }
-  }
-
-  async function loadTaskImages() {
-    const images = await getTaskImages(task.id);
-    setTaskImages(images);
-  }
-
-  // 处理图片上传
-  async function handleImageChange(e: ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files;
-    if (!files || files.length === 0 || !user) return;
-    
-    setUploading(true);
-    
     try {
-      // 使用批量上传函数
-      const uploadedImages = await uploadImagesToExistingTask(files, task.id, user.id.toString());
-      if (uploadedImages.length > 0) {
-        await loadTaskImages(); // 重新加载图片列表
-        console.log(`成功上传 ${uploadedImages.length} 张图片`);
+      setAssigning(true);
+      const res = await assignTaskToCleaners(task.id, selectedCleaners, user.id, assignmentNotes);
+      if (res.success) {
+        await refresh();
+        onAttendanceUpdate?.();
+        setShowAssignPanel(false);
+        setSelectedCleaners([]);
+        setAssignmentNotes('');
+      } else {
+        alert(res.error || '分配失败');
       }
     } catch (error) {
-      console.error('上传图片时出错:', error);
+      console.error('分配任务失败:', error);
+      alert('分配任务失败');
+    } finally {
+      setAssigning(false);
     }
-    
-    setUploading(false);
-    e.target.value = ''; // 清空文件输入
-  }
+  };
 
-  // 处理打卡
-  async function handleCheckIn() {
-    if (!user) return;
-    setLoading(true);
-    const success = await checkIn(task.id, user.id.toString());
-    if (success) {
-      await loadAttendanceStatus();
-      onAttendanceUpdate?.(); // 通知父组件刷新
-    }
-    setLoading(false);
-  }
-
-  async function handleCheckOut() {
-    if (!user) return;
-    setLoading(true);
-    const success = await checkOut(task.id, user.id.toString());
-    if (success) {
-      await loadAttendanceStatus();
-      onAttendanceUpdate?.(); // 通知父组件刷新
-    }
-    setLoading(false);
-  }
-
-  // 处理备品统计
   function handleInventoryChange(e: ChangeEvent<HTMLInputElement>) {
     setInventory({ ...inventory, [e.target.name]: e.target.value });
   }
@@ -105,130 +79,314 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
     setInventorySubmitted(true);
   }
 
-  // 渲染打卡信息
-  function renderAttendanceInfo() {
-    if (!user) {
-      return <span style={{ color: 'red', marginLeft: 8 }}>请先登录后再打卡</span>;
-    }
-
-    // Manager 显示所有用户的打卡状态
-    if (user.role === 'manager') {
-      const checkedInRecords = allAttendances.filter(a => a.status === 'checked_in');
-      const checkedOutRecords = allAttendances.filter(a => a.status === 'checked_out');
-      const totalAssigned = task.assignedCleaners.length;
-      
-      return (
-        <div style={{ marginLeft: 8 }}>
-          <div>出勤：{checkedInRecords.length}/{totalAssigned} 人</div>
-          <div>退勤：{checkedOutRecords.length}/{totalAssigned} 人</div>
-          {checkedInRecords.length > 0 && (
-            <div style={{ marginTop: 8, fontSize: 12, color: '#16a34a' }}>
-              <b>出勤时间：</b>
-              {checkedInRecords.map(record => (
-                <div key={record.id} style={{ marginLeft: 8 }}>
-                  {record.user_id}: {new Date(record.check_in_time!).toLocaleString()}
-                </div>
-              ))}
-            </div>
-          )}
-          {checkedOutRecords.length > 0 && (
-            <div style={{ marginTop: 8, fontSize: 12, color: '#2563eb' }}>
-              <b>退勤时间：</b>
-              {checkedOutRecords.map(record => (
-                <div key={record.id} style={{ marginLeft: 8 }}>
-                  {record.user_id}: {new Date(record.check_out_time!).toLocaleString()}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    // Cleaner 显示自己的打卡状态
-    if (currentStatus === 'none') {
-      return (
-        <button onClick={handleCheckIn} disabled={loading} style={{ marginLeft: 8, padding: '6px 18px', background: '#22c55e', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
-          {loading ? '打卡中...' : '出勤打卡'}
-        </button>
-      );
-    }
-    
-    if (currentStatus === 'checked_in') {
-      // 找到出勤记录显示时间
-      const checkInRecord = allAttendances.find(a => a.status === 'checked_in' && a.user_id === user.id.toString());
-      return (
-        <>
-          <span style={{ color: '#16a34a', marginLeft: 8 }}>
-            已出勤：{checkInRecord?.check_in_time ? new Date(checkInRecord.check_in_time).toLocaleString() : ''}
-          </span>
-          <button onClick={handleCheckOut} disabled={loading} style={{ marginLeft: 12, padding: '6px 18px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
-            {loading ? '打卡中...' : '退勤打卡'}
-          </button>
-        </>
-      );
-    }
-    
-    if (currentStatus === 'checked_out') {
-      // 找到退勤记录显示时间
-      const checkOutRecord = allAttendances.find(a => a.status === 'checked_out' && a.user_id === user.id.toString());
-      return (
-        <span style={{ color: '#2563eb', marginLeft: 8 }}>
-          已退勤：{checkOutRecord?.check_out_time ? new Date(checkOutRecord.check_out_time).toLocaleString() : ''}
-        </span>
-      );
-    }
+  if (!user) {
+    return <div style={{ border: '1px solid #eee', borderRadius: 8, padding: 20, background: '#f9fafb' }}>请先登录查看任务详情</div>;
   }
 
+  const caps = getTaskCapabilities(user.role, task.status, {
+    isAssignedCleaner: task.assignedCleaners?.some(name => name === user.name),
+    hasAccepted: false,
+    attendance: {
+      hasCheckIn: currentStatus === 'checked_in' || currentStatus === 'checked_out',
+      hasCheckOut: currentStatus === 'checked_out'
+    },
+    assignedCleanersCount: task.assignedCleaners?.length || 0,
+    pendingCleanerAck: false
+  });
+
   return (
-    <div style={{ border: '1px solid #eee', borderRadius: 8, padding: 20, background: '#f9fafb' }}>
-      <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8 }}>{task.hotelName}</div>
-      <div style={{ color: '#888', fontSize: 14, marginBottom: 8 }}>任务ID：{task.id} | 日期：{task.date} | 入住时间：{task.checkInTime}</div>
-      <div style={{ fontSize: 14, marginBottom: 8 }}>清扫人员：{task.assignedCleaners.join('，')}</div>
-      <div style={{ marginBottom: 8 }}><b>任务描述：</b>{task.description}</div>
-      <div style={{ marginBottom: 8 }}><b>备注：</b>{task.note}</div>
-      {/* 打卡功能 */}
-      <div style={{ margin: '16px 0' }}>
-        <b>打卡：</b>
-        {renderAttendanceInfo()}
-      </div>
-      {/* 上传图片功能 */}
-      <div style={{ margin: '16px 0' }}>
-        <b>清扫图片：</b>
-        <input 
-          type="file" 
-          accept="image/*" 
-          multiple
-          onChange={handleImageChange}
-          disabled={uploading}
-          style={{ marginLeft: 8 }} 
-        />
-        {uploading && <span style={{ marginLeft: 8, color: '#666' }}>上传中...</span>}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
-          {taskImages.map((image) => (
-            <div key={image.id} style={{ position: 'relative' }}>
-              <img 
-                src={image.image_url} 
-                alt={`清扫图片`} 
-                style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, border: '1px solid #eee' }} 
-              />
-              <div style={{ fontSize: 10, color: '#666', marginTop: 2 }}>
-                {new Date(image.uploaded_at).toLocaleString()}
-              </div>
+    <div>
+      <TaskCard
+        id={task.id}
+        hotelName={task.hotelName}
+        date={task.checkInDate || task.date || ''}
+        checkInDate={task.checkInDate}
+        checkInTime={task.checkInTime}
+        checkOutDate={task.checkOutDate}
+        cleaningDate={task.cleaningDate}
+        assignedCleaners={task.assignedCleaners}
+        status={task.status}
+        description={task.description}
+        note={task.note}
+        images={task.images}
+        showDetail={true}
+        attendanceStatus={undefined}
+        hotelAddress={task.hotelAddress}
+        roomNumber={task.roomNumber}
+        lockPassword={task.lockPassword}
+        acceptedBy={task.acceptedBy}
+        completedAt={task.completedAt}
+        confirmedAt={task.confirmedAt}
+        viewerRole={user.role}
+        viewMode={'detail'}
+        capabilities={caps}
+        renderBlocks={{
+          assignmentAction: caps.canOpenAssignmentModal ? (
+            <button
+              onClick={async () => {
+                // 打开前加载可用清洁员
+                try {
+                  const dateStr = task.cleaningDate || task.checkInDate || task.date || '';
+                  console.log('TaskDetailPanel - 获取清洁员，日期:', dateStr);
+                  if (dateStr) {
+                    const cleaners = await getAvailableCleanersForDate(dateStr);
+                    console.log('TaskDetailPanel - 获取到清洁员:', cleaners);
+                    setAvailableCleaners(cleaners);
+                  } else {
+                    console.log('TaskDetailPanel - 没有有效日期');
+                    setAvailableCleaners([]);
+                  }
+                } catch (e) {
+                  console.error('TaskDetailPanel - 获取清洁员失败:', e);
+                  setAvailableCleaners([]);
+                }
+                setShowAssignPanel(true);
+              }}
+              style={{ alignSelf: 'flex-start', padding: '6px 12px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}
+            >
+              {task.assignedCleaners && task.assignedCleaners.length > 0 ? '追加人员' : '分配清洁工'}
+            </button>
+          ) : null,
+          taskAcceptance: caps.showTaskAcceptance ? (
+            <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
+              <button
+                onClick={async () => {
+                  // TODO: 实现接受任务逻辑
+                  console.log('接受任务:', task.id);
+                  alert('任务接受功能开发中...');
+                }}
+                style={{ 
+                  flex: 1,
+                  padding: '8px 16px', 
+                  background: '#10b981', 
+                  color: '#fff', 
+                  border: 'none', 
+                  borderRadius: 6, 
+                  fontWeight: 600, 
+                  fontSize: 14, 
+                  cursor: 'pointer' 
+                }}
+              >
+                接受任务
+              </button>
+              <button
+                onClick={async () => {
+                  // TODO: 实现拒绝任务逻辑
+                  console.log('拒绝任务:', task.id);
+                  alert('任务拒绝功能开发中...');
+                }}
+                style={{ 
+                  flex: 1,
+                  padding: '8px 16px', 
+                  background: '#ef4444', 
+                  color: '#fff', 
+                  border: 'none', 
+                  borderRadius: 6, 
+                  fontWeight: 600, 
+                  fontSize: 14, 
+                  cursor: 'pointer' 
+                }}
+              >
+                拒绝任务
+              </button>
             </div>
-          ))}
+          ) : null,
+          attendanceSummary: caps.showAttendanceSummary ? (
+            <AttendanceSummary assignedCleaners={task.assignedCleaners} attendances={allAttendances} />
+          ) : null,
+          attendanceActions: caps.showAttendanceActions ? (
+            <AttendanceActions
+              taskId={task.id}
+              userId={user.id.toString()}
+              currentStatus={currentStatus}
+              allAttendances={allAttendances}
+              loading={loading}
+              onLoadingChange={setLoading}
+              onAfterUpdate={async () => { await refresh(); onAttendanceUpdate?.(); }}
+            />
+          ) : null,
+          attachments: (
+            <>
+              {user.role === 'cleaner' && (
+                <ImageUpload
+                  taskId={task.id}
+                  userId={user.id.toString()}
+                  disabled={uploading}
+                  onUploaded={async (count) => { if (count > 0) { await refresh(); } }}
+                />
+              )}
+              <AttachmentGallery images={taskImages} />
+            </>
+          ),
+          notes: (
+            <div>
+              <b>备品统计：</b>
+              <form onSubmit={handleInventorySubmit} style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 8 }}>
+                <label>毛巾数：<input name="towel" type="number" min={0} value={inventory.towel} onChange={handleInventoryChange} style={{ width: 60, marginLeft: 4 }} /></label>
+                <label>香皂数：<input name="soap" type="number" min={0} value={inventory.soap} onChange={handleInventoryChange} style={{ width: 60, marginLeft: 4 }} /></label>
+                <button type="submit" style={{ padding: '6px 18px', background: '#f59e42', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>提交</button>
+              </form>
+              {inventorySubmitted && <div style={{ color: '#16a34a', marginTop: 8 }}>已提交：毛巾 {inventory.towel}，香皂 {inventory.soap}</div>}
+            </div>
+          )
+        }}
+      />
+
+      {/* 分配清洁工面板 - 在任务卡片下方展开 */}
+      {showAssignPanel && (
+        <div style={{
+          marginTop: 16,
+          border: '1px solid #e5e7eb',
+          borderRadius: 8,
+          padding: 16,
+          backgroundColor: '#f9fafb'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>
+              {task.assignedCleaners && task.assignedCleaners.length > 0 ? '追加清洁人员' : '分配清洁工'}
+            </h3>
+            <button
+              onClick={() => {
+                setShowAssignPanel(false);
+                setSelectedCleaners([]);
+                setAssignmentNotes('');
+              }}
+              style={{ 
+                color: '#6b7280', 
+                fontSize: 20, 
+                background: 'none', 
+                border: 'none', 
+                cursor: 'pointer' 
+              }}
+            >
+              ×
+            </button>
+          </div>
+
+          {/* 当前已分配的清洁工显示 */}
+          {task.assignedCleaners && task.assignedCleaners.length > 0 && (
+            <div style={{ marginBottom: 16, padding: 12, backgroundColor: '#dbeafe', borderRadius: 6 }}>
+              <div style={{ fontSize: 14, fontWeight: 500, color: '#1e40af', marginBottom: 4 }}>
+                已分配清洁工：
+              </div>
+              <div style={{ fontSize: 14, color: '#1e40af' }}>
+                {task.assignedCleaners.join('、')}
+              </div>
+              {task.status === 'assigned' && (
+                <div style={{ fontSize: 12, color: '#f59e0b', marginTop: 4 }}>
+                  状态：已分配，待接收
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 可用清洁员列表 */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: 'block', fontSize: 14, fontWeight: 500, color: '#374151', marginBottom: 8 }}>
+              选择清洁员 *
+            </label>
+            {availableCleaners.length === 0 ? (
+              <div style={{ fontSize: 14, color: '#6b7280', padding: 12, backgroundColor: '#f3f4f6', borderRadius: 6 }}>
+                该日期暂无可用清洁员
+              </div>
+            ) : (
+              <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+                {availableCleaners.map((cleaner) => {
+                  const isSelected = selectedCleaners.includes(cleaner.id);
+                  return (
+                    <div
+                      key={cleaner.id}
+                      onClick={() => handleCleanerToggle(cleaner.id)}
+                      style={{ 
+                        padding: 12,
+                        border: `1px solid ${isSelected ? '#3b82f6' : '#d1d5db'}`,
+                        borderRadius: 6,
+                        cursor: 'pointer',
+                        marginBottom: 8,
+                        backgroundColor: isSelected ? '#dbeafe' : '#ffffff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleCleanerToggle(cleaner.id)}
+                        style={{ width: 16, height: 16 }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 500, marginBottom: 2 }}>{cleaner.name || '未知姓名'}</div>
+                        <div style={{ fontSize: 12, color: '#6b7280' }}>
+                          当前任务: {cleaner.currentTaskCount || 0}/{cleaner.maxTaskCapacity || 0}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* 备注输入 */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: 'block', fontSize: 14, fontWeight: 500, color: '#374151', marginBottom: 8 }}>
+              备注（可选）
+            </label>
+            <textarea
+              value={assignmentNotes}
+              onChange={(e) => setAssignmentNotes(e.target.value)}
+              style={{ 
+                width: '100%', 
+                padding: 8, 
+                border: '1px solid #d1d5db', 
+                borderRadius: 6, 
+                fontSize: 14,
+                resize: 'vertical',
+                minHeight: 60
+              }}
+              placeholder="输入备注信息"
+            />
+          </div>
+
+          {/* 操作按钮 */}
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => {
+                setShowAssignPanel(false);
+                setSelectedCleaners([]);
+                setAssignmentNotes('');
+              }}
+              style={{ 
+                padding: '8px 16px', 
+                background: '#f3f4f6', 
+                color: '#374151', 
+                border: 'none', 
+                borderRadius: 6, 
+                fontWeight: 500, 
+                cursor: 'pointer' 
+              }}
+            >
+              取消
+            </button>
+            <button
+              onClick={handleAssignSubmit}
+              disabled={assigning || selectedCleaners.length === 0}
+              style={{ 
+                padding: '8px 16px', 
+                background: assigning || selectedCleaners.length === 0 ? '#9ca3af' : '#2563eb', 
+                color: '#fff', 
+                border: 'none', 
+                borderRadius: 6, 
+                fontWeight: 500, 
+                cursor: assigning || selectedCleaners.length === 0 ? 'not-allowed' : 'pointer' 
+              }}
+            >
+              {assigning ? '分配中...' : '确认分配'}
+            </button>
+          </div>
         </div>
-      </div>
-      {/* 备品统计功能 */}
-      <div style={{ margin: '16px 0' }}>
-        <b>备品统计：</b>
-        <form onSubmit={handleInventorySubmit} style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 8 }}>
-          <label>毛巾数：<input name="towel" type="number" min={0} value={inventory.towel} onChange={handleInventoryChange} style={{ width: 60, marginLeft: 4 }} /></label>
-          <label>香皂数：<input name="soap" type="number" min={0} value={inventory.soap} onChange={handleInventoryChange} style={{ width: 60, marginLeft: 4 }} /></label>
-          <button type="submit" style={{ padding: '6px 18px', background: '#f59e42', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>提交</button>
-        </form>
-        {inventorySubmitted && <div style={{ color: '#16a34a', marginTop: 8 }}>已提交：毛巾 {inventory.towel}，香皂 {inventory.soap}</div>}
-      </div>
+      )}
     </div>
   );
-}; 
+} 

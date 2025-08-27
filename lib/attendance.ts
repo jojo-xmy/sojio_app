@@ -34,7 +34,7 @@ export async function getUserAttendanceByTaskId(taskId: string, userId: string):
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
   
   if (error) {
     console.error('Error fetching user attendance:', error);
@@ -91,7 +91,7 @@ export async function getUserLatestAttendance(taskId: string, userId: string): P
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
   
   if (error || !data) {
     return 'none';

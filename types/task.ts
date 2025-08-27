@@ -37,6 +37,7 @@ export interface Task {
   checkInDate: string;    // 入住日期
   checkInTime: string;    // 入住时间
   checkOutDate?: string;  // 退房日期
+  cleaningDate?: string;  // 清扫日期（默认为退房日期，可修改）
   assignedCleaners: string[];
   status: TaskStatus;
   description?: string;

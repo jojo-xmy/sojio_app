@@ -2,18 +2,28 @@
 import React from 'react';
 import { TaskStatusBadge } from './TaskStatusBadge';
 import { Task, TaskStatus } from '@/types/task';
+import { TaskCapabilities } from '@/lib/taskCapabilities';
 
 export interface TaskCardProps {
   id: string;
   hotelName: string;
-  date: string;
+  date: string; // 保持兼容性，但优先使用具体日期字段
+  checkInDate?: string;    // 入住日期
   checkInTime: string;
+  checkOutDate?: string;   // 退房日期  
+  cleaningDate?: string;   // 清扫日期
   assignedCleaners: string[];
   status: TaskStatus;
   description?: string;
   note?: string;
   images?: string[];
   showDetail?: boolean;
+  // 视图与角色（新增，可选，仅用于后续显隐控制）
+  viewerRole?: 'owner' | 'manager' | 'cleaner';
+  viewMode?: 'list' | 'calendar' | 'detail';
+  // 能力矩阵与插槽（可选）
+  capabilities?: TaskCapabilities;
+  renderBlocks?: Partial<Record<'attendanceSummary' | 'attendanceActions' | 'attachments' | 'notes' | 'acknowledgement' | 'assignmentAction' | 'taskAcceptance', React.ReactNode>>;
   onClick?: () => void;
   attendanceStatus?: 'none' | 'checked_in' | 'checked_out';
   // 新增字段
@@ -29,13 +39,18 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   id, 
   hotelName, 
   date, 
+  checkInDate,
   checkInTime, 
+  checkOutDate,
+  cleaningDate,
   assignedCleaners, 
   status, 
   description, 
   note, 
   images, 
   showDetail, 
+  capabilities,
+  renderBlocks,
   onClick, 
   attendanceStatus,
   hotelAddress,
@@ -43,7 +58,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   lockPassword,
   acceptedBy,
   completedAt,
-  confirmedAt
+  confirmedAt,
+  viewerRole,
+  viewMode
 }) => {
   return (
     <div
@@ -77,9 +94,29 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       </div>
 
       <div style={{ color: '#888', fontSize: 14, marginBottom: 8 }}>任务ID：{id}</div>
-      <div style={{ fontSize: 14, marginBottom: 4 }}>📅 日期：{date}</div>
+      <div style={{ fontSize: 14, marginBottom: 4 }}>📅 入住日期：{checkInDate || date}</div>
       <div style={{ fontSize: 14, marginBottom: 4 }}>🕐 入住时间：{checkInTime}</div>
-      <div style={{ fontSize: 14, marginBottom: 8 }}>👥 清扫人员：{assignedCleaners.join('，')}</div>
+      {checkOutDate && (
+        <div style={{ fontSize: 14, marginBottom: 4 }}>📤 退房日期：{checkOutDate}</div>
+      )}
+      <div style={{ fontSize: 14, marginBottom: 4 }}>🧹 清扫日期：{cleaningDate || checkOutDate || '未设置'}</div>
+      
+      {/* 清扫人员信息 */}
+      <div style={{ fontSize: 14, marginBottom: 8 }}>
+        👥 清扫人员：
+        {!assignedCleaners || assignedCleaners.length === 0 ? (
+          <span style={{ color: '#ef4444', fontWeight: 500 }}> 未分配</span>
+        ) : (
+          <>
+            <span style={{ color: '#059669', fontWeight: 500 }}> {assignedCleaners.join('，')}</span>
+            {status === 'assigned' && (
+              <span style={{ color: '#f59e0b', fontSize: 12, marginLeft: 8 }}>
+                （已分配，待接收）
+              </span>
+            )}
+          </>
+        )}
+      </div>
 
       {/* 门锁密码 */}
       {lockPassword && (
@@ -149,6 +186,20 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           </span>
         )}
       </div>
+
+      {/* 能力矩阵驱动的可插拔区块（仅在传入时显示；不改变默认渲染） */}
+      {capabilities && renderBlocks && (
+        <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {capabilities.visibleBlocks.includes('attendanceSummary') && renderBlocks.attendanceSummary}
+          {capabilities.visibleBlocks.includes('attendanceActions') && renderBlocks.attendanceActions}
+          {capabilities.visibleBlocks.includes('attachments') && renderBlocks.attachments}
+          {capabilities.visibleBlocks.includes('notes') && renderBlocks.notes}
+          {capabilities.visibleBlocks.includes('acknowledgement') && renderBlocks.acknowledgement}
+          {capabilities.visibleBlocks.includes('taskAcceptance') && renderBlocks.taskAcceptance}
+          {/* 仅在详情视图（右侧面板）中显示分配按钮，列表视图中不显示 */}
+          {viewMode === 'detail' && capabilities.visibleBlocks.includes('assignmentAction') && renderBlocks.assignmentAction}
+        </div>
+      )}
 
       {showDetail && (
         <div style={{ marginTop: 16, borderTop: '1px dashed #ddd', paddingTop: 12 }}>

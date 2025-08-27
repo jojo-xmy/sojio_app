@@ -58,126 +58,186 @@ export function TaskAssignmentModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">分配任务</h2>
+    <div style={{ 
+      position: 'fixed', 
+      top: 0, 
+      left: 0, 
+      right: 0, 
+      bottom: 0, 
+      backgroundColor: 'rgba(0,0,0,0.5)', 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center', 
+      zIndex: 1000 
+    }}>
+      <div style={{ 
+        backgroundColor: 'white', 
+        borderRadius: 8, 
+        padding: 24, 
+        width: '100%', 
+        maxWidth: 640, 
+        maxHeight: '90vh', 
+        overflowY: 'auto' 
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 600 }}>分配任务</h2>
           <button
             onClick={handleClose}
-            className="text-gray-500 hover:text-gray-700 text-2xl"
+            style={{ 
+              color: '#6b7280', 
+              fontSize: 24, 
+              background: 'none', 
+              border: 'none', 
+              cursor: 'pointer' 
+            }}
           >
             ×
           </button>
         </div>
 
         {/* 任务信息 */}
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-          <h3 className="font-medium mb-2">任务详情</h3>
-          <div className="grid grid-cols-2 gap-4 text-sm">
+        <div style={{ marginBottom: 24, padding: 16, backgroundColor: '#f9fafb', borderRadius: 8 }}>
+          <h3 style={{ fontWeight: 500, marginBottom: 8 }}>任务详情</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, fontSize: 14 }}>
             <div>
-              <span className="text-gray-600">酒店：</span>
-              <span>{(task.task as any).hotel_name || task.task.hotelName}</span>
+              <span style={{ color: '#6b7280' }}>酒店：</span>
+              <span>{task.task.hotelName}</span>
             </div>
             <div>
-              <span className="text-gray-600">房间号：</span>
-              <span>{(task.task as any).room_number || task.task.roomNumber || '未指定'}</span>
+              <span style={{ color: '#6b7280' }}>房间号：</span>
+              <span>{task.task.roomNumber || '未指定'}</span>
             </div>
             <div>
-              <span className="text-gray-600">日期：</span>
+              <span style={{ color: '#6b7280' }}>日期：</span>
               <span>{task.task.checkInDate || task.task.date}</span>
             </div>
             <div>
-              <span className="text-gray-600">时间：</span>
-              <span>{(task.task as any).check_in_time || task.task.checkInTime || '未指定'}</span>
+              <span style={{ color: '#6b7280' }}>时间：</span>
+              <span>{task.task.checkInTime || '未指定'}</span>
             </div>
-            <div className="col-span-2">
-              <span className="text-gray-600">描述：</span>
+            <div style={{ gridColumn: 'span 2' }}>
+              <span style={{ color: '#6b7280' }}>描述：</span>
               <span>{task.task.description || task.task.note || '无'}</span>
             </div>
           </div>
         </div>
 
         {/* 可用清洁员列表 */}
-        <div className="mb-6">
-          <h3 className="font-medium mb-3">可用清洁员 ({availableCleaners.length})</h3>
+        <div style={{ marginBottom: 24 }}>
+          <h3 style={{ fontWeight: 500, marginBottom: 12 }}>可用清洁员 ({availableCleaners.length})</h3>
           {(() => { 
             console.log('TaskAssignmentModal - availableCleaners:', availableCleaners);
             console.log('TaskAssignmentModal - availableCleaners.length:', availableCleaners.length);
             console.log('TaskAssignmentModal - availableCleaners[0]:', availableCleaners[0]);
+            console.log('TaskAssignmentModal - 开始渲染清洁员列表');
             return null; 
           })()}
           {availableCleaners.length === 0 ? (
-            <div className="text-gray-500 text-center py-4">
+            <div style={{ color: '#6b7280', textAlign: 'center', padding: 16 }}>
               该日期没有可用的清洁员
             </div>
           ) : (
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {availableCleaners.map(cleaner => (
-                <div
-                  key={cleaner.id}
-                  className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                    selectedCleaners.includes(cleaner.id)
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                  onClick={() => handleCleanerToggle(cleaner.id)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
+            <div style={{ maxHeight: 240, overflowY: 'auto' }}>
+              {(() => {
+                console.log('TaskAssignmentModal - 准备映射清洁员列表');
+                return null;
+              })()}
+              {availableCleaners.map((cleaner, index) => {
+                console.log(`TaskAssignmentModal - 渲染清洁员 ${index}:`, cleaner);
+                const isSelected = selectedCleaners.includes(cleaner.id);
+                return (
+                  <div
+                    key={cleaner.id}
+                    onClick={() => handleCleanerToggle(cleaner.id)}
+                    style={{ 
+                      padding: 12,
+                      border: `1px solid ${isSelected ? '#3b82f6' : '#d1d5db'}`,
+                      borderRadius: 8,
+                      cursor: 'pointer',
+                      marginBottom: 8,
+                      backgroundColor: isSelected ? '#dbeafe' : '#ffffff',
+                      minHeight: 60,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                       <input
                         type="checkbox"
-                        checked={selectedCleaners.includes(cleaner.id)}
+                        checked={isSelected}
                         onChange={() => handleCleanerToggle(cleaner.id)}
-                        className="w-4 h-4 text-blue-600"
+                        style={{ width: 16, height: 16 }}
                       />
                       <div>
-                        <div className="font-medium">{cleaner.name}</div>
-                        <div className="text-sm text-gray-600">
-                          当前任务: {cleaner.currentTaskCount}/{cleaner.maxTaskCapacity}
+                        <div style={{ fontWeight: 500, marginBottom: 4 }}>{cleaner.name || '未知姓名'}</div>
+                        <div style={{ fontSize: 12, color: '#6b7280' }}>
+                          当前任务: {cleaner.currentTaskCount || 0}/{cleaner.maxTaskCapacity || 0}
                         </div>
                       </div>
                     </div>
-                    <div className="text-sm text-gray-500">
-                      {cleaner.currentTaskCount < cleaner.maxTaskCapacity ? (
-                        <span className="text-green-600">可用</span>
+                    <div style={{ fontSize: 12 }}>
+                      {(cleaner.currentTaskCount || 0) < (cleaner.maxTaskCapacity || 0) ? (
+                        <span style={{ color: '#059669' }}>可用</span>
                       ) : (
-                        <span className="text-red-600">已满</span>
+                        <span style={{ color: '#dc2626' }}>已满</span>
                       )}
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
 
         {/* 备注 */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+        <div style={{ marginBottom: 24 }}>
+          <label style={{ display: 'block', fontSize: 14, fontWeight: 500, color: '#374151', marginBottom: 8 }}>
             备注（可选）
           </label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-lg resize-none"
-            rows={3}
             placeholder="添加分配备注..."
+            style={{ 
+              width: '100%', 
+              padding: 8, 
+              border: '1px solid #d1d5db', 
+              borderRadius: 8, 
+              resize: 'none',
+              fontFamily: 'inherit'
+            }}
+            rows={3}
           />
         </div>
 
         {/* 操作按钮 */}
-        <div className="flex justify-end space-x-3">
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
           <button
             onClick={handleClose}
-            className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
             disabled={isSubmitting}
+            style={{ 
+              padding: '8px 16px', 
+              color: '#4b5563', 
+              backgroundColor: 'transparent',
+              border: '1px solid #d1d5db', 
+              borderRadius: 8, 
+              cursor: isSubmitting ? 'not-allowed' : 'pointer' 
+            }}
           >
             取消
           </button>
           <button
             onClick={handleSubmit}
             disabled={isSubmitting || selectedCleaners.length === 0}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ 
+              padding: '8px 16px', 
+              backgroundColor: (isSubmitting || selectedCleaners.length === 0) ? '#d1d5db' : '#2563eb', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: 8, 
+              cursor: (isSubmitting || selectedCleaners.length === 0) ? 'not-allowed' : 'pointer' 
+            }}
           >
             {isSubmitting ? '分配中...' : '确认分配'}
           </button>

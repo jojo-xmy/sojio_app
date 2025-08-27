@@ -13,7 +13,9 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({ isOpen, onClose,
   const user = useUserStore(s => s.user);
   const [formData, setFormData] = useState({
     hotelName: '',
-    date: '',
+    checkInDate: '',
+    checkOutDate: '',
+    guestCount: 1, // 入住人数
     hasCheckIn: 'yes', // 'yes' | 'no'
     assignedCleaners: [] as string[],
     details: ''
@@ -40,7 +42,9 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({ isOpen, onClose,
       // 准备任务数据
       const taskData = {
         hotel_name: formData.hotelName,
-        date: formData.date,
+        check_in_date: formData.checkInDate,
+        check_out_date: formData.checkOutDate,
+        guest_count: formData.guestCount,
         check_in_time: formData.hasCheckIn === 'yes' ? '15:00' : null, // 默认时间，后续可优化
         assigned_cleaners: formData.assignedCleaners,
         description: formData.details,

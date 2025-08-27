@@ -121,6 +121,40 @@ export async function getCalendarTasks(
 
     const availableCleaners: UserProfile[] = []; // 后续可从其他接口或逻辑填充
 
+    // 映射数据库字段到Task类型
+    const mappedTask: Task = {
+      id: task.id,
+      hotelName: task.hotel_name || '',
+      checkInDate: task.check_in_date || '',
+      checkInTime: task.check_in_time || '',
+      checkOutDate: task.check_out_date || '',
+      cleaningDate: task.cleaning_date || task.check_out_date || '', // 默认为退房日期
+      assignedCleaners: assignedCleaners.map((c: any) => c.name) || [],
+      status: task.status,
+      description: task.description || '',
+      note: task.note || '',
+      images: task.images || [],
+      hotelAddress: task.hotel_address || '',
+      roomNumber: task.room_number || '',
+      lockPassword: task.lock_password || '',
+      specialInstructions: task.special_instructions || '',
+      acceptedBy: task.accepted_by || [],
+      completedAt: task.completed_at || '',
+      confirmedAt: task.confirmed_at || '',
+      createdBy: task.created_by || '',
+      createdAt: task.created_at || '',
+      updatedAt: task.updated_at || '',
+      // 保持兼容性
+      date: task.check_in_date || '',
+      inventory: task.inventory || {
+        towel: 0,
+        soap: 0,
+        shampoo: 0,
+        conditioner: 0,
+        toiletPaper: 0
+      }
+    };
+
     return {
       id: task.id,
       title: task.hotel_name,
@@ -131,7 +165,7 @@ export async function getCalendarTasks(
       assignedCleaners,
       availableCleaners,
       type: 'task',
-      task: task,
+      task: mappedTask,
     };
   });
   console.log("calendarEvents:", calendarEvents);
@@ -139,7 +173,7 @@ export async function getCalendarTasks(
 }
 
 
-// 获取指定日期的可用清洁员
+// 获取指定日期的可用清洁员（简化版本：按日期而非时间段）
 export async function getAvailableCleanersForDate(date: string): Promise<AvailableCleaner[]> {
   // 第一步：取当天可用性条目（不做联表，避免因缺失外键导致结果被过滤）
   const { data: availability, error: availError } = await supabase
@@ -190,7 +224,7 @@ export async function getAvailableCleanersForDate(date: string): Promise<Availab
   const cleanerTaskCounts = await getCleanerTaskCountsForDate(date);
   console.log('清洁员任务数量:', cleanerTaskCounts);
 
-  // 以cleaner_id为单位去重后合并信息
+  // 简化逻辑：只要在当天有可用性记录就算可用，不再检查具体时间段
   const seen = new Set<string>();
   const availableCleaners: AvailableCleaner[] = [];
   for (const a of availability) {
@@ -201,13 +235,14 @@ export async function getAvailableCleanersForDate(date: string): Promise<Availab
     const profile = idToProfile.get(cleanerId);
     const taskCount = cleanerTaskCounts[cleanerId] || 0;
 
+    // 简化：只要有当天的可用性记录就认为可用（不管具体时间段）
     availableCleaners.push({
       id: cleanerId,
       name: profile?.name || '未知',
       role: profile?.role || 'cleaner',
-      availableHours: a.available_hours || {},
+      availableHours: { available: true }, // 简化为简单的可用标记
       currentTaskCount: taskCount,
-      maxTaskCapacity: 2
+      maxTaskCapacity: 3 // 增加到3个任务
     });
   }
 
@@ -344,13 +379,46 @@ export async function getTaskWithAssignments(taskId: string): Promise<TaskCalend
 
   const assignedCleaners = data.task_assignments?.map((assignment: any) => assignment.user_profiles).filter(Boolean) || [];
 
+  // 映射数据库字段到Task类型
+  const mappedTask: Task = {
+    id: data.id,
+    hotelName: data.hotel_name || '',
+    checkInDate: data.check_in_date || '',
+    checkInTime: data.check_in_time || '',
+    checkOutDate: data.check_out_date || '',
+    cleaningDate: data.cleaning_date || data.check_out_date || '',
+    assignedCleaners: assignedCleaners.map((c: any) => c.name) || [],
+    status: data.status,
+    description: data.description || '',
+    note: data.note || '',
+    images: data.images || [],
+    hotelAddress: data.hotel_address || '',
+    roomNumber: data.room_number || '',
+    lockPassword: data.lock_password || '',
+    specialInstructions: data.special_instructions || '',
+    acceptedBy: data.accepted_by || [],
+    completedAt: data.completed_at || '',
+    confirmedAt: data.confirmed_at || '',
+    createdBy: data.created_by || '',
+    createdAt: data.created_at || '',
+    updatedAt: data.updated_at || '',
+    date: data.check_in_date || '',
+    inventory: data.inventory || {
+      towel: 0,
+      soap: 0,
+      shampoo: 0,
+      conditioner: 0,
+      toiletPaper: 0
+    }
+  };
+
   return {
     id: data.id,
     title: `${data.hotel_name}${data.room_number ? ` - ${data.room_number}` : ''}`,
     start: startTime,
     end: endTime,
     type: 'task',
-    task: data,
+    task: mappedTask,
     assignedCleaners
   };
 }

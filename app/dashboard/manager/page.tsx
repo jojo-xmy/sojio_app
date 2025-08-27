@@ -5,13 +5,15 @@ import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/userStore';
 import { TaskCreateForm } from '@/components/TaskCreateForm';
 import { RoleSelector } from '@/components/RoleSelector';
-import { CustomTaskCalendar } from '@/components/CustomTaskCalendar';
+import { TaskCalendar } from '@/components/TaskCalendar';
 import { TaskCard } from '@/components/TaskCard';
 import { TaskDetailPanel } from '@/components/TaskDetailPanel';
 import { getCalendarTasks } from '@/lib/calendar';
 import { getAttendanceByTaskId, calculateTaskStatus } from '@/lib/attendance';
 import { Task } from '@/types/task';
 import { TaskCalendarEvent } from '@/types/calendar';
+import { getTaskCapabilities } from '@/lib/taskCapabilities';
+
 
 export default function ManagerDashboard() {
   const router = useRouter();
@@ -37,10 +39,10 @@ export default function ManagerDashboard() {
       
       const calendarEvents = await getCalendarTasks(startDate, endDate);
       
-      // 转换为Task格式并加载打卡状态
+      // 加载打卡状态并更新任务对象
       const tasksWithStatus = await Promise.all(
         calendarEvents.map(async (event: TaskCalendarEvent) => {
-          const task = event.task as any; // 使用any类型来访问数据库字段
+          const task = event.task; // 现在task已经是正确映射的Task对象
           const attendanceRecords = await getAttendanceByTaskId(task.id);
           const taskStatus = calculateTaskStatus(attendanceRecords, event.assignedCleaners?.map(c => c.name) || []);
           
@@ -55,35 +57,12 @@ export default function ManagerDashboard() {
             overallStatus = 'checked_in';
           }
           
+          // 直接使用已映射的task对象，只更新attendanceStatus
           return {
-            id: task.id,
-            hotelName: task.hotel_name || '',
-            checkInDate: task.check_in_date || '',
-            checkInTime: task.check_in_time || '',
-            checkOutDate: task.check_out_date || '',
-            assignedCleaners: event.assignedCleaners?.map(c => c.name) || [],
-            status: task.status,
-            description: task.description || '',
-            note: task.notes || '',
-            images: task.images || [],
+            ...task,
             attendanceStatus: overallStatus,
-            acceptedBy: event.assignedCleaners?.map(c => c.name) || [],
-            createdBy: task.created_by || '',
-            createdAt: task.created_at || '',
-            updatedAt: task.updated_at || '',
-            hotelAddress: task.hotel_address || '',
-            roomNumber: task.room_number || '',
-            lockPassword: task.lock_password || '',
-            specialInstructions: task.special_instructions || '',
-            inventory: task.inventory || {
-              towel: 0,
-              soap: 0,
-              shampoo: 0,
-              conditioner: 0,
-              toiletPaper: 0
-            },
-            // 保持兼容性
-            date: task.check_in_date || ''
+            assignedCleaners: event.assignedCleaners?.map(c => c.name) || task.assignedCleaners || [],
+            acceptedBy: event.assignedCleaners?.map(c => c.name) || task.acceptedBy || []
           } as Task;
         })
       );
@@ -160,7 +139,7 @@ export default function ManagerDashboard() {
         </div>
       </div>
       {viewMode === 'calendar' ? (
-        <CustomTaskCalendar className="w-full" />
+        <TaskCalendar className="w-full" />
       ) : (
         <div style={{ display: 'flex', gap: 24 }}>
           {/* 任务列表 */}
@@ -169,28 +148,56 @@ export default function ManagerDashboard() {
               <div style={{ color: '#888', textAlign: 'center', padding: '2rem' }}>加载中...</div>
             ) : (
               <>
-                {tasksWithAttendance.map(task => (
-                  <TaskCard 
-                    key={task.id} 
-                    {...task} 
-                    showDetail={false} 
-                    onClick={() => setSelectedTask(task)} 
-                  />
-                ))}
+                {tasksWithAttendance.map(task => {
+                  const caps = getTaskCapabilities('manager', task.status, {});
+                  return (
+                    <TaskCard 
+                      key={task.id} 
+                      id={task.id}
+                      hotelName={task.hotelName}
+                      date={task.checkInDate || task.date || ''}
+                      checkInDate={task.checkInDate}
+                      checkInTime={task.checkInTime}
+                      checkOutDate={task.checkOutDate}
+                      cleaningDate={task.cleaningDate}
+                      assignedCleaners={task.assignedCleaners}
+                      status={task.status}
+                      description={task.description}
+                      note={task.note}
+                      images={task.images}
+                      attendanceStatus={task.attendanceStatus}
+                      hotelAddress={task.hotelAddress}
+                      roomNumber={task.roomNumber}
+                      lockPassword={task.lockPassword}
+                      acceptedBy={task.acceptedBy}
+                      completedAt={task.completedAt}
+                      confirmedAt={task.confirmedAt}
+                      showDetail={false} 
+                      onClick={() => setSelectedTask(task)}
+                      capabilities={caps}
+                    />
+                  );
+                })}
                 {tasksWithAttendance.length === 0 && <div style={{ color: '#888' }}>暂无任务</div>}
               </>
             )}
           </div>
 
-          {/* 任务详情面板 */}
-          {selectedTask && (
-            <div style={{ flex: 1 }}>
-              <TaskDetailPanel 
-                task={selectedTask} 
-                onAttendanceUpdate={handleAttendanceUpdate}
-              />
+          {/* 右侧任务面板（sticky 居中显示，滚动时保持） */}
+          <div style={{ width: 360 }}>
+            <div className="sticky" style={{ top: 16 }}>
+              {!selectedTask ? (
+                <div className="text-gray-500 flex items-center justify-center" style={{ height: 'calc(100vh - 32px)' }}>选择一个任务查看详情</div>
+              ) : (
+                <div className="max-h-[calc(100vh-32px)] overflow-y-auto">
+                  <TaskDetailPanel 
+                    task={selectedTask} 
+                    onAttendanceUpdate={handleAttendanceUpdate}
+                  />
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       )}
       
@@ -203,6 +210,8 @@ export default function ManagerDashboard() {
           loadAllAttendanceStatus();
         }}
       />
+
+
     </div>
   );
 } 

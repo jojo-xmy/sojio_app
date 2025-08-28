@@ -1,7 +1,8 @@
 "use client";
-import { useState, ChangeEvent } from 'react';
+import { useState, ChangeEvent, useEffect } from 'react';
 import { useUserStore } from '@/store/userStore';
-import { createTaskWithImages } from '@/lib/upload';
+
+import { supabase } from '@/lib/supabase';
 
 interface TaskCreateFormProps {
   isOpen: boolean;
@@ -12,17 +13,46 @@ interface TaskCreateFormProps {
 export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({ isOpen, onClose, onTaskCreated }) => {
   const user = useUserStore(s => s.user);
   const [formData, setFormData] = useState({
-    hotelName: '',
+    hotelId: '',
     checkInDate: '',
     checkOutDate: '',
     guestCount: 1, // 入住人数
-    hasCheckIn: 'yes', // 'yes' | 'no'
-    assignedCleaners: [] as string[],
     details: ''
   });
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [ownerHotels, setOwnerHotels] = useState<Array<{id: string; name: string; address: string}>>([]);
+
+  // 加载owner的酒店列表
+  useEffect(() => {
+    if (isOpen && user?.role === 'owner') {
+      loadOwnerHotels();
+    }
+  }, [isOpen, user]);
+
+  const loadOwnerHotels = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('hotels')
+        .select('id, name, address')
+        .eq('owner_id', user.id)
+        .order('name');
+
+      if (error) {
+        console.error('加载酒店列表失败:', error);
+        setError('加载酒店列表失败');
+        return;
+      }
+
+      setOwnerHotels(data || []);
+    } catch (error) {
+      console.error('加载酒店列表失败:', error);
+      setError('加载酒店列表失败');
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -39,51 +69,46 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({ isOpen, onClose,
     try {
       console.log('开始创建任务:', formData);
       
-      // 准备任务数据
-      const taskData = {
-        hotel_name: formData.hotelName,
-        check_in_date: formData.checkInDate,
-        check_out_date: formData.checkOutDate,
-        guest_count: formData.guestCount,
-        check_in_time: formData.hasCheckIn === 'yes' ? '15:00' : null, // 默认时间，后续可优化
-        assigned_cleaners: formData.assignedCleaners,
-        description: formData.details,
-        created_by: user.id.toString()
-      };
-      // 使用新的完整流程创建任务和上传图片
-      const result = await createTaskWithImages({
-        hotel_name: formData.hotelName,
-        date: formData.checkInDate, // 使用 check_in_date 作为 date
-        check_in_date: formData.checkInDate,
-        check_out_date: formData.checkOutDate,
-        guest_count: formData.guestCount,
-        check_in_time: formData.hasCheckIn === 'yes' ? '15:00' : null,
-        assigned_cleaners: formData.assignedCleaners,
-        description: formData.details || null,
-        created_by: user.id.toString()
-      }, selectedImages);
-      
-      if (result.task) {
-        console.log('任务创建成功:', result.task);
-        console.log('图片上传成功:', result.images.length, '张');
-        alert('任务创建成功！');
-        onTaskCreated?.(); // 通知父组件刷新
-        onClose();
-        
-        // 重置表单
-        setFormData({
-          hotelName: '',
-          checkInDate: '',
-          checkOutDate: '',
-          guestCount: 1,
-          hasCheckIn: 'yes',
-          assignedCleaners: [],
-          details: ''
-        });
-        setSelectedImages([]);
-      } else {
-        setError('任务创建失败，请重试');
+      // 获取选中的酒店信息
+      const selectedHotel = ownerHotels.find(hotel => hotel.id === formData.hotelId);
+      if (!selectedHotel) {
+        setError('请选择酒店');
+        return;
       }
+
+      // 创建calendar entry，触发器会自动创建对应的task
+      const { data, error } = await supabase
+        .from('calendar_entries')
+        .insert({
+          hotel_id: formData.hotelId,
+          check_in_date: formData.checkInDate,
+          check_out_date: formData.checkOutDate,
+          guest_count: formData.guestCount,
+          room_number: '', // 房东暂不指定房间号
+          special_notes: formData.details || null,
+          created_by: user.id
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        throw error;
+      }
+      
+      console.log('Calendar entry创建成功，触发器将自动创建task:', data);
+      alert('任务创建成功！');
+      onTaskCreated?.(); // 通知父组件刷新
+      onClose();
+      
+      // 重置表单
+      setFormData({
+        hotelId: '',
+        checkInDate: '',
+        checkOutDate: '',
+        guestCount: 1,
+        details: ''
+      });
+      setSelectedImages([]);
     } catch (error) {
       console.error('创建任务时出错:', error);
       setError('创建任务时发生错误，请重试');
@@ -131,17 +156,27 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({ isOpen, onClose,
         </div>
 
         <form onSubmit={handleSubmit}>
-          {/* 酒店名称 */}
+          {/* 酒店选择 */}
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>酒店名称 *</label>
-            <input
-              type="text"
-              value={formData.hotelName}
-              onChange={(e) => handleInputChange('hotelName', e.target.value)}
-              placeholder="请输入酒店名称"
+            <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>选择酒店 *</label>
+            <select
+              value={formData.hotelId}
+              onChange={(e) => handleInputChange('hotelId', e.target.value)}
               required
               style={{ width: '100%', padding: 8, border: '1px solid #ddd', borderRadius: 4 }}
-            />
+            >
+              <option value="">请选择酒店</option>
+              {ownerHotels.map(hotel => (
+                <option key={hotel.id} value={hotel.id}>
+                  {hotel.name} - {hotel.address}
+                </option>
+              ))}
+            </select>
+            {ownerHotels.length === 0 && (
+              <div style={{ color: '#ef4444', fontSize: 12, marginTop: 4 }}>
+                您暂无管理的酒店，请联系管理员
+              </div>
+            )}
           </div>
 
           {/* 入住日期 */}
@@ -182,79 +217,9 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({ isOpen, onClose,
             />
           </div>
 
-          {/* Check-in 有/无 */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>Check-in *</label>
-            <div style={{ display: 'flex', gap: 16 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <input
-                  type="radio"
-                  name="hasCheckIn"
-                  value="yes"
-                  checked={formData.hasCheckIn === 'yes'}
-                  onChange={(e) => handleInputChange('hasCheckIn', e.target.value)}
-                />
-                有
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <input
-                  type="radio"
-                  name="hasCheckIn"
-                  value="no"
-                  checked={formData.hasCheckIn === 'no'}
-                  onChange={(e) => handleInputChange('hasCheckIn', e.target.value)}
-                />
-                无
-              </label>
-            </div>
-          </div>
 
-          {/* 清扫人员选择 */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>清扫人员 *</label>
-            <div style={{ border: '1px solid #ddd', borderRadius: 4, padding: 8, minHeight: 100 }}>
-              <div style={{ color: '#888', fontSize: 14, marginBottom: 8 }}>请选择清扫人员（预留接口）</div>
-              <div style={{ color: '#666', fontSize: 12 }}>
-                示例：Yamada Taro, Nguyen Linh
-              </div>
-              {/* 临时添加一些清扫人员选项 */}
-              <div style={{ marginTop: 8 }}>
-                {['Yamada Taro', 'Nguyen Linh', 'Sato Hanako'].map(cleaner => (
-                  <label key={cleaner} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 4 }}>
-                    <input
-                      type="checkbox"
-                      checked={formData.assignedCleaners.includes(cleaner)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          handleInputChange('assignedCleaners', [...formData.assignedCleaners, cleaner]);
-                        } else {
-                          handleInputChange('assignedCleaners', formData.assignedCleaners.filter(c => c !== cleaner));
-                        }
-                      }}
-                    />
-                    {cleaner}
-                  </label>
-                ))}
-              </div>
-            </div>
-          </div>
 
-          {/* 图片上传 */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>任务图片</label>
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleImageChange}
-              style={{ width: '100%', padding: 8, border: '1px solid #ddd', borderRadius: 4 }}
-            />
-            {selectedImages.length > 0 && (
-              <div style={{ marginTop: 8, fontSize: 12, color: '#666' }}>
-                已选择 {selectedImages.length} 张图片
-              </div>
-            )}
-          </div>
+
 
           {/* 详细信息 */}
           <div style={{ marginBottom: 24 }}>

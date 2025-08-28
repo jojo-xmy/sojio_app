@@ -28,7 +28,9 @@ export const LoginRoleSelector: React.FC<LoginRoleSelectorProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchUserRoles();
+    if (lineUserId) {
+      fetchUserRoles();
+    }
   }, [lineUserId]);
 
   const fetchUserRoles = async () => {

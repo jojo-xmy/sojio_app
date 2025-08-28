@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { RoleSelector } from '@/components/RoleSelector';
 import { TaskCalendar } from '@/components/TaskCalendar';
 import { TaskCreateForm } from '@/components/TaskCreateForm';
+import { getTasksByOwner } from '@/lib/tasks';
 
 
 export default function OwnerDashboard() {
@@ -22,15 +23,13 @@ export default function OwnerDashboard() {
     try {
       setLoading(true);
       
-      // 这里可以添加获取房东任务统计的逻辑
-      // 暂时使用模拟数据
-      const mockTasks = [
-        { id: '1', status: 'completed', hotelName: '测试酒店1', roomNumber: '101' },
-        { id: '2', status: 'in_progress', hotelName: '测试酒店2', roomNumber: '102' },
-        { id: '3', status: 'assigned', hotelName: '测试酒店3', roomNumber: '103' },
-      ];
+      // 获取房东管理的任务
+      const ownerTasks = await getTasksByOwner(user.id.toString());
       
-      setTasksWithAttendance(mockTasks);
+      // 任务数据已经在getTasksByOwner中映射过字段名
+      const tasksForDisplay = ownerTasks;
+      
+      setTasksWithAttendance(tasksForDisplay);
     } catch (error) {
       console.error('加载房东任务统计失败:', error);
     } finally {

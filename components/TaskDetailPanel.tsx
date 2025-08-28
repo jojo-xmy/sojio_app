@@ -206,6 +206,22 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
         viewMode={'detail'}
         capabilities={caps}
         renderBlocks={{
+          ownerMessage: (user.role === 'manager' && task.description) ? (
+            <div style={{ 
+              border: '1px solid #e5e7eb', 
+              borderRadius: 8, 
+              padding: 12, 
+              backgroundColor: '#f9fafb',
+              marginBottom: 12
+            }}>
+              <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: '#6b7280' }}>
+                房东留言
+              </h4>
+              <div style={{ fontSize: 14, color: '#374151', lineHeight: 1.5 }}>
+                {task.description}
+              </div>
+            </div>
+          ) : null,
           taskEdit: caps.canEditTaskDetails ? (
             <div style={{ marginTop: 12 }}>
               {!editingTask ? (

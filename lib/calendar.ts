@@ -463,3 +463,111 @@ export async function updateTaskStatus(
     };
   }
 }
+
+// 获取owner管理酒店的日历任务数据
+export async function getOwnerCalendarTasks(
+  startDate: Date,
+  endDate: Date,
+  ownerId: string
+): Promise<TaskCalendarEvent[]> {
+  const startDateStr = startDate.toISOString().split('T')[0];
+  const endDateStr = endDate.toISOString().split('T')[0];
+
+  try {
+    // 首先获取owner管理的酒店ID列表
+    const { data: hotels, error: hotelError } = await supabase
+      .from('hotels')
+      .select('id')
+      .eq('owner_id', ownerId);
+
+    if (hotelError) {
+      console.error('Error fetching owner hotels:', hotelError);
+      return [];
+    }
+
+    if (!hotels || hotels.length === 0) {
+      console.log('Owner has no hotels');
+      return [];
+    }
+
+    const hotelIds = hotels.map(h => h.id);
+
+    // 然后查询这些酒店的任务
+    const { data: tasks, error: taskError } = await supabase
+      .from('tasks')
+      .select(`
+        *,
+        task_assignments(
+          *,
+          user_profiles:user_profiles!task_assignments_cleaner_id_fkey(
+            id, 
+            line_user_id, 
+            name, 
+            katakana, 
+            avatar, 
+            role, 
+            phone, 
+            created_at, 
+            updated_at
+          )
+        )
+      `)
+      .in('hotel_id', hotelIds)
+      .gte('check_in_date', startDateStr)
+      .lte('check_in_date', endDateStr)
+      .order('check_in_date');
+
+    if (taskError) {
+      console.error('Error fetching owner calendar tasks:', taskError);
+      return [];
+    }
+
+    // 转换为 TaskCalendarEvent 格式
+    const events: TaskCalendarEvent[] = (tasks || []).map(task => {
+      const assignments = task.task_assignments || [];
+      const assignedCleaners = assignments.map((assignment: any) => ({
+        id: assignment.user_profiles?.id || '',
+        name: assignment.user_profiles?.name || 'Unknown',
+        katakana: assignment.user_profiles?.katakana || '',
+        avatar: assignment.user_profiles?.avatar || '',
+        role: assignment.user_profiles?.role || 'cleaner',
+        assignedAt: assignment.created_at
+      }));
+
+      // 将数据库字段映射为Task接口字段
+      const mappedTask: Task = {
+        ...task,
+        hotelName: task.hotel_name,
+        checkInDate: task.check_in_date,
+        checkOutDate: task.check_out_date,
+        checkInTime: task.check_in_time,
+        roomNumber: task.room_number,
+        lockPassword: task.lock_password,
+        specialInstructions: task.special_instructions,
+        hotelAddress: task.hotel_address,
+        createdBy: task.created_by,
+        createdAt: task.created_at,
+        updatedAt: task.updated_at,
+        guestCount: task.guest_count,
+        assignedCleaners: task.assigned_cleaners || []
+      };
+
+      return {
+        id: task.id,
+        title: task.hotel_name,
+        start: new Date(`${task.check_in_date}T00:00:00`),
+        end: new Date(`${task.check_in_date}T23:59:59`),
+        date: task.check_in_date,
+        task: mappedTask,
+        assignedCleaners,
+        type: 'task'
+      };
+    });
+
+    console.log(`Loaded ${events.length} tasks for owner ${ownerId}`);
+    return events;
+  } catch (error) {
+    console.error('Error in getOwnerCalendarTasks:', error);
+    return [];
+  }
+}

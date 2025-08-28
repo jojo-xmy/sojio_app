@@ -13,6 +13,7 @@ export interface TaskImage {
 // 创建任务并上传图片的完整流程
 export async function createTaskWithImages(taskData: {
   hotel_name: string;
+  hotel_id?: string;
   date: string;
   check_in_date?: string;
   check_out_date?: string;
@@ -28,7 +29,7 @@ export async function createTaskWithImages(taskData: {
     // 1. 创建任务（插入 tasks 表），获取返回的 UUID id
     const task = await createTask({
       hotelName: taskData.hotel_name,
-      date: taskData.date,
+      hotelId: taskData.hotel_id,
       checkInDate: taskData.check_in_date || taskData.date,
       checkOutDate: taskData.check_out_date,
       guestCount: taskData.guest_count,

@@ -23,7 +23,7 @@ export interface TaskCardProps {
   viewMode?: 'list' | 'calendar' | 'detail';
   // 能力矩阵与插槽（可选）
   capabilities?: TaskCapabilities;
-  renderBlocks?: Partial<Record<'attendanceSummary' | 'attendanceActions' | 'attachments' | 'notes' | 'acknowledgement' | 'assignmentAction' | 'taskAcceptance' | 'taskPublish' | 'taskEdit', React.ReactNode>>;
+  renderBlocks?: Partial<Record<'attendanceSummary' | 'attendanceActions' | 'attachments' | 'notes' | 'acknowledgement' | 'assignmentAction' | 'taskAcceptance' | 'taskPublish' | 'taskEdit' | 'ownerMessage', React.ReactNode>>;
   onClick?: () => void;
   attendanceStatus?: 'none' | 'checked_in' | 'checked_out';
   // 新增字段
@@ -190,6 +190,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       {/* 能力矩阵驱动的可插拔区块（仅在传入时显示；不改变默认渲染） */}
       {capabilities && renderBlocks && (
         <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {renderBlocks.ownerMessage}
           {capabilities.visibleBlocks.includes('taskEdit') && renderBlocks.taskEdit}
           {capabilities.visibleBlocks.includes('taskPublish') && renderBlocks.taskPublish}
           {capabilities.visibleBlocks.includes('taskAcceptance') && renderBlocks.taskAcceptance}

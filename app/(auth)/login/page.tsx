@@ -7,8 +7,9 @@ import { LoginRoleSelector } from '@/components/LoginRoleSelector';
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, setUser, isInitialized } = useUserStore();
-  const [loading, setLoading] = useState(false);
+  const { user, isInitialized } = useUserStore();
+  const [loadingLogin, setLoadingLogin] = useState(false);
+  const [loadingRegister, setLoadingRegister] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showRoleSelector, setShowRoleSelector] = useState(false);
   const [detectedLineUserId, setDetectedLineUserId] = useState<string | null>(null);
@@ -30,15 +31,15 @@ export default function LoginPage() {
     }
   }, [searchParams]);
 
-  // 如果用户已登录，重定向到dashboard
+  // 如果用户已登录且不在角色选择状态，重定向到dashboard
   useEffect(() => {
-    if (isInitialized && user) {
+    if (isInitialized && user && !showRoleSelector) {
       router.push('/dashboard');
     }
-  }, [user, isInitialized, router]);
+  }, [user, isInitialized, router, showRoleSelector]);
 
   const handleLineLogin = () => {
-    setLoading(true);
+    setLoadingLogin(true);
     setError(null);
     
     // 重定向到LINE OAuth授权页面进行登录检测
@@ -46,7 +47,7 @@ export default function LoginPage() {
   };
 
   const handleLineRegister = () => {
-    setLoading(true);
+    setLoadingRegister(true);
     setError(null);
     
     // 重定向到LINE OAuth授权页面进行注册
@@ -68,15 +69,7 @@ export default function LoginPage() {
     }
   }, [searchParams, router]);
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/line?action=logout', { method: 'POST' });
-      setUser(null);
-      router.push('/login');
-    } catch (error) {
-      console.error('登出失败:', error);
-    }
-  };
+  // 注：登录页不再提供退出登录按钮
 
   // 显示角色选择器
   if (showRoleSelector && detectedLineUserId) {
@@ -264,17 +257,17 @@ export default function LoginPage() {
         {/* 登录按钮 */}
         <button
           onClick={handleLineLogin}
-          disabled={loading}
+          disabled={loadingLogin}
           style={{
             width: '100%',
             padding: '1rem',
-            background: loading ? '#9ca3af' : '#00B900',
+            background: loadingLogin ? '#9ca3af' : '#00B900',
             color: 'white',
             border: 'none',
             borderRadius: '8px',
             fontSize: '1rem',
             fontWeight: '600',
-            cursor: loading ? 'not-allowed' : 'pointer',
+            cursor: loadingLogin ? 'not-allowed' : 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -283,7 +276,7 @@ export default function LoginPage() {
             marginBottom: '0.75rem'
           }}
         >
-          {loading ? (
+          {loadingLogin ? (
             <>
               <div style={{
                 width: '20px',
@@ -306,17 +299,17 @@ export default function LoginPage() {
         {/* 注册按钮 */}
         <button
           onClick={handleLineRegister}
-          disabled={loading}
+          disabled={loadingRegister}
           style={{
             width: '100%',
             padding: '1rem',
-            background: loading ? '#9ca3af' : '#10b981',
+            background: loadingRegister ? '#9ca3af' : '#10b981',
             color: 'white',
             border: 'none',
             borderRadius: '8px',
             fontSize: '1rem',
             fontWeight: '600',
-            cursor: loading ? 'not-allowed' : 'pointer',
+            cursor: loadingRegister ? 'not-allowed' : 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -324,7 +317,7 @@ export default function LoginPage() {
             transition: 'background-color 0.2s'
           }}
         >
-          {loading ? (
+          {loadingRegister ? (
             <>
               <div style={{
                 width: '20px',
@@ -360,6 +353,8 @@ export default function LoginPage() {
             <li>首次注册默认角色为清洁员</li>
           </ul>
         </div>
+
+        {/* 登录页不显示退出登录按钮 */}
 
         <style jsx>{`
           @keyframes spin {

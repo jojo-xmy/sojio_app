@@ -31,7 +31,7 @@ export default function CleanerDashboard() {
               cursor: 'pointer' 
             }}
           >
-            可用性设置
+            日程注册
           </button>
           <button 
             onClick={() => router.push('/dashboard/cleaner/tasks')}

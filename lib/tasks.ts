@@ -35,8 +35,8 @@ export async function getTaskById(id: string): Promise<Task | null> {
 // 创建新任务
 export async function createTask(taskData: {
   hotelName: string;
-  date: string;
-  checkInDate?: string;
+  hotelId?: string;
+  checkInDate: string;
   checkOutDate?: string;
   guestCount?: number;
   checkInTime: string;
@@ -51,8 +51,8 @@ export async function createTask(taskData: {
 }): Promise<Task | null> {
   const newTask = {
     hotel_name: taskData.hotelName,
-    date: taskData.date,
-    check_in_date: taskData.checkInDate || taskData.date,
+    hotel_id: taskData.hotelId || null,
+    check_in_date: taskData.checkInDate,
     check_out_date: taskData.checkOutDate || null,
     guest_count: taskData.guestCount || 1,
     check_in_time: taskData.checkInTime,
@@ -286,6 +286,64 @@ export async function updateTaskDetails(
 }
 
 
+
+// 获取owner管理的任务（通过hotel_id关联hotels表的owner_id）
+export async function getTasksByOwner(ownerId: string): Promise<Task[]> {
+  try {
+    // 首先获取owner管理的酒店ID列表
+    const { data: hotels, error: hotelError } = await supabase
+      .from('hotels')
+      .select('id')
+      .eq('owner_id', ownerId);
+
+    if (hotelError) {
+      console.error('Error fetching owner hotels:', hotelError);
+      return [];
+    }
+
+    if (!hotels || hotels.length === 0) {
+      console.log('Owner has no hotels');
+      return [];
+    }
+
+    const hotelIds = hotels.map(h => h.id);
+
+    // 然后查询这些酒店的任务
+    const { data: tasks, error: taskError } = await supabase
+      .from('tasks')
+      .select('*')
+      .in('hotel_id', hotelIds)
+      .order('created_at', { ascending: false });
+    
+    if (taskError) {
+      console.error('Error fetching tasks by owner:', taskError);
+      return [];
+    }
+    
+    // 将数据库字段名转换为Task接口字段名
+    const mappedTasks = (tasks || []).map(task => ({
+      ...task,
+      hotelName: task.hotel_name,
+      checkInDate: task.check_in_date,
+      checkOutDate: task.check_out_date,
+      checkInTime: task.check_in_time,
+      roomNumber: task.room_number,
+      lockPassword: task.lock_password,
+      specialInstructions: task.special_instructions,
+      hotelAddress: task.hotel_address,
+      createdBy: task.created_by,
+      createdAt: task.created_at,
+      updatedAt: task.updated_at,
+      guestCount: task.guest_count
+    }));
+
+    console.log(`Loaded ${mappedTasks.length} tasks for owner ${ownerId}`);
+    return mappedTasks;
+  } catch (error) {
+    console.error('Error in getTasksByOwner:', error);
+    return [];
+  }
+}
 
 // 删除任务
 export async function deleteTask(taskId: string): Promise<{ success: boolean; error?: string }> {

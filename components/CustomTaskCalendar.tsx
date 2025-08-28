@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useUserStore } from '@/store/userStore';
 import { TaskStatusBadge } from '@/components/TaskStatusBadge';
 import { TaskStatus } from '@/types/task';
-import { getCalendarTasks, getAvailableCleanersForDate, assignTaskToCleaners } from '@/lib/calendar';
+import { getCalendarTasks, getOwnerCalendarTasks, getAvailableCleanersForDate, assignTaskToCleaners } from '@/lib/calendar';
 import { TaskCalendarEvent, AvailableCleaner } from '@/types/calendar';
 import { TaskDetailPanel } from '@/components/TaskDetailPanel';
 
@@ -29,7 +29,10 @@ export function CustomTaskCalendar({ className }: CustomTaskCalendarProps) {
     
     try {
       setLoading(true);
-      const calendarEvents = await getCalendarTasks(startDate, endDate);
+      // 根据用户角色调用不同的数据加载函数
+      const calendarEvents = user.role === 'owner' 
+        ? await getOwnerCalendarTasks(startDate, endDate, user.id.toString())
+        : await getCalendarTasks(startDate, endDate);
       
       // 对任务进行优先级排序
       const sortedEvents = calendarEvents.sort((a, b) => {

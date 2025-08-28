@@ -111,6 +111,7 @@ CREATE TABLE public.tasks (
   attendance_status text,
   hotel_id uuid,
   check_out_date date,
+  guest_count integer DEFAULT 1,
   CONSTRAINT tasks_pkey PRIMARY KEY (id),
   CONSTRAINT tasks_hotel_id_fkey FOREIGN KEY (hotel_id) REFERENCES public.hotels(id),
   CONSTRAINT tasks_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.user_profiles(id)

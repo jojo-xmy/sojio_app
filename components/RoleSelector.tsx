@@ -34,7 +34,7 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
       // 如果没有line_user_id，设置loading为false，这样至少可以显示退出按钮
       setLoading(false);
     }
-  }, [user]);
+  }, [user?.line_user_id]); // 只依赖line_user_id，避免不必要的重新获取
 
   const fetchUserRoles = async (lineUserId: string) => {
     try {

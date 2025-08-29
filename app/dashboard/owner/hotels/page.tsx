@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/userStore';
-import { getUserHotels, createHotel } from '@/lib/hotelManagement';
+import { getUserHotels, createHotel, updateHotel } from '@/lib/hotelManagement';
 import { Hotel, CreateHotelData } from '@/types/hotel';
 
 export default function HotelsPage() {
@@ -13,6 +13,9 @@ export default function HotelsPage() {
   const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState<{ hotelId: string; name: string; address: string; imageUrl: string }>({ hotelId: '', name: '', address: '', imageUrl: '' });
 
   // 表单状态
   const [formData, setFormData] = useState<CreateHotelData>({
@@ -74,12 +77,26 @@ export default function HotelsPage() {
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">我的酒店</h1>
-        <button
-          onClick={() => setShowCreateForm(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          添加酒店
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowCreateForm(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            添加酒店
+          </button>
+          <button
+            onClick={() => {
+              // 打开编辑表单，初始化为第一个酒店（可在表单中切换）
+              const first = hotels[0];
+              setEditForm({ hotelId: first?.id || '', name: first?.name || '', address: first?.address || '', imageUrl: first?.imageUrl || '' });
+              setShowEditForm(true);
+            }}
+            className="bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
+            disabled={hotels.length === 0}
+          >
+            编辑酒店信息
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -194,6 +211,86 @@ export default function HotelsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 编辑酒店信息表单（带酒店选择） */}
+      {showEditForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h2 className="text-xl font-bold mb-4">编辑酒店信息</h2>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">选择酒店 *</label>
+              <select
+                value={editForm.hotelId}
+                onChange={(e) => {
+                  const h = hotels.find(x => x.id === e.target.value);
+                  setEditForm({ hotelId: h?.id || '', name: h?.name || '', address: h?.address || '', imageUrl: h?.imageUrl || '' });
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {hotels.map(h => (
+                  <option key={h.id} value={h.id}>{h.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">酒店名称 *</label>
+              <input
+                type="text"
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">地址 *</label>
+              <input
+                type="text"
+                value={editForm.address}
+                onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">图片URL（可选）</label>
+              <input
+                type="url"
+                value={editForm.imageUrl}
+                onChange={(e) => setEditForm({ ...editForm, imageUrl: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowEditForm(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={async () => {
+                  if (!editForm.hotelId) return;
+                  try {
+                    setEditing(true);
+                    await updateHotel(editForm.hotelId, { name: editForm.name, address: editForm.address, imageUrl: editForm.imageUrl });
+                    await loadHotels();
+                    setShowEditForm(false);
+                  } catch (err) {
+                    alert('更新失败');
+                    console.error(err);
+                  } finally {
+                    setEditing(false);
+                  }
+                }}
+                disabled={editing}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {editing ? '保存中...' : '保存'}
+              </button>
+            </div>
           </div>
         </div>
       )}

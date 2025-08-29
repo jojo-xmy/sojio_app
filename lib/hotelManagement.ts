@@ -66,6 +66,28 @@ export async function getHotelById(hotelId: string): Promise<Hotel | null> {
   return data;
 }
 
+// 更新酒店信息
+export async function updateHotel(hotelId: string, updates: Partial<Pick<Hotel, 'name' | 'address' | 'imageUrl'>>): Promise<Hotel> {
+  const payload: any = {};
+  if (updates.name !== undefined) payload.name = updates.name;
+  if (updates.address !== undefined) payload.address = updates.address;
+  if (updates.imageUrl !== undefined) payload.image_url = updates.imageUrl;
+
+  const { data, error } = await supabase
+    .from('hotels')
+    .update(payload)
+    .eq('id', hotelId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('更新酒店信息失败:', error);
+    throw new Error('更新酒店信息失败');
+  }
+
+  return data as Hotel;
+}
+
 // 日历管理API
 
 // 获取酒店的日历条目
@@ -94,7 +116,21 @@ export async function getHotelCalendarEntries(
     throw new Error('获取日历条目失败');
   }
 
-  return data || [];
+  // 字段映射：owner_notes -> ownerNotes
+  const mapped = (data || []).map((row: any) => ({
+    id: row.id,
+    hotelId: row.hotel_id,
+    checkInDate: row.check_in_date,
+    checkOutDate: row.check_out_date,
+    guestCount: row.guest_count,
+    roomNumber: row.room_number || '',
+    ownerNotes: row.owner_notes || '',
+    createdBy: row.created_by,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  })) as CalendarEntry[];
+
+  return mapped;
 }
 
 // 创建日历条目
@@ -107,7 +143,7 @@ export async function createCalendarEntry(entryData: CreateCalendarEntryData, us
       check_out_date: entryData.checkOutDate,
       guest_count: entryData.guestCount,
       room_number: entryData.roomNumber,
-      special_notes: entryData.specialNotes,
+      owner_notes: entryData.ownerNotes,
       created_by: userId
     })
     .select()
@@ -126,9 +162,36 @@ export async function updateCalendarEntry(
   entryId: string, 
   updates: Partial<CreateCalendarEntryData>
 ): Promise<CalendarEntry> {
+  const mapped: any = { ...updates };
+  // 字段映射 camelCase -> snake_case（仅映射存在的字段）
+  if (Object.prototype.hasOwnProperty.call(mapped, 'hotelId')) {
+    mapped.hotel_id = mapped.hotelId;
+    delete mapped.hotelId;
+  }
+  if (Object.prototype.hasOwnProperty.call(mapped, 'checkInDate')) {
+    mapped.check_in_date = mapped.checkInDate;
+    delete mapped.checkInDate;
+  }
+  if (Object.prototype.hasOwnProperty.call(mapped, 'checkOutDate')) {
+    mapped.check_out_date = mapped.checkOutDate;
+    delete mapped.checkOutDate;
+  }
+  if (Object.prototype.hasOwnProperty.call(mapped, 'guestCount')) {
+    mapped.guest_count = mapped.guestCount;
+    delete mapped.guestCount;
+  }
+  if (Object.prototype.hasOwnProperty.call(mapped, 'roomNumber')) {
+    mapped.room_number = mapped.roomNumber;
+    delete mapped.roomNumber;
+  }
+  if (Object.prototype.hasOwnProperty.call(mapped, 'ownerNotes')) {
+    mapped.owner_notes = mapped.ownerNotes;
+    delete mapped.ownerNotes;
+  }
+
   const { data, error } = await supabase
     .from('calendar_entries')
-    .update(updates)
+    .update(mapped)
     .eq('id', entryId)
     .select()
     .single();
@@ -152,6 +215,35 @@ export async function deleteCalendarEntry(entryId: string): Promise<void> {
     console.error('删除日历条目失败:', error);
     throw new Error('删除日历条目失败');
   }
+}
+
+// 通过 task_id 获取对应的入住登记（用于从任务侧反查日历条目）
+export async function getCalendarEntryByTaskId(taskId: string): Promise<CalendarEntry | null> {
+  const { data, error } = await supabase
+    .from('calendar_entries')
+    .select('*')
+    .eq('task_id', taskId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('通过 task_id 获取日历条目失败:', error);
+    throw new Error('获取入住登记失败');
+  }
+
+  if (!data) return null;
+
+  return {
+    id: data.id,
+    hotelId: data.hotel_id,
+    checkInDate: data.check_in_date,
+    checkOutDate: data.check_out_date,
+    guestCount: data.guest_count,
+    roomNumber: data.room_number || '',
+    ownerNotes: data.owner_notes || '',
+    createdBy: data.created_by,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at
+  } as CalendarEntry;
 }
 
 // 清洁员可用性管理API

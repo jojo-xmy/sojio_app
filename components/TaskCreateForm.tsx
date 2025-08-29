@@ -85,7 +85,7 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({ isOpen, onClose,
           check_out_date: formData.checkOutDate,
           guest_count: formData.guestCount,
           room_number: '', // 房东暂不指定房间号
-          special_notes: formData.details || null,
+          owner_notes: formData.details || null,
           created_by: user.id
         })
         .select()

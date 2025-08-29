@@ -98,7 +98,8 @@ export function getTaskCapabilities(
 
   // 角色与状态规则
   if (role === 'owner') {
-    // 房东只能查看任务进度，不能编辑
+    // 房东仅查看任务进度与附件，不编辑清扫任务（编辑/删除面向入住登记在前端单独实现）
+    caps.canEditTaskDetails = false;
     caps.showLockPassword = false; // 房东不需要看密码
     
     // 房东只在任务被分配后才能看到清扫进程和清洁员信息

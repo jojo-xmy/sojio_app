@@ -3,28 +3,26 @@
 | CREATE OR REPLACE FUNCTION public.generate_cleaning_tasks() RETURNS trigger LANGUAGE plpgsql AS $$ 
 
 BEGIN
-    -- 当有新的退房日期时，自动创建清扫任务
+    -- 当有新的退房日期时，自动创建清扫任务（不再自动写入 description）
     INSERT INTO tasks (
         hotel_name,
-        date,
+        check_in_date,
         status,
         created_by,
-        room_number,
-        description
+        room_number
     )
     SELECT 
         h.name,
         NEW.check_out_date,
         'draft',
         NEW.created_by,
-        NEW.room_number,
-        '退房后清扫任务 - 房间: ' || COALESCE(NEW.room_number, '未指定')
+        NEW.room_number
     FROM hotels h
     WHERE h.id = NEW.hotel_id
       AND NOT EXISTS (
           SELECT 1 FROM tasks t 
           WHERE t.hotel_name = h.name 
-            AND t.date = NEW.check_out_date
+            AND t.check_in_date = NEW.check_out_date
             AND t.room_number = NEW.room_number
       );
     

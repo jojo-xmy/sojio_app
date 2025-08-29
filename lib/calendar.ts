@@ -124,6 +124,7 @@ export async function getCalendarTasks(
     // 映射数据库字段到Task类型
     const mappedTask: Task = {
       id: task.id,
+      hotelId: task.hotel_id,
       hotelName: task.hotel_name || '',
       checkInDate: task.check_in_date || '',
       checkInTime: task.check_in_time || '',
@@ -133,6 +134,8 @@ export async function getCalendarTasks(
       status: task.status,
       description: task.description || '',
       note: task.note || '',
+      ownerNotes: task.owner_notes || '',
+      cleanerNotes: task.cleaner_notes || '',
       images: task.images || [],
       hotelAddress: task.hotel_address || '',
       roomNumber: task.room_number || '',
@@ -382,6 +385,7 @@ export async function getTaskWithAssignments(taskId: string): Promise<TaskCalend
   // 映射数据库字段到Task类型
   const mappedTask: Task = {
     id: data.id,
+    hotelId: data.hotel_id,
     hotelName: data.hotel_name || '',
     checkInDate: data.check_in_date || '',
     checkInTime: data.check_in_time || '',
@@ -391,6 +395,8 @@ export async function getTaskWithAssignments(taskId: string): Promise<TaskCalend
     status: data.status,
     description: data.description || '',
     note: data.note || '',
+    ownerNotes: data.owner_notes || '',
+    cleanerNotes: data.cleaner_notes || '',
     images: data.images || [],
     hotelAddress: data.hotel_address || '',
     roomNumber: data.room_number || '',
@@ -549,7 +555,9 @@ export async function getOwnerCalendarTasks(
         createdAt: task.created_at,
         updatedAt: task.updated_at,
         guestCount: task.guest_count,
-        assignedCleaners: task.assigned_cleaners || []
+        assignedCleaners: task.assigned_cleaners || [],
+        ownerNotes: task.owner_notes || '',
+        cleanerNotes: task.cleaner_notes || ''
       };
 
       return {

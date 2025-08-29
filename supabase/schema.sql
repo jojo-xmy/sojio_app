@@ -18,13 +18,13 @@ CREATE TABLE public.calendar_entries (
   check_out_date date NOT NULL,
   guest_count integer NOT NULL DEFAULT 1,
   room_number text,
-  special_notes text,
+  owner_notes text,
   created_by uuid,
   created_at timestamp without time zone DEFAULT now(),
   updated_at timestamp without time zone DEFAULT now(),
   CONSTRAINT calendar_entries_pkey PRIMARY KEY (id),
-  CONSTRAINT calendar_entries_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.user_profiles(id),
-  CONSTRAINT calendar_entries_hotel_id_fkey FOREIGN KEY (hotel_id) REFERENCES public.hotels(id)
+  CONSTRAINT calendar_entries_hotel_id_fkey FOREIGN KEY (hotel_id) REFERENCES public.hotels(id),
+  CONSTRAINT calendar_entries_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.user_profiles(id)
 );
 CREATE TABLE public.cleaner_availability (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -88,7 +88,6 @@ CREATE TABLE public.task_images (
   CONSTRAINT task_images_pkey PRIMARY KEY (id),
   CONSTRAINT task_images_task_id_fkey FOREIGN KEY (task_id) REFERENCES public.tasks(id)
 );
-
 CREATE TABLE public.tasks (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   hotel_name text NOT NULL,
@@ -106,17 +105,18 @@ CREATE TABLE public.tasks (
   updated_at timestamp with time zone DEFAULT now(),
   hotel_address text,
   lock_password text,
-  special_instructions text,
-  note text,
+  notes text,
   attendance_status text,
   hotel_id uuid,
   check_out_date date,
+  cleaning_date date,
   guest_count integer DEFAULT 1,
+  owner_notes text,
+  cleaner_notes text,
   CONSTRAINT tasks_pkey PRIMARY KEY (id),
-  CONSTRAINT tasks_hotel_id_fkey FOREIGN KEY (hotel_id) REFERENCES public.hotels(id),
-  CONSTRAINT tasks_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.user_profiles(id)
+  CONSTRAINT tasks_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.user_profiles(id),
+  CONSTRAINT tasks_hotel_id_fkey FOREIGN KEY (hotel_id) REFERENCES public.hotels(id)
 );
-
 CREATE TABLE public.user_profiles (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   line_user_id text NOT NULL,

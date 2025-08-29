@@ -63,7 +63,7 @@ export function CustomTaskCalendar({ className }: CustomTaskCalendarProps) {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user?.role, user?.id]); // 只依赖user.role和user.id，而不是整个user对象
 
   // 处理任务点击（右侧面板展示并加载可用清洁员）
   const handleTaskClick = useCallback(async (event: TaskCalendarEvent) => {
@@ -133,7 +133,7 @@ export function CustomTaskCalendar({ className }: CustomTaskCalendarProps) {
     } finally {
       setAssigning(false);
     }
-  }, [selectedEvent, user, currentDate, loadCalendarData]);
+  }, [selectedEvent?.task.id, user?.id, currentDate, loadCalendarData]); // 只依赖必要的属性
 
   // 获取月份的第一天和最后一天
   const getMonthRange = (date: Date) => {

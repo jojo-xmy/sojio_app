@@ -21,7 +21,7 @@ export function useTask(task: Task) {
     }
     const imgs = await getTaskImages(task.id);
     setImages(imgs);
-  }, [task, user]);
+  }, [task.id, user?.id]); // 只依赖task.id和user.id，而不是整个task和user对象
 
   useEffect(() => {
     refresh();

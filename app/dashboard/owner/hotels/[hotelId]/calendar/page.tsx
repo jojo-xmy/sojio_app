@@ -32,7 +32,7 @@ export default function HotelCalendarPage() {
     checkOutDate: '',
     guestCount: 1,
     roomNumber: '',
-    specialNotes: ''
+    ownerNotes: ''
   });
 
   useEffect(() => {
@@ -79,7 +79,7 @@ export default function HotelCalendarPage() {
         checkOutDate: '',
         guestCount: 1,
         roomNumber: '',
-        specialNotes: ''
+        ownerNotes: ''
       });
       setShowCreateForm(false);
       await loadHotelData(); // 重新加载数据
@@ -105,7 +105,7 @@ export default function HotelCalendarPage() {
         checkOutDate: '',
         guestCount: 1,
         roomNumber: '',
-        specialNotes: ''
+        ownerNotes: ''
       });
       await loadHotelData(); // 重新加载数据
     } catch (err) {
@@ -136,7 +136,7 @@ export default function HotelCalendarPage() {
       checkOutDate: entry.checkOutDate,
       guestCount: entry.guestCount,
       roomNumber: entry.roomNumber || '',
-      specialNotes: entry.specialNotes || ''
+      ownerNotes: entry.ownerNotes || ''
     });
   };
 
@@ -148,7 +148,7 @@ export default function HotelCalendarPage() {
       checkOutDate: '',
       guestCount: 1,
       roomNumber: '',
-      specialNotes: ''
+      ownerNotes: ''
     });
   };
 
@@ -248,10 +248,10 @@ export default function HotelCalendarPage() {
                 </div>
               </div>
               
-              {entry.specialNotes && (
+              {entry.ownerNotes && (
                 <div>
-                  <span className="text-sm font-medium text-gray-700">特殊说明:</span>
-                  <p className="text-gray-900 mt-1">{entry.specialNotes}</p>
+                  <span className="text-sm font-medium text-gray-700">房东备注:</span>
+                  <p className="text-gray-900 mt-1">{entry.ownerNotes}</p>
                 </div>
               )}
               
@@ -322,14 +322,14 @@ export default function HotelCalendarPage() {
               </div>
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  特殊说明（可选）
+                  房东备注（可选）
                 </label>
                 <textarea
-                  value={formData.specialNotes}
-                  onChange={(e) => setFormData({ ...formData, specialNotes: e.target.value })}
+                  value={formData.ownerNotes}
+                  onChange={(e) => setFormData({ ...formData, ownerNotes: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   rows={3}
-                  placeholder="输入特殊说明"
+                  placeholder="输入房东备注"
                 />
               </div>
               <div className="flex gap-3">

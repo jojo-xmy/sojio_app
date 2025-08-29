@@ -20,7 +20,7 @@ export interface CalendarEntry {
   checkOutDate: string;
   guestCount: number;
   roomNumber?: string;
-  specialNotes?: string;
+  ownerNotes?: string;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -67,7 +67,7 @@ export interface CreateCalendarEntryData {
   checkOutDate: string;
   guestCount: number;
   roomNumber?: string;
-  specialNotes?: string;
+  ownerNotes?: string;
 }
 
 // 可用性设置数据

@@ -12,7 +12,8 @@ import { getTaskCapabilities } from '@/lib/taskCapabilities';
 import { TaskCard } from '@/components/TaskCard';
 import { useTask } from '@/lib/useTask';
 import { getAvailableCleanersForDate, assignTaskToCleaners } from '@/lib/calendar';
-import { publishTask, acceptTask, rejectTask, updateTaskDetails } from '@/lib/tasks';
+import { getCalendarEntryByTaskId, updateCalendarEntry, deleteCalendarEntry } from '@/lib/hotelManagement';
+import { publishTask, acceptTask, rejectTask, updateTaskDetails, updateOwnerNotes, deleteTask } from '@/lib/tasks';
 
 interface TaskDetailPanelProps {
   task: Task;
@@ -31,16 +32,85 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
   const [assignmentNotes, setAssignmentNotes] = useState('');
   const [editingTask, setEditingTask] = useState(false);
   const [editFormData, setEditFormData] = useState({
-    note: task.note || '',
+    description: task.description || '',
     cleaningDate: task.cleaningDate || '',
     roomNumber: task.roomNumber || '',
     lockPassword: task.lockPassword || ''
   });
+  const [ownerNotesDraft, setOwnerNotesDraft] = useState(task.ownerNotes || '');
   // 备品统计（保留，暂不抽离）
   const [inventory, setInventory] = useState({ towel: '', soap: '' });
   const [inventorySubmitted, setInventorySubmitted] = useState(false);
+  const [ownerEditingEntry, setOwnerEditingEntry] = useState<null | {
+    id: string;
+    checkInDate: string;
+    checkOutDate: string;
+    guestCount: number;
+    roomNumber?: string;
+    ownerNotes?: string;
+  }>(null);
 
   useEffect(() => { /* useTask 内部已处理加载 */ }, [task.id, user?.id]);
+
+  // Owner 打开入住登记编辑
+  const openOwnerEdit = async () => {
+    try {
+      const entry = await getCalendarEntryByTaskId(task.id);
+      if (!entry) {
+        alert('未找到对应的入住登记');
+        return;
+      }
+      setOwnerEditingEntry({
+        id: entry.id,
+        checkInDate: entry.checkInDate,
+        checkOutDate: entry.checkOutDate,
+        guestCount: entry.guestCount,
+        roomNumber: entry.roomNumber,
+        ownerNotes: entry.ownerNotes
+      });
+    } catch (e) {
+      console.error('加载入住登记失败:', e);
+      alert('加载入住登记失败');
+    }
+  };
+
+  const saveOwnerEntry = async () => {
+    if (!ownerEditingEntry) return;
+    try {
+      await updateCalendarEntry(ownerEditingEntry.id, {
+        checkInDate: ownerEditingEntry.checkInDate,
+        checkOutDate: ownerEditingEntry.checkOutDate,
+        guestCount: ownerEditingEntry.guestCount,
+        roomNumber: ownerEditingEntry.roomNumber || '',
+        ownerNotes: ownerEditingEntry.ownerNotes || ''
+      });
+      setOwnerEditingEntry(null);
+      await refresh();
+      onAttendanceUpdate?.();
+    } catch (e) {
+      console.error('更新入住登记失败:', e);
+      alert('更新入住登记失败');
+    }
+  };
+
+  const deleteOwnerEntry = async () => {
+    try {
+      const entry = await getCalendarEntryByTaskId(task.id);
+      if (!entry) {
+        alert('未找到对应的入住登记');
+        return;
+      }
+      if (!confirm('确定删除该入住登记及其关联任务？该操作不可恢复。')) return;
+      await deleteCalendarEntry(entry.id);
+      setOwnerEditingEntry(null);
+      await refresh();
+      onAttendanceUpdate?.();
+      alert('已删除入住登记与关联任务');
+    } catch (e) {
+      console.error('删除入住登记失败:', e);
+      alert('删除入住登记失败');
+    }
+  };
 
   // 处理清洁工选择
   const handleCleanerToggle = (cleanerId: string) => {
@@ -83,7 +153,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
   const handleEditSave = async () => {
     try {
       const result = await updateTaskDetails(task.id, {
-        note: editFormData.note,
+        description: editFormData.description,
         cleaningDate: editFormData.cleaningDate,
         roomNumber: editFormData.roomNumber,
         lockPassword: editFormData.lockPassword
@@ -206,7 +276,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
         viewMode={'detail'}
         capabilities={caps}
         renderBlocks={{
-          ownerMessage: (user.role === 'manager' && task.description) ? (
+          ownerMessage: (
             <div style={{ 
               border: '1px solid #e5e7eb', 
               borderRadius: 8, 
@@ -215,31 +285,30 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
               marginBottom: 12
             }}>
               <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: '#6b7280' }}>
-                房东留言
+                房东备注
               </h4>
               <div style={{ fontSize: 14, color: '#374151', lineHeight: 1.5 }}>
-                {task.description}
+                {task.ownerNotes || '—'}
               </div>
+              {user.role === 'owner' && (
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
+                  <button onClick={openOwnerEdit} style={{ padding: '6px 12px', background: '#6b7280', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>编辑入住登记</button>
+                  <button onClick={deleteOwnerEntry} style={{ padding: '6px 12px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>删除</button>
+                </div>
+              )}
             </div>
-          ) : null,
-          taskEdit: caps.canEditTaskDetails ? (
+          ),
+          taskEdit: (user.role === 'manager' && caps.canEditTaskDetails) ? (
             <div style={{ marginTop: 12 }}>
               {!editingTask ? (
-                <button
-                  onClick={() => setEditingTask(true)}
-                  style={{ 
-                    padding: '8px 16px', 
-                    background: '#6b7280', 
-                    color: '#fff', 
-                    border: 'none', 
-                    borderRadius: 6, 
-                    fontWeight: 600, 
-                    fontSize: 14, 
-                    cursor: 'pointer' 
-                  }}
-                >
-                  编辑任务详情
-                </button>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                  <button
+                    onClick={() => setEditingTask(true)}
+                    style={{ padding: '8px 16px', background: '#6b7280', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}
+                  >
+                    编辑任务
+                  </button>
+                </div>
               ) : (
                 <div style={{ 
                   border: '1px solid #e5e7eb', 
@@ -251,11 +320,11 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                   
                   <div style={{ marginBottom: 12 }}>
                     <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 4 }}>
-                      备注
+                      任务描述
                     </label>
                     <textarea
-                      value={editFormData.note}
-                      onChange={(e) => setEditFormData({...editFormData, note: e.target.value})}
+                      value={editFormData.description}
+                      onChange={(e) => setEditFormData({...editFormData, description: e.target.value})}
                       style={{ 
                         width: '100%', 
                         padding: 8, 
@@ -264,7 +333,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                         fontSize: 14,
                         minHeight: 60
                       }}
-                      placeholder="输入任务备注"
+                      placeholder="输入任务描述"
                     />
                   </div>
 
@@ -324,7 +393,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                     />
                   </div>
 
-                  <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                  <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', alignItems: 'center' }}>
                     <button
                       onClick={() => setEditingTask(false)}
                       style={{ 
@@ -482,6 +551,41 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
           )
         }}
       />
+
+      {/* Owner 入住登记编辑弹窗 */}
+      {user.role === 'owner' && ownerEditingEntry && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: '#fff', borderRadius: 8, padding: 16, width: '90%', maxWidth: 480 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>编辑入住登记</h3>
+            <div style={{ display: 'grid', gap: 12 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 14, marginBottom: 4 }}>入住日期</label>
+                <input type="date" value={ownerEditingEntry.checkInDate} onChange={(e) => setOwnerEditingEntry({ ...ownerEditingEntry, checkInDate: e.target.value })} style={{ width: '100%', padding: 8, border: '1px solid #d1d5db', borderRadius: 6 }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 14, marginBottom: 4 }}>退房日期</label>
+                <input type="date" value={ownerEditingEntry.checkOutDate} onChange={(e) => setOwnerEditingEntry({ ...ownerEditingEntry, checkOutDate: e.target.value })} style={{ width: '100%', padding: 8, border: '1px solid #d1d5db', borderRadius: 6 }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 14, marginBottom: 4 }}>入住人数</label>
+                <input type="number" min={1} value={ownerEditingEntry.guestCount} onChange={(e) => setOwnerEditingEntry({ ...ownerEditingEntry, guestCount: parseInt(e.target.value) || 1 })} style={{ width: '100%', padding: 8, border: '1px solid #d1d5db', borderRadius: 6 }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 14, marginBottom: 4 }}>房间号</label>
+                <input type="text" value={ownerEditingEntry.roomNumber || ''} onChange={(e) => setOwnerEditingEntry({ ...ownerEditingEntry, roomNumber: e.target.value })} style={{ width: '100%', padding: 8, border: '1px solid #d1d5db', borderRadius: 6 }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 14, marginBottom: 4 }}>房东备注</label>
+                <textarea value={ownerEditingEntry.ownerNotes || ''} onChange={(e) => setOwnerEditingEntry({ ...ownerEditingEntry, ownerNotes: e.target.value })} style={{ width: '100%', padding: 8, border: '1px solid #d1d5db', borderRadius: 6, minHeight: 60 }} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
+              <button onClick={() => setOwnerEditingEntry(null)} style={{ padding: '8px 16px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: 6, cursor: 'pointer' }}>取消</button>
+              <button onClick={saveOwnerEntry} style={{ padding: '8px 16px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>保存</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 分配清洁工面板 - 在任务卡片下方展开 */}
       {showAssignPanel && (

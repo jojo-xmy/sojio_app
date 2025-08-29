@@ -253,6 +253,7 @@ export async function rejectTask(taskId: string, cleanerId: string, reason?: str
 export async function updateTaskDetails(
   taskId: string, 
   updates: {
+    description?: string;
     note?: string;
     cleaningDate?: string;
     roomNumber?: string;
@@ -264,6 +265,7 @@ export async function updateTaskDetails(
       updated_at: new Date().toISOString()
     };
 
+    if (updates.description !== undefined) updateData.description = updates.description;
     if (updates.note !== undefined) updateData.note = updates.note;
     if (updates.cleaningDate !== undefined) updateData.cleaning_date = updates.cleaningDate;
     if (updates.roomNumber !== undefined) updateData.room_number = updates.roomNumber;
@@ -282,6 +284,76 @@ export async function updateTaskDetails(
   } catch (error) {
     console.error('更新任务详情失败:', error);
     return { success: false, error: error instanceof Error ? error.message : '更新任务详情失败' };
+  }
+}
+
+// 清洁员退勤备注：写入 tasks.cleaner_notes
+export async function updateCleanerNotes(taskId: string, cleanerNotes: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase
+      .from('tasks')
+      .update({ cleaner_notes: cleanerNotes || null, updated_at: new Date().toISOString() })
+      .eq('id', taskId);
+
+    if (error) throw error;
+    return { success: true };
+  } catch (error) {
+    console.error('更新清洁员备注失败:', error);
+    return { success: false, error: error instanceof Error ? error.message : '更新清洁员备注失败' };
+  }
+}
+
+// 房东备注：写入 tasks.owner_notes
+export async function updateOwnerNotes(taskId: string, ownerNotes: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase
+      .from('tasks')
+      .update({ owner_notes: ownerNotes || null, updated_at: new Date().toISOString() })
+      .eq('id', taskId);
+
+    if (error) throw error;
+    return { success: true };
+  } catch (error) {
+    console.error('更新房东备注失败:', error);
+    return { success: false, error: error instanceof Error ? error.message : '更新房东备注失败' };
+  }
+}
+
+// 删除任务（清理依赖：task_assignments、task_images、attendance）
+export async function deleteTask(taskId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    // 删除关联分配
+    const { error: assignErr } = await supabase
+      .from('task_assignments')
+      .delete()
+      .eq('task_id', taskId);
+    if (assignErr) throw assignErr;
+
+    // 删除关联图片
+    const { error: imgErr } = await supabase
+      .from('task_images')
+      .delete()
+      .eq('task_id', taskId);
+    if (imgErr) throw imgErr;
+
+    // 删除打卡记录
+    const { error: attErr } = await supabase
+      .from('attendance')
+      .delete()
+      .eq('task_id', taskId);
+    if (attErr) throw attErr;
+
+    // 删除任务
+    const { error: taskErr } = await supabase
+      .from('tasks')
+      .delete()
+      .eq('id', taskId);
+    if (taskErr) throw taskErr;
+
+    return { success: true };
+  } catch (error) {
+    console.error('删除任务失败:', error);
+    return { success: false, error: error instanceof Error ? error.message : '删除任务失败' };
   }
 }
 
@@ -346,16 +418,4 @@ export async function getTasksByOwner(ownerId: string): Promise<Task[]> {
 }
 
 // 删除任务
-export async function deleteTask(taskId: string): Promise<{ success: boolean; error?: string }> {
-  const { error } = await supabase
-    .from('tasks')
-    .delete()
-    .eq('id', taskId);
-  
-  if (error) {
-    console.error('Error deleting task:', error);
-    return { success: false, error: error.message };
-  }
-  
-  return { success: true };
-} 
+// (移除重复的简单删除实现，统一使用上方包含级联清理的 deleteTask)

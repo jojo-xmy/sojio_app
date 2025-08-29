@@ -33,6 +33,7 @@ export const TASK_STATUS_COLOR: Record<TaskStatus, string> = {
 // 任务接口定义
 export interface Task {
   id: string;
+  hotelId?: string;
   hotelName: string;
   checkInDate: string;    // 入住日期
   checkInTime: string;    // 入住时间
@@ -61,6 +62,10 @@ export interface Task {
   roomNumber?: string;          // 房间号
   lockPassword?: string;        // 门锁密码
   specialInstructions?: string; // 特殊说明
+
+  // 新增：备注传递链
+  ownerNotes?: string;          // 来源于 calendar_entries.owner_notes
+  cleanerNotes?: string;        // 清洁员退勤填写
   
   // 备品信息
   inventory?: {

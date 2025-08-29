@@ -1,6 +1,7 @@
 "use client";
 import React from 'react';
 import { Attendance, checkIn, checkOut } from '@/lib/attendance';
+import { updateCleanerNotes } from '@/lib/tasks';
 
 interface AttendanceActionsProps {
   taskId: string;
@@ -33,7 +34,20 @@ export const AttendanceActions: React.FC<AttendanceActionsProps> = ({
 
   async function handleCheckOut() {
     onLoadingChange(true);
-    const ok = await checkOut(taskId, userId);
+    // 退勤前收集清洁员备注
+    let ok = true;
+    try {
+      const note = window.prompt('退勤备注（可选）：');
+      if (note !== null) {
+        const res = await updateCleanerNotes(taskId, note.trim());
+        if (!res.success) {
+          console.error('保存清洁员备注失败:', res.error);
+        }
+      }
+    } catch (e) {
+      console.error('收集或保存退勤备注失败:', e);
+    }
+    ok = ok && await checkOut(taskId, userId);
     if (ok) await onAfterUpdate();
     onLoadingChange(false);
   }

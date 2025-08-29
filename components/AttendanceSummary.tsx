@@ -1,21 +1,56 @@
 "use client";
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Attendance } from '@/lib/attendance';
+import { supabase } from '@/lib/supabase';
 
 interface AttendanceSummaryProps {
   assignedCleaners?: string[];
   attendances: Attendance[];
 }
 
+interface UserProfile {
+  id: string;
+  name: string;
+}
+
 export const AttendanceSummary: React.FC<AttendanceSummaryProps> = ({ assignedCleaners, attendances }) => {
+  const [userProfiles, setUserProfiles] = useState<UserProfile[]>([]);
   const checkedInRecords = attendances.filter(a => a.status === 'checked_in');
   const checkedOutRecords = attendances.filter(a => a.status === 'checked_out');
   const totalAssigned = (assignedCleaners || []).length;
 
-  // 根据用户ID获取姓名的简单方法（如果assignedCleaners包含名字，则使用索引匹配）
+  // 获取用户信息
+  useEffect(() => {
+    const fetchUserProfiles = async () => {
+      if (attendances.length === 0) return;
+      
+      const userIds = [...new Set(attendances.map(a => a.user_id))];
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('id, name')
+        .in('id', userIds);
+      
+      if (!error && data) {
+        setUserProfiles(data);
+      }
+    };
+
+    fetchUserProfiles();
+  }, [attendances]);
+
+  // 根据用户ID获取姓名
   const getUserName = (userId: string) => {
-    // 这里简化处理，实际项目中可能需要用户查询
-    return `用户${userId.slice(-4)}`; // 显示用户ID的最后4位作为标识
+    const userProfile = userProfiles.find(u => u.id === userId);
+    if (userProfile) {
+      return userProfile.name;
+    }
+    // 如果assignedCleaners包含名字，尝试匹配
+    if (assignedCleaners && assignedCleaners.length > 0) {
+      // 这里简化处理，实际项目中应该通过用户ID查询用户信息
+      // 暂时返回用户ID的最后4位作为标识
+      return `用户${userId.slice(-4)}`;
+    }
+    return `用户${userId.slice(-4)}`;
   };
 
   return (

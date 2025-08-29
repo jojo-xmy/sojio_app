@@ -62,6 +62,7 @@ export interface Task {
   roomNumber?: string;          // 房间号
   lockPassword?: string;        // 门锁密码
   specialInstructions?: string; // 特殊说明
+  guestCount?: number;          // 入住人数
 
   // 新增：备注传递链
   ownerNotes?: string;          // 来源于 calendar_entries.owner_notes

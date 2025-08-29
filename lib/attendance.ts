@@ -15,7 +15,8 @@ export async function getAttendanceByTaskId(taskId: string): Promise<Attendance[
   const { data, error } = await supabase
     .from('attendance')
     .select('*')
-    .eq('task_id', taskId);
+    .eq('task_id', taskId)
+    .order('created_at', { ascending: false }); // 确保获取最新记录
   
   if (error) {
     console.error('Error fetching attendance:', error);

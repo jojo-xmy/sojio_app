@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/userStore';
 import { getUserHotels, createHotel, updateHotel } from '@/lib/hotelManagement';
 import { Hotel, CreateHotelData } from '@/types/hotel';
+import { supabase } from '@/lib/supabase';
 
 export default function HotelsPage() {
   const router = useRouter();
@@ -31,6 +32,20 @@ export default function HotelsPage() {
     }
     loadHotels();
   }, [user, router]);
+
+  // 订阅酒店数据变更
+  useEffect(() => {
+    if (!user || user.role !== 'owner') return;
+    const channel = supabase
+      .channel(`realtime-owner-hotels-${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'hotels' }, () => {
+        loadHotels();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id]);
+
+
 
   const loadHotels = async () => {
     if (!user) return;

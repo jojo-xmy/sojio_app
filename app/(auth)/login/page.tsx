@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useUserStore } from '@/store/userStore';
 import { LoginRoleSelector } from '@/components/LoginRoleSelector';
+import { ClearAuthButton } from '@/components/ClearAuthButton';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -354,7 +355,15 @@ export default function LoginPage() {
           </ul>
         </div>
 
-        {/* 登录页不显示退出登录按钮 */}
+        {/* 清除认证状态按钮 */}
+        <div style={{ 
+          marginTop: '1.5rem', 
+          textAlign: 'center',
+          paddingTop: '1rem',
+          borderTop: '1px solid #e5e7eb'
+        }}>
+          <ClearAuthButton />
+        </div>
 
         <style jsx>{`
           @keyframes spin {

@@ -10,6 +10,7 @@ import {
   deleteCalendarEntry 
 } from '@/lib/hotelManagement';
 import { Hotel, CalendarEntry, CreateCalendarEntryData } from '@/types/hotel';
+import { supabase } from '@/lib/supabase';
 
 export default function HotelCalendarPage() {
   const params = useParams();
@@ -42,6 +43,24 @@ export default function HotelCalendarPage() {
     }
     loadHotelData();
   }, [user, router, hotelId]);
+
+  // 订阅酒店相关的条目与任务变更
+  useEffect(() => {
+    if (!user || user.role !== 'owner') return;
+    const channel = supabase
+      .channel('realtime-owner-hotel-calendar')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'calendar_entries' }, () => {
+        loadHotelData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
+        loadHotelData();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user, hotelId]);
+
+
 
   const loadHotelData = async () => {
     try {

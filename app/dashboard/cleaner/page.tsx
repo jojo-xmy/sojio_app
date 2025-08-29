@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from 'next/navigation';
-
+import { useRef } from 'react';
 import { useUserStore } from '@/store/userStore';
 import { RoleSelector } from '@/components/RoleSelector';
 import { TaskCalendar } from '@/components/TaskCalendar';
@@ -11,6 +11,7 @@ import { TaskCalendar } from '@/components/TaskCalendar';
 export default function CleanerDashboard() {
   const user = useUserStore(s => s.user);
   const router = useRouter();
+  const calendarRef = useRef<{ refreshData: () => void }>(null);
 
   return (
     <div style={{ maxWidth: 1200, margin: '2rem auto', padding: '0 1rem' }}>
@@ -52,7 +53,13 @@ export default function CleanerDashboard() {
       </div>
       
       {/* 日历视图（内部已包含右侧任务详情面板） */}
-      <TaskCalendar className="w-full" />
+      <TaskCalendar 
+        ref={calendarRef}
+        className="w-full" 
+        onDataRefresh={() => {
+          console.log('清洁员日历数据已刷新');
+        }}
+      />
     </div>
   );
 } 

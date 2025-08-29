@@ -21,31 +21,52 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
   showLogout = false, 
   compactMode = false 
 }) => {
-  const { user, setUser, clearUser } = useUserStore();
+  const { user, setUser, clearUser, isInitialized } = useUserStore();
   const router = useRouter();
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasFetchedRoles, setHasFetchedRoles] = useState(false);
 
+  // 等待用户状态完全初始化后再开始获取角色
   useEffect(() => {
-    if (user?.line_user_id) {
+    if (!isInitialized) {
+      setLoading(true);
+      return;
+    }
+
+    // 如果用户状态已初始化但没有用户，且不需要显示退出按钮，则不显示组件
+    if (!user && !showLogout) {
+      setLoading(false);
+      return;
+    }
+
+    // 如果有用户且有line_user_id，获取角色列表
+    if (user?.line_user_id && !hasFetchedRoles) {
       fetchUserRoles(user.line_user_id);
-    } else {
-      // 如果没有line_user_id，设置loading为false，这样至少可以显示退出按钮
+    } else if (!user?.line_user_id) {
+      // 如果没有line_user_id，设置loading为false
       setLoading(false);
     }
-  }, [user?.line_user_id]); // 只依赖line_user_id，避免不必要的重新获取
+  }, [isInitialized, user?.line_user_id, showLogout, hasFetchedRoles]);
 
   const fetchUserRoles = async (lineUserId: string) => {
+    if (hasFetchedRoles) return; // 防止重复获取
+    
     try {
+      setLoading(true);
+      setError(null);
+      
       const response = await fetch(`/api/auth/user-roles?lineUserId=${lineUserId}`);
       if (response.ok) {
         const data = await response.json();
-        setRoles(data.roles);
+        setRoles(data.roles || []);
+        setHasFetchedRoles(true);
       } else {
         setError('获取角色列表失败');
       }
     } catch (error) {
+      console.error('获取角色列表失败:', error);
       setError('获取角色列表失败');
     } finally {
       setLoading(false);
@@ -56,6 +77,8 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
     if (!user?.line_user_id) return;
     
     try {
+      setError(null);
+      
       const response = await fetch('/api/auth/user-roles', {
         method: 'POST',
         headers: {
@@ -69,12 +92,22 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
 
       if (response.ok) {
         const data = await response.json();
+        // 切换角色后，调用登录写 cookie 的接口，确保刷新后仍能读取
+        const loginResponse = await fetch('/api/auth/line/login-with-role', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user: data.user })
+        });
+        if (!loginResponse.ok) {
+          throw new Error('写入登录cookie失败');
+        }
         setUser(data.user);
         router.push('/dashboard');
       } else {
         setError('切换角色失败');
       }
     } catch (error) {
+      console.error('切换角色失败:', error);
       setError('切换角色失败');
     }
   };
@@ -115,6 +148,20 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
     }
   };
 
+  // 如果用户状态还未初始化，显示加载状态
+  if (!isInitialized) {
+    return (
+      <div style={{ 
+        padding: compactMode ? '0.5rem' : '1rem',
+        textAlign: 'center',
+        color: '#6b7280'
+      }}>
+        初始化中...
+      </div>
+    );
+  }
+
+  // 如果正在加载角色数据，显示加载状态
   if (loading) {
     return (
       <div style={{ 
@@ -127,19 +174,7 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
     );
   }
 
-  if (error) {
-    return (
-      <div style={{ 
-        padding: compactMode ? '0.5rem' : '1rem',
-        color: '#dc2626',
-        textAlign: 'center'
-      }}>
-        {error}
-      </div>
-    );
-  }
-
-  // 即使没有多个角色，如果showLogout为true，也要显示退出按钮
+  // 如果不需要显示退出按钮且没有多个角色，则不显示组件
   if (roles.length === 0 && !showLogout) {
     return null;
   }
@@ -153,6 +188,21 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
       marginBottom: compactMode ? '1rem' : '1.5rem',
       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
     }}>
+      {error && (
+        <div style={{
+          padding: '0.5rem',
+          marginBottom: '1rem',
+          background: '#fef2f2',
+          border: '1px solid #fecaca',
+          borderRadius: '6px',
+          color: '#dc2626',
+          fontSize: '0.875rem',
+          textAlign: 'center'
+        }}>
+          {error}
+        </div>
+      )}
+
       {roles.length > 1 && (
         <>
           <h3 style={{ 

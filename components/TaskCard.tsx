@@ -23,7 +23,7 @@ export interface TaskCardProps {
   viewMode?: 'list' | 'calendar' | 'detail';
   // 能力矩阵与插槽（可选）
   capabilities?: TaskCapabilities;
-  renderBlocks?: Partial<Record<'attendanceSummary' | 'attendanceActions' | 'attachments' | 'notes' | 'acknowledgement' | 'assignmentAction' | 'taskAcceptance' | 'taskPublish' | 'taskEdit' | 'ownerMessage', React.ReactNode>>;
+  renderBlocks?: Partial<Record<'attendanceSummary' | 'attendanceActions' | 'attachments' | 'notes' | 'acknowledgement' | 'assignmentAction' | 'taskAcceptance' | 'taskPublish' | 'taskEdit' | 'ownerMessage' | 'taskDescription' | 'managerActions', React.ReactNode>>;
   onClick?: () => void;
   attendanceStatus?: 'none' | 'checked_in' | 'checked_out';
   // 新增字段
@@ -33,6 +33,7 @@ export interface TaskCardProps {
   acceptedBy?: string[];
   completedAt?: string;
   confirmedAt?: string;
+  guestCount?: number; // 添加入住人数字段
 }
 
 export const TaskCard: React.FC<TaskCardProps> = ({ 
@@ -60,7 +61,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   completedAt,
   confirmedAt,
   viewerRole,
-  viewMode
+  viewMode,
+  guestCount
 }) => {
   return (
     <div
@@ -82,6 +84,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           {roomNumber && (
             <div style={{ fontSize: 14, color: '#666', marginBottom: 4 }}>
               房间：{roomNumber}
+            </div>
+          )}
+          {guestCount !== undefined && (
+            <div style={{ fontSize: 14, color: '#666', marginBottom: 4 }}>
+              入住：{guestCount}人
             </div>
           )}
           {hotelAddress && (
@@ -118,8 +125,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         )}
       </div>
 
-      {/* 门锁密码 */}
-      {lockPassword && (
+      {/* 门锁密码 - 对owner隐藏 */}
+      {lockPassword && viewerRole !== 'owner' && (
         <div style={{ fontSize: 14, marginBottom: 8, color: '#059669', fontWeight: 500 }}>
           🔐 门锁密码：{lockPassword}
         </div>
@@ -191,9 +198,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       {capabilities && renderBlocks && (
         <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {renderBlocks.ownerMessage}
-          {capabilities.visibleBlocks.includes('taskEdit') && renderBlocks.taskEdit}
-          {capabilities.visibleBlocks.includes('taskPublish') && renderBlocks.taskPublish}
-          {capabilities.visibleBlocks.includes('assignmentAction') && renderBlocks.assignmentAction}
+          {renderBlocks.taskDescription}
           {capabilities.visibleBlocks.includes('taskAcceptance') && renderBlocks.taskAcceptance}
           {capabilities.visibleBlocks.includes('attendanceSummary') && renderBlocks.attendanceSummary}
           {capabilities.visibleBlocks.includes('attendanceActions') && renderBlocks.attendanceActions}
@@ -203,13 +208,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         </div>
       )}
 
+      {/* Manager操作区域 - 放在底部 */}
+      {capabilities && renderBlocks && renderBlocks.managerActions}
+
       {showDetail && (
         <div style={{ marginTop: 16, borderTop: '1px dashed #ddd', paddingTop: 12 }}>
-          {description && (
-            <div style={{ marginBottom: 8 }}>
-              <strong>📋 任务描述：</strong>{description}
-            </div>
-          )}
           {note && (
             <div style={{ marginBottom: 8 }}>
               <strong>📝 备注：</strong>{note}

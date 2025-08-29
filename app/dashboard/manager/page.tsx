@@ -1,6 +1,6 @@
 // app/dashboard/manager/page.tsx
 "use client";
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/userStore';
 import { TaskCreateForm } from '@/components/TaskCreateForm';
@@ -8,11 +8,10 @@ import { RoleSelector } from '@/components/RoleSelector';
 import { TaskCalendar } from '@/components/TaskCalendar';
 import { TaskCard } from '@/components/TaskCard';
 import { TaskDetailPanel } from '@/components/TaskDetailPanel';
-import { getCalendarTasks } from '@/lib/calendar';
-import { getAttendanceByTaskId, calculateTaskStatus } from '@/lib/attendance';
-import { Task } from '@/types/task';
-import { TaskCalendarEvent } from '@/types/calendar';
 import { getTaskCapabilities } from '@/lib/taskCapabilities';
+import { useManagerDashboard } from '@/hooks/usePageRefresh';
+import { Task } from '@/types/task';
+import { supabase } from '@/lib/supabase';
 
 
 export default function ManagerDashboard() {
@@ -20,60 +19,13 @@ export default function ManagerDashboard() {
   const user = useUserStore(s => s.user);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('calendar');
-  const [tasksWithAttendance, setTasksWithAttendance] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const calendarRef = useRef<{ refreshData: () => void }>(null);
+  
+  // 使用新的全局 refresh 管理器
+  const { tasksWithAttendance, loading, refresh: loadAllAttendanceStatus } = useManagerDashboard();
 
-  // 加载所有任务的打卡状态
-  const loadAllAttendanceStatus = useCallback(async () => {
-    if (!user) return;
-    
-    try {
-      setLoading(true);
-      
-      // 从数据库加载任务数据
-      const startDate = new Date();
-      startDate.setMonth(startDate.getMonth() - 1); // 获取过去一个月的数据
-      const endDate = new Date();
-      endDate.setMonth(endDate.getMonth() + 1); // 获取未来一个月的数据
-      
-      const calendarEvents = await getCalendarTasks(startDate, endDate);
-      
-      // 加载打卡状态并更新任务对象
-      const tasksWithStatus = await Promise.all(
-        calendarEvents.map(async (event: TaskCalendarEvent) => {
-          const task = event.task; // 现在task已经是正确映射的Task对象
-          const attendanceRecords = await getAttendanceByTaskId(task.id);
-          const taskStatus = calculateTaskStatus(attendanceRecords, event.assignedCleaners?.map(c => c.name) || []);
-          
-          // 计算总体打卡状态：如果有任何人已退勤，显示"已退勤"；如果有任何人已出勤，显示"已出勤"；否则显示"未打卡"
-          let overallStatus: 'none' | 'checked_in' | 'checked_out' = 'none';
-          const hasCheckedOut = attendanceRecords.some(record => record.status === 'checked_out');
-          const hasCheckedIn = attendanceRecords.some(record => record.status === 'checked_in');
-          
-          if (hasCheckedOut) {
-            overallStatus = 'checked_out';
-          } else if (hasCheckedIn) {
-            overallStatus = 'checked_in';
-          }
-          
-          // 直接使用已映射的task对象，只更新attendanceStatus
-          return {
-            ...task,
-            attendanceStatus: overallStatus,
-            assignedCleaners: event.assignedCleaners?.map(c => c.name) || task.assignedCleaners || [],
-            acceptedBy: event.assignedCleaners?.map(c => c.name) || task.acceptedBy || []
-          } as Task;
-        })
-      );
-      
-      setTasksWithAttendance(tasksWithStatus);
-    } catch (error) {
-      console.error('加载任务数据失败:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
+
 
   // 刷新打卡状态的回调函数
   const handleAttendanceUpdate = useCallback(() => {
@@ -84,6 +36,29 @@ export default function ManagerDashboard() {
   useEffect(() => {
     loadAllAttendanceStatus();
   }, [loadAllAttendanceStatus]);
+
+  // 订阅实时变更：tasks 与 attendance 与 task_assignments
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`realtime-manager-dashboard-${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
+        loadAllAttendanceStatus();
+        if (calendarRef.current) calendarRef.current.refreshData();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, () => {
+        loadAllAttendanceStatus();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'task_assignments' }, () => {
+        loadAllAttendanceStatus();
+        if (calendarRef.current) calendarRef.current.refreshData();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id, loadAllAttendanceStatus]);
+
+
 
   return (
     <div style={{ maxWidth: 1200, margin: '2rem auto', padding: '0 1rem' }}>
@@ -107,10 +82,10 @@ export default function ManagerDashboard() {
             {viewMode === 'list' ? '日历视图' : '列表视图'}
           </button>
           <button 
-            onClick={() => router.push('/admin/registration-applications')}
+            onClick={() => router.push('/dashboard/manager/applications')}
             style={{ 
               padding: '8px 20px', 
-              background: '#10b981', 
+              background: '#059669', 
               color: '#fff', 
               border: 'none', 
               borderRadius: 6, 
@@ -139,7 +114,14 @@ export default function ManagerDashboard() {
         </div>
       </div>
       {viewMode === 'calendar' ? (
-        <TaskCalendar className="w-full" />
+        <TaskCalendar 
+          ref={calendarRef}
+          className="w-full" 
+          onDataRefresh={() => {
+            console.log('管理者日历数据已刷新');
+            // 移除这里的loadAllAttendanceStatus调用，避免循环刷新
+          }}
+        />
       ) : (
         <div style={{ display: 'flex', gap: 24 }}>
           {/* 任务列表 */}
@@ -172,6 +154,7 @@ export default function ManagerDashboard() {
                       acceptedBy={task.acceptedBy}
                       completedAt={task.completedAt}
                       confirmedAt={task.confirmedAt}
+                      guestCount={task.guestCount}
                       showDetail={false} 
                       onClick={() => setSelectedTask(task)}
                       capabilities={caps}
@@ -208,6 +191,10 @@ export default function ManagerDashboard() {
           // 刷新任务列表，从数据库获取最新数据
           console.log('任务创建成功，需要刷新列表');
           loadAllAttendanceStatus();
+          // 同时刷新日历数据
+          if (calendarRef.current) {
+            calendarRef.current.refreshData();
+          }
         }}
       />
 

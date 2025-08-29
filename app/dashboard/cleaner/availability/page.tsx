@@ -8,6 +8,7 @@ import {
   batchSetCleanerAvailability 
 } from '@/lib/hotelManagement';
 import { CleanerAvailability, AvailabilityData } from '@/types/hotel';
+import { supabase } from '@/lib/supabase';
 
 export default function CleanerAvailabilityPage() {
   const router = useRouter();
@@ -34,6 +35,24 @@ export default function CleanerAvailabilityPage() {
     }
     loadAvailability();
   }, [user, router, currentMonth]);
+
+  // 订阅可用性与任务变更，当前月视图刷新
+  useEffect(() => {
+    if (!user || user.role !== 'cleaner') return;
+    const channel = supabase
+      .channel(`realtime-cleaner-availability-${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cleaner_availability' }, () => {
+        loadAvailability();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
+        loadAvailability();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id, currentMonth]);
+
+
 
   const loadAvailability = async () => {
     if (!user) return;

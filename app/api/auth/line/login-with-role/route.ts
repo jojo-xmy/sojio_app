@@ -31,14 +31,14 @@ export async function POST(request: NextRequest) {
       path: '/'
     });
 
-    // 设置用户信息到cookie（用于客户端访问）
+    // 设置用户信息到cookie（用于客户端访问）- 统一使用 line_user_id 字段名
     response.cookies.set('user_info', JSON.stringify({
       id: user.id,
       name: user.name,
       katakana: user.katakana,
       role: user.role,
       avatar: user.avatar,
-      lineUserId: user.line_user_id
+      line_user_id: user.line_user_id
     }), {
       httpOnly: false,
       secure: process.env.NODE_ENV === 'production',

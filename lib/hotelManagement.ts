@@ -223,6 +223,7 @@ export async function getCalendarEntryByTaskId(taskId: string): Promise<Calendar
     .from('calendar_entries')
     .select('*')
     .eq('task_id', taskId)
+    .order('created_at', { ascending: false }) // 确保获取最新记录
     .maybeSingle();
 
   if (error) {
@@ -323,6 +324,9 @@ export async function batchSetCleanerAvailability(
     throw new Error('批量设置清洁员可用性失败');
   }
 
+  // 短暂延迟确保数据库写入完成
+  await new Promise(resolve => setTimeout(resolve, 100));
+
   return data || [];
 }
 
@@ -337,7 +341,8 @@ export async function getAvailableCleaners(date: string): Promise<any[]> {
       user_profiles!inner(id, name, role)
     `)
     .eq('date', date)
-    .eq('user_profiles.role', 'cleaner');
+    .eq('user_profiles.role', 'cleaner')
+    .order('created_at', { ascending: false }); // 确保获取最新可用性
 
   if (error) {
     console.error('获取可用清洁员失败:', error);
@@ -388,7 +393,8 @@ export async function getTaskAssignments(taskId: string): Promise<TaskAssignment
       *,
       user_profiles!cleaner_id(id, name, role)
     `)
-    .eq('task_id', taskId);
+    .eq('task_id', taskId)
+    .order('assigned_at', { ascending: false }); // 确保获取最新分配
 
   if (error) {
     console.error('获取任务分配失败:', error);
@@ -399,8 +405,8 @@ export async function getTaskAssignments(taskId: string): Promise<TaskAssignment
 }
 
 // 获取清洁员的任务列表
-export async function getCleanerTasks(cleanerId: string): Promise<any[]> {
-  const { data, error } = await supabase
+export async function getCleanerTasks(cleanerId: string, forceRefresh: boolean = false): Promise<any[]> {
+  let query = supabase
     .from('task_assignments')
     .select(`
       *,
@@ -408,6 +414,13 @@ export async function getCleanerTasks(cleanerId: string): Promise<any[]> {
     `)
     .eq('cleaner_id', cleanerId)
     .order('assigned_at', { ascending: false });
+
+  // 强制刷新时添加 limit 避免缓存
+  if (forceRefresh) {
+    query = query.limit(1000);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error('获取清洁员任务失败:', error);

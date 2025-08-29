@@ -10,7 +10,7 @@ import { ImageUpload } from '@/components/ImageUpload';
 import { AttachmentGallery } from '@/components/AttachmentGallery';
 import { getTaskCapabilities } from '@/lib/taskCapabilities';
 import { TaskCard } from '@/components/TaskCard';
-import { useTask } from '@/lib/useTask';
+import { useGlobalRefresh } from '@/hooks/useRefresh';
 import { getAvailableCleanersForDate, assignTaskToCleaners } from '@/lib/calendar';
 import { getCalendarEntryByTaskId, updateCalendarEntry, deleteCalendarEntry } from '@/lib/hotelManagement';
 import { publishTask, acceptTask, rejectTask, updateTaskDetails, updateOwnerNotes, deleteTask } from '@/lib/tasks';
@@ -22,7 +22,7 @@ interface TaskDetailPanelProps {
 
 export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttendanceUpdate }) => {
   const user = useUserStore(s => s.user);
-  const { allAttendances, currentStatus, images: taskImages, refresh } = useTask(task);
+  const { allAttendances, currentStatus, images: taskImages, taskDetails, calendarEntry, refresh } = useGlobalRefresh(task);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [showAssignPanel, setShowAssignPanel] = useState(false);
@@ -53,25 +53,19 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
   useEffect(() => { /* useTask 内部已处理加载 */ }, [task.id, user?.id]);
 
   // Owner 打开入住登记编辑
-  const openOwnerEdit = async () => {
-    try {
-      const entry = await getCalendarEntryByTaskId(task.id);
-      if (!entry) {
-        alert('未找到对应的入住登记');
-        return;
-      }
-      setOwnerEditingEntry({
-        id: entry.id,
-        checkInDate: entry.checkInDate,
-        checkOutDate: entry.checkOutDate,
-        guestCount: entry.guestCount,
-        roomNumber: entry.roomNumber,
-        ownerNotes: entry.ownerNotes
-      });
-    } catch (e) {
-      console.error('加载入住登记失败:', e);
-      alert('加载入住登记失败');
+  const openOwnerEdit = () => {
+    if (!calendarEntry) {
+      alert('未找到对应的入住登记');
+      return;
     }
+    setOwnerEditingEntry({
+      id: calendarEntry.id,
+      checkInDate: calendarEntry.checkInDate,
+      checkOutDate: calendarEntry.checkOutDate,
+      guestCount: calendarEntry.guestCount,
+      roomNumber: calendarEntry.roomNumber || '',
+      ownerNotes: calendarEntry.ownerNotes || ''
+    });
   };
 
   const saveOwnerEntry = async () => {
@@ -95,13 +89,12 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
 
   const deleteOwnerEntry = async () => {
     try {
-      const entry = await getCalendarEntryByTaskId(task.id);
-      if (!entry) {
+      if (!calendarEntry) {
         alert('未找到对应的入住登记');
         return;
       }
       if (!confirm('确定删除该入住登记及其关联任务？该操作不可恢复。')) return;
-      await deleteCalendarEntry(entry.id);
+      await deleteCalendarEntry(calendarEntry.id);
       setOwnerEditingEntry(null);
       await refresh();
       onAttendanceUpdate?.();
@@ -272,11 +265,12 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
         acceptedBy={task.acceptedBy}
         completedAt={task.completedAt}
         confirmedAt={task.confirmedAt}
+        guestCount={task.guestCount}
         viewerRole={user.role}
         viewMode={'detail'}
         capabilities={caps}
         renderBlocks={{
-          ownerMessage: (
+          ownerMessage: (user.role === 'owner' || user.role === 'manager') && (
             <div style={{ 
               border: '1px solid #e5e7eb', 
               borderRadius: 8, 
@@ -298,25 +292,36 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
               )}
             </div>
           ),
-          taskEdit: (user.role === 'manager' && caps.canEditTaskDetails) ? (
-            <div style={{ marginTop: 12 }}>
-              {!editingTask ? (
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                  <button
-                    onClick={() => setEditingTask(true)}
-                    style={{ padding: '8px 16px', background: '#6b7280', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}
-                  >
-                    编辑任务
-                  </button>
-                </div>
-              ) : (
+          taskDescription: task.description && user.role !== 'owner' && (
+            <div style={{ 
+              border: '1px solid #e5e7eb', 
+              borderRadius: 8, 
+              padding: 12, 
+              backgroundColor: '#f9fafb',
+              marginBottom: 12
+            }}>
+              <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: '#6b7280' }}>
+                任务描述
+              </h4>
+              <div style={{ fontSize: 14, color: '#374151', lineHeight: 1.5 }}>
+                {task.description}
+              </div>
+            </div>
+          ),
+          managerActions: user.role === 'manager' ? (
+            <div style={{ marginTop: 16 }}>
+              {/* 编辑任务表单 */}
+              {editingTask && (
                 <div style={{ 
                   border: '1px solid #e5e7eb', 
                   borderRadius: 8, 
                   padding: 16, 
-                  backgroundColor: '#f9fafb' 
+                  backgroundColor: '#f9fafb',
+                  marginBottom: 16
                 }}>
-                  <h4 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>编辑任务详情</h4>
+                  <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: '#6b7280' }}>
+                    编辑任务详情
+                  </h4>
                   
                   <div style={{ marginBottom: 12 }}>
                     <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 4 }}>
@@ -425,55 +430,88 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                   </div>
                 </div>
               )}
-            </div>
-          ) : null,
-          taskPublish: caps.showTaskPublish ? (
-            <div style={{ marginTop: 12 }}>
-              <button
-                onClick={handlePublishTask}
-                style={{ 
-                  padding: '8px 16px', 
-                  background: '#f59e0b', 
-                  color: '#fff', 
-                  border: 'none', 
-                  borderRadius: 6, 
-                  fontWeight: 600, 
-                  fontSize: 14, 
-                  cursor: 'pointer' 
-                }}
-              >
-                发布任务
-              </button>
-              <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
-                发布后任务将变为"待分配"状态
+
+              {/* Manager操作按钮 */}
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {caps.canEditTaskDetails && !editingTask && (
+                  <button
+                    onClick={() => setEditingTask(true)}
+                    style={{ 
+                      padding: '8px 16px', 
+                      background: '#6b7280', 
+                      color: '#fff', 
+                      border: 'none', 
+                      borderRadius: 6, 
+                      fontWeight: 600, 
+                      fontSize: 14, 
+                      cursor: 'pointer' 
+                    }}
+                  >
+                    编辑任务
+                  </button>
+                )}
+                
+                {caps.showTaskPublish && (
+                  <button
+                    onClick={handlePublishTask}
+                    style={{ 
+                      padding: '8px 16px', 
+                      background: '#f59e0b', 
+                      color: '#fff', 
+                      border: 'none', 
+                      borderRadius: 6, 
+                      fontWeight: 600, 
+                      fontSize: 14, 
+                      cursor: 'pointer' 
+                    }}
+                  >
+                    发布任务
+                  </button>
+                )}
+                
+                {caps.canOpenAssignmentModal && (
+                  <button
+                    onClick={async () => {
+                      // 打开前加载可用清洁员
+                      try {
+                        const dateStr = task.cleaningDate || task.checkInDate || task.date || '';
+                        console.log('TaskDetailPanel - 获取清洁员，日期:', dateStr);
+                        if (dateStr) {
+                          const cleaners = await getAvailableCleanersForDate(dateStr);
+                          console.log('TaskDetailPanel - 获取到清洁员:', cleaners);
+                          setAvailableCleaners(cleaners);
+                        } else {
+                          console.log('TaskDetailPanel - 没有有效日期');
+                          setAvailableCleaners([]);
+                        }
+                      } catch (e) {
+                        console.error('TaskDetailPanel - 获取清洁员失败:', e);
+                        setAvailableCleaners([]);
+                      }
+                      setShowAssignPanel(true);
+                    }}
+                    style={{ 
+                      padding: '8px 16px', 
+                      background: '#2563eb', 
+                      color: '#fff', 
+                      border: 'none', 
+                      borderRadius: 6, 
+                      fontWeight: 600, 
+                      fontSize: 14, 
+                      cursor: 'pointer' 
+                    }}
+                  >
+                    {task.assignedCleaners && task.assignedCleaners.length > 0 ? '追加人员' : '分配清洁工'}
+                  </button>
+                )}
               </div>
+              
+              {caps.showTaskPublish && (
+                <div style={{ fontSize: 12, color: '#6b7280', marginTop: 8 }}>
+                  发布后任务将变为"待分配"状态
+                </div>
+              )}
             </div>
-          ) : null,
-          assignmentAction: caps.canOpenAssignmentModal ? (
-            <button
-              onClick={async () => {
-                // 打开前加载可用清洁员
-                try {
-                  const dateStr = task.cleaningDate || task.checkInDate || task.date || '';
-                  console.log('TaskDetailPanel - 获取清洁员，日期:', dateStr);
-                  if (dateStr) {
-                    const cleaners = await getAvailableCleanersForDate(dateStr);
-                    console.log('TaskDetailPanel - 获取到清洁员:', cleaners);
-                    setAvailableCleaners(cleaners);
-                  } else {
-                    console.log('TaskDetailPanel - 没有有效日期');
-                    setAvailableCleaners([]);
-                  }
-                } catch (e) {
-                  console.error('TaskDetailPanel - 获取清洁员失败:', e);
-                  setAvailableCleaners([]);
-                }
-                setShowAssignPanel(true);
-              }}
-              style={{ alignSelf: 'flex-start', padding: '6px 12px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}
-            >
-              {task.assignedCleaners && task.assignedCleaners.length > 0 ? '追加人员' : '分配清洁工'}
-            </button>
           ) : null,
           taskAcceptance: caps.showTaskAcceptance ? (
             <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>

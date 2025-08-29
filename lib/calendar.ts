@@ -13,12 +13,13 @@ import { UserProfile } from '@/types/user';
 export async function getCalendarTasks(
   startDate: Date,
   endDate: Date,
-  config?: Partial<CalendarViewConfig>
+  config?: Partial<CalendarViewConfig>,
+  forceRefresh: boolean = false
 ): Promise<TaskCalendarEvent[]> {
   const startDateStr = startDate.toISOString().split('T')[0];
   const endDateStr = endDate.toISOString().split('T')[0];
 
-  // 构建基础 query
+  // 构建基础 query，强制刷新时添加时间戳避免缓存
   let query = supabase
     .from('tasks')
     .select(`
@@ -39,6 +40,11 @@ export async function getCalendarTasks(
       )
     `)
     .order('check_in_date', { ascending: true });
+
+  // 强制刷新时添加随机查询参数避免缓存
+  if (forceRefresh) {
+    query = query.limit(1000); // 添加 limit 强制重新查询
+  }
 
   // 开发环境：如果查询指定日期范围没有数据，则查询所有数据
   const { data: tasksInRange, error: rangeError } = await query
@@ -141,6 +147,7 @@ export async function getCalendarTasks(
       roomNumber: task.room_number || '',
       lockPassword: task.lock_password || '',
       specialInstructions: task.special_instructions || '',
+      guestCount: task.guest_count || 1, // 添加入住人数映射
       acceptedBy: task.accepted_by || [],
       completedAt: task.completed_at || '',
       confirmedAt: task.confirmed_at || '',
@@ -182,7 +189,8 @@ export async function getAvailableCleanersForDate(date: string): Promise<Availab
   const { data: availability, error: availError } = await supabase
     .from('cleaner_availability')
     .select('cleaner_id, available_hours, notes')
-    .eq('date', date);
+    .eq('date', date)
+    .order('created_at', { ascending: false }); // 确保获取最新可用性
 
   console.log('可用性原始数据:', availability);
   console.log('可用性查询错误:', availError);
@@ -211,7 +219,8 @@ export async function getAvailableCleanersForDate(date: string): Promise<Availab
     .from('user_profiles')
     .select('id, name, role, katakana, avatar, phone')
     .in('id', cleanerIds)
-    .eq('role', 'cleaner');
+    .eq('role', 'cleaner')
+    .order('created_at', { ascending: false }); // 确保获取最新用户信息
 
   console.log('清洁员档案数据:', profiles);
   console.log('清洁员档案查询错误:', profilesError);
@@ -262,7 +271,8 @@ async function getCleanerTaskCountsForDate(date: string): Promise<Record<string,
       cleaner_id,
       tasks!inner(check_in_date)
     `)
-    .eq('tasks.check_in_date', date);
+    .eq('tasks.check_in_date', date)
+    .order('assigned_at', { ascending: false }); // 确保获取最新分配
 
   if (error) {
     console.error('获取清洁员任务数量失败:', error);
@@ -315,6 +325,9 @@ export async function assignTaskToCleaners(
     if (taskError) {
       throw taskError;
     }
+
+    // 短暂延迟确保数据库写入完成
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     return { success: true };
   } catch (error) {
@@ -555,7 +568,7 @@ export async function getOwnerCalendarTasks(
         createdAt: task.created_at,
         updatedAt: task.updated_at,
         guestCount: task.guest_count,
-        assignedCleaners: task.assigned_cleaners || [],
+        assignedCleaners: assignedCleaners.map((c: any) => c.name) || [],
         ownerNotes: task.owner_notes || '',
         cleanerNotes: task.cleaner_notes || ''
       };

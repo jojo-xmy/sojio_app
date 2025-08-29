@@ -2,16 +2,16 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/userStore';
-import { getCleanerTasks } from '@/lib/hotelManagement';
+import { useCleanerTasks } from '@/hooks/usePageRefresh';
 import { TaskStatusBadge } from '@/components/TaskStatusBadge';
 import { TaskActionButtons } from '@/components/TaskActionButtons';
 import { TaskStatus } from '@/types/task';
+import { supabase } from '@/lib/supabase';
 
 export default function CleanerTasksPage() {
   const router = useRouter();
   const user = useUserStore(s => s.user);
-  const [tasks, setTasks] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { tasks, loading, refresh } = useCleanerTasks();
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<TaskStatus | 'all'>('all');
 
@@ -20,30 +20,28 @@ export default function CleanerTasksPage() {
       router.push('/dashboard');
       return;
     }
-    loadTasks();
   }, [user, router]);
 
-  const loadTasks = async () => {
-    if (!user) return;
-    
-    try {
-      setLoading(true);
-      const taskList = await getCleanerTasks(user.id.toString());
-      setTasks(taskList);
-    } catch (err) {
-      setError('加载任务列表失败');
-      console.error('加载任务列表失败:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // 订阅实时变更：与用户相关的任务、分配、任务状态
+  useEffect(() => {
+    if (!user || user.role !== 'cleaner') return;
+    const channel = supabase
+      .channel(`realtime-cleaner-tasks-${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
+        refresh();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'task_assignments' }, (payload) => {
+        // 分配变更也会触发
+        refresh();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id, refresh]);
 
   const handleStatusChange = (taskId: string, newStatus: TaskStatus) => {
-    setTasks(prev => prev.map(task => 
-      task.task_id === taskId 
-        ? { ...task, tasks: { ...task.tasks, status: newStatus } }
-        : task
-    ));
+    // 触发全局刷新以获取最新数据
+    refresh();
   };
 
   const getFilteredTasks = () => {

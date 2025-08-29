@@ -71,6 +71,9 @@ export async function transitionTask(
 
     console.log(`任务 ${taskId} 状态从 ${currentStatus} 转换为 ${newStatus}`);
     
+    // 短暂延迟确保数据库写入完成
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     // 发送LINE通知
     await sendStatusChangeNotification(taskId, currentStatus, newStatus, userId, userRole, additionalData);
     

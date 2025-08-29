@@ -60,6 +60,7 @@ export const CustomTaskCalendar = forwardRef<{ refreshData: () => void }, Custom
         });
         
         setEvents(sortedEvents);
+        
         // 通知父组件数据已刷新
         onDataRefresh?.();
       } catch (error) {
@@ -68,6 +69,17 @@ export const CustomTaskCalendar = forwardRef<{ refreshData: () => void }, Custom
         setLoading(false);
       }
     }, [user, onDataRefresh]);
+
+    // 同步更新 selectedEvent，确保侧栏显示最新数据
+    useEffect(() => {
+      if (selectedEvent && events.length > 0) {
+        const updatedEvent = events.find(event => event.task.id === selectedEvent.task.id);
+        if (updatedEvent && JSON.stringify(updatedEvent) !== JSON.stringify(selectedEvent)) {
+          console.log('同步更新 selectedEvent:', updatedEvent);
+          setSelectedEvent(updatedEvent);
+        }
+      }
+    }, [events, selectedEvent]);
 
     // 暴露刷新方法给父组件
     useImperativeHandle(ref, () => ({
@@ -352,6 +364,12 @@ export const CustomTaskCalendar = forwardRef<{ refreshData: () => void }, Custom
                   <TaskDetailPanel 
                     task={selectedEvent.task}
                     onAttendanceUpdate={async () => {
+                      const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+                      const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+                      await loadCalendarData(startDate, endDate);
+                    }}
+                    onTaskUpdate={async () => {
+                      // 当任务详情更新时，同步更新 selectedEvent
                       const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
                       const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
                       await loadCalendarData(startDate, endDate);

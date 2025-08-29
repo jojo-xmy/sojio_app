@@ -18,9 +18,10 @@ import { publishTask, acceptTask, rejectTask, updateTaskDetails, updateOwnerNote
 interface TaskDetailPanelProps {
   task: Task;
   onAttendanceUpdate?: () => void; // 回调函数，用于通知父组件刷新打卡状态
+  onTaskUpdate?: () => void; // 回调函数，用于通知父组件刷新任务详情
 }
 
-export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttendanceUpdate }) => {
+export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttendanceUpdate, onTaskUpdate }) => {
   const user = useUserStore(s => s.user);
   const { allAttendances, currentStatus, images: taskImages, taskDetails, calendarEntry, refresh } = useGlobalRefresh(task);
   const [loading, setLoading] = useState(false);
@@ -81,6 +82,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
       setOwnerEditingEntry(null);
       await refresh();
       onAttendanceUpdate?.();
+      onTaskUpdate?.();
     } catch (e) {
       console.error('更新入住登记失败:', e);
       alert('更新入住登记失败');
@@ -98,6 +100,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
       setOwnerEditingEntry(null);
       await refresh();
       onAttendanceUpdate?.();
+      onTaskUpdate?.();
       alert('已删除入住登记与关联任务');
     } catch (e) {
       console.error('删除入住登记失败:', e);
@@ -128,6 +131,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
       if (res.success) {
         await refresh();
         onAttendanceUpdate?.();
+        onTaskUpdate?.();
         setShowAssignPanel(false);
         setSelectedCleaners([]);
         setAssignmentNotes('');
@@ -155,6 +159,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
       if (result.success) {
         await refresh();
         onAttendanceUpdate?.();
+        onTaskUpdate?.();
         setEditingTask(false);
         alert('任务详情更新成功！');
       } else {
@@ -173,6 +178,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
       if (result.success) {
         await refresh();
         onAttendanceUpdate?.();
+        onTaskUpdate?.();
         alert('任务发布成功！');
       } else {
         alert(result.error || '发布失败');
@@ -191,6 +197,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
       if (result.success) {
         await refresh();
         onAttendanceUpdate?.();
+        onTaskUpdate?.();
         alert('任务接受成功！');
       } else {
         alert(result.error || '接受失败');
@@ -209,6 +216,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
       if (result.success) {
         await refresh();
         onAttendanceUpdate?.();
+        onTaskUpdate?.();
         alert('任务已拒绝');
       } else {
         alert(result.error || '拒绝失败');
@@ -560,7 +568,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
               allAttendances={allAttendances}
               loading={loading}
               onLoadingChange={setLoading}
-              onAfterUpdate={async () => { await refresh(); onAttendanceUpdate?.(); }}
+              onAfterUpdate={async () => { await refresh(); onAttendanceUpdate?.(); onTaskUpdate?.(); }}
             />
           ) : null,
           attachments: (

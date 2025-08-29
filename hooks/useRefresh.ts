@@ -18,15 +18,23 @@ export function useTaskData(task: Task) {
   const refresh = useCallback(async () => {
     if (!task) return;
     
-    const [attendanceList, latestStatus, imageList] = await Promise.all([
-      getAttendanceByTaskId(task.id),
-      user ? getUserLatestAttendance(task.id, user.id.toString()) : Promise.resolve('none' as const),
-      getTaskImages(task.id)
-    ]);
+    console.log('--- useTaskData refresh start ---');
+    console.log('Task ID:', task.id);
+    console.log('User ID:', user?.id);
+    
+    const attendanceList = await getAttendanceByTaskId(task.id);
+    console.log('attendances:', attendanceList);
+    
+    const latestStatus = user ? await getUserLatestAttendance(task.id, user.id.toString()) : 'none' as const;
+    console.log('latest status:', latestStatus);
+    
+    const imageList = await getTaskImages(task.id);
+    console.log('images:', imageList);
     
     setAllAttendances(attendanceList);
     setCurrentStatus(latestStatus);
     setImages(imageList);
+    console.log('--- useTaskData refresh end ---');
   }, [task?.id, user?.id]);
 
   return {
@@ -43,8 +51,15 @@ export function useTaskDetails(taskId: string) {
 
   const refresh = useCallback(async () => {
     if (!taskId) return;
+    
+    console.log('--- useTaskDetails refresh start ---');
+    console.log('Task ID:', taskId);
+    
     const task = await getTaskById(taskId);
+    console.log('task details:', task);
+    
     setTaskDetails(task);
+    console.log('--- useTaskDetails refresh end ---');
   }, [taskId]);
 
   return {
@@ -59,8 +74,15 @@ export function useCalendarEntry(taskId: string) {
 
   const refresh = useCallback(async () => {
     if (!taskId) return;
+    
+    console.log('--- useCalendarEntry refresh start ---');
+    console.log('Task ID:', taskId);
+    
     const entry = await getCalendarEntryByTaskId(taskId);
+    console.log('calendar entry:', entry);
+    
     setCalendarEntry(entry);
+    console.log('--- useCalendarEntry refresh end ---');
   }, [taskId]);
 
   return {
@@ -78,17 +100,33 @@ export function useGlobalRefresh(task: Task) {
 
   // Global refresh function that refreshes all data sources
   const refresh = useCallback(async () => {
+    console.log('--- refresh start ---');
+    const attendances = await getAttendanceByTaskId(task.id);
+    console.log('attendances:', attendances);
+
+    const latest = user ? await getUserLatestAttendance(task.id, user.id.toString()) : null;
+    console.log('latest status:', latest);
+
+    const imgs = await getTaskImages(task.id);
+    console.log('images:', imgs);
+
+    const calendarEntryData = await getCalendarEntryByTaskId(task.id);
+    console.log('calendar entry:', calendarEntryData);
+    console.log('--- refresh end ---');
+    
     await Promise.all([
       taskData.refresh(),
       taskDetails.refresh(),
       calendarEntry.refresh()
     ]);
-  }, [taskData.refresh, taskDetails.refresh, calendarEntry.refresh]);
+  }, [task.id, user?.id]);
 
   // Initial load
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    if (task?.id) {
+      refresh();
+    }
+  }, [task?.id]); // 只在 task.id 变化时执行，避免无限循环
 
   return {
     // Task data

@@ -21,7 +21,6 @@ export interface CalendarEntry {
   guestCount: number;
   roomNumber?: string;
   ownerNotes?: string;
-  task_id?: string; // 关联的任务ID
   createdBy: string;
   createdAt: string;
   updatedAt: string;

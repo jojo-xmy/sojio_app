@@ -26,7 +26,6 @@ export default function TaskDetailPage() {
           const taskObj: Task = {
             id: taskData.id,
             hotelName: taskData.hotel_name || '',
-            checkInDate: taskData.check_in_date || taskData.date || '',
             checkInTime: taskData.check_in_time || '',
             date: taskData.date,
             assignedCleaners: calendarEvent.assignedCleaners?.map(c => c.name) || [],

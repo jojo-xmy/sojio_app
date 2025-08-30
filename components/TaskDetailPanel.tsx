@@ -1,5 +1,5 @@
 "use client";
-import { useState, ChangeEvent, FormEvent, useEffect, useCallback } from 'react';
+import { useState, ChangeEvent, FormEvent, useEffect } from 'react';
 import { Task } from '@/types/task';
 import { useUserStore } from '@/store/userStore';
 import { getUserAttendanceByTaskId, checkIn, checkOut, Attendance, getAttendanceByTaskId, getUserLatestAttendance } from '@/lib/attendance';
@@ -11,42 +11,19 @@ import { AttachmentGallery } from '@/components/AttachmentGallery';
 import { getTaskCapabilities } from '@/lib/taskCapabilities';
 import { TaskCard } from '@/components/TaskCard';
 import { useGlobalRefresh } from '@/hooks/useRefresh';
-import { useTaskStore } from '@/store/taskStore';
 import { getAvailableCleanersForDate, assignTaskToCleaners } from '@/lib/calendar';
 import { getCalendarEntryByTaskId, updateCalendarEntry, deleteCalendarEntry } from '@/lib/hotelManagement';
 import { publishTask, acceptTask, rejectTask, updateTaskDetails, updateOwnerNotes, deleteTask } from '@/lib/tasks';
 
 interface TaskDetailPanelProps {
   task: Task;
+  onAttendanceUpdate?: () => void; // 回调函数，用于通知父组件刷新打卡状态
+  onTaskUpdate?: () => void; // 回调函数，用于通知父组件刷新任务详情
 }
 
-export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task }) => {
+export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttendanceUpdate, onTaskUpdate }) => {
   const user = useUserStore(s => s.user);
-  const { updateTaskData, taskData } = useTaskStore();
-  
-  // 优先使用全局状态中的数据，如果没有则使用传入的 task
-  const globalTaskData = taskData[task.id];
-  const effectiveTask = globalTaskData?.taskDetails || task;
-  
-  const { allAttendances, currentStatus, images: taskImages, taskDetails, calendarEntry, refresh } = useGlobalRefresh(effectiveTask);
-  
-  // 辅助函数：更新全局状态
-  const updateGlobalState = useCallback(() => {
-    updateTaskData(effectiveTask.id, {
-      attendances: allAttendances,
-      currentStatus,
-      images: taskImages,
-      taskDetails,
-      calendarEntry,
-    });
-  }, [effectiveTask.id, allAttendances, currentStatus, taskImages, taskDetails, calendarEntry, updateTaskData]);
-
-  // 在数据更新后自动同步到全局状态
-  useEffect(() => {
-    if (allAttendances.length > 0 || taskImages.length > 0 || taskDetails || calendarEntry) {
-      updateGlobalState();
-    }
-  }, [allAttendances, taskImages, taskDetails, calendarEntry]); // 移除 updateGlobalState 依赖，避免循环
+  const { allAttendances, currentStatus, images: taskImages, taskDetails, calendarEntry, refresh } = useGlobalRefresh(task);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [showAssignPanel, setShowAssignPanel] = useState(false);
@@ -104,7 +81,8 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task }) => {
       });
       setOwnerEditingEntry(null);
       await refresh();
-      updateGlobalState();
+      onAttendanceUpdate?.();
+      onTaskUpdate?.();
     } catch (e) {
       console.error('更新入住登记失败:', e);
       alert('更新入住登记失败');
@@ -121,7 +99,8 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task }) => {
       await deleteCalendarEntry(calendarEntry.id);
       setOwnerEditingEntry(null);
       await refresh();
-      updateGlobalState();
+      onAttendanceUpdate?.();
+      onTaskUpdate?.();
       alert('已删除入住登记与关联任务');
     } catch (e) {
       console.error('删除入住登记失败:', e);
@@ -148,10 +127,11 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task }) => {
     if (!user) return;
     try {
       setAssigning(true);
-      const res = await assignTaskToCleaners(effectiveTask.id, selectedCleaners, user.id, assignmentNotes);
+      const res = await assignTaskToCleaners(task.id, selectedCleaners, user.id, assignmentNotes);
       if (res.success) {
         await refresh();
-        updateGlobalState();
+        onAttendanceUpdate?.();
+        onTaskUpdate?.();
         setShowAssignPanel(false);
         setSelectedCleaners([]);
         setAssignmentNotes('');
@@ -169,7 +149,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task }) => {
   // 处理任务编辑保存
   const handleEditSave = async () => {
     try {
-      const result = await updateTaskDetails(effectiveTask.id, {
+      const result = await updateTaskDetails(task.id, {
         description: editFormData.description,
         cleaningDate: editFormData.cleaningDate,
         roomNumber: editFormData.roomNumber,
@@ -178,7 +158,8 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task }) => {
 
       if (result.success) {
         await refresh();
-        updateGlobalState();
+        onAttendanceUpdate?.();
+        onTaskUpdate?.();
         setEditingTask(false);
         alert('任务详情更新成功！');
       } else {
@@ -193,10 +174,11 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task }) => {
   // 处理任务发布
   const handlePublishTask = async () => {
     try {
-      const result = await publishTask(effectiveTask.id);
+      const result = await publishTask(task.id);
       if (result.success) {
         await refresh();
-        updateGlobalState();
+        onAttendanceUpdate?.();
+        onTaskUpdate?.();
         alert('任务发布成功！');
       } else {
         alert(result.error || '发布失败');
@@ -211,10 +193,11 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task }) => {
   const handleAcceptTask = async () => {
     if (!user) return;
     try {
-      const result = await acceptTask(effectiveTask.id, user.id.toString());
+      const result = await acceptTask(task.id, user.id.toString());
       if (result.success) {
         await refresh();
-        updateGlobalState();
+        onAttendanceUpdate?.();
+        onTaskUpdate?.();
         alert('任务接受成功！');
       } else {
         alert(result.error || '接受失败');
@@ -229,10 +212,11 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task }) => {
   const handleRejectTask = async () => {
     if (!user) return;
     try {
-      const result = await rejectTask(effectiveTask.id, user.id.toString());
+      const result = await rejectTask(task.id, user.id.toString());
       if (result.success) {
         await refresh();
-        updateGlobalState();
+        onAttendanceUpdate?.();
+        onTaskUpdate?.();
         alert('任务已拒绝');
       } else {
         alert(result.error || '拒绝失败');
@@ -255,41 +239,41 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task }) => {
     return <div style={{ border: '1px solid #eee', borderRadius: 8, padding: 20, background: '#f9fafb' }}>请先登录查看任务详情</div>;
   }
 
-  const caps = getTaskCapabilities(user.role, effectiveTask.status, {
-    isAssignedCleaner: effectiveTask.assignedCleaners?.some(name => name === user.name),
+  const caps = getTaskCapabilities(user.role, task.status, {
+    isAssignedCleaner: task.assignedCleaners?.some(name => name === user.name),
     hasAccepted: false,
     attendance: {
       hasCheckIn: currentStatus === 'checked_in' || currentStatus === 'checked_out',
       hasCheckOut: currentStatus === 'checked_out'
     },
-    assignedCleanersCount: effectiveTask.assignedCleaners?.length || 0,
+    assignedCleanersCount: task.assignedCleaners?.length || 0,
     pendingCleanerAck: false
   });
 
   return (
     <div>
       <TaskCard
-        id={effectiveTask.id}
-        hotelName={effectiveTask.hotelName}
-        date={effectiveTask.checkInDate || effectiveTask.date || ''}
-        checkInDate={effectiveTask.checkInDate}
-        checkInTime={effectiveTask.checkInTime}
-        checkOutDate={effectiveTask.checkOutDate}
-        cleaningDate={effectiveTask.cleaningDate}
-        assignedCleaners={effectiveTask.assignedCleaners}
-        status={effectiveTask.status}
-        description={effectiveTask.description}
-        note={effectiveTask.note}
-        images={effectiveTask.images}
+        id={task.id}
+        hotelName={task.hotelName}
+        date={task.checkInDate || task.date || ''}
+        checkInDate={task.checkInDate}
+        checkInTime={task.checkInTime}
+        checkOutDate={task.checkOutDate}
+        cleaningDate={task.cleaningDate}
+        assignedCleaners={task.assignedCleaners}
+        status={task.status}
+        description={task.description}
+        note={task.note}
+        images={task.images}
         showDetail={true}
         attendanceStatus={undefined}
-        hotelAddress={effectiveTask.hotelAddress}
-        roomNumber={effectiveTask.roomNumber}
-        lockPassword={effectiveTask.lockPassword}
-        acceptedBy={effectiveTask.acceptedBy}
-        completedAt={effectiveTask.completedAt}
-        confirmedAt={effectiveTask.confirmedAt}
-        guestCount={effectiveTask.guestCount}
+        hotelAddress={task.hotelAddress}
+        roomNumber={task.roomNumber}
+        lockPassword={task.lockPassword}
+        acceptedBy={task.acceptedBy}
+        completedAt={task.completedAt}
+        confirmedAt={task.confirmedAt}
+        guestCount={task.guestCount}
         viewerRole={user.role}
         viewMode={'detail'}
         capabilities={caps}
@@ -584,7 +568,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task }) => {
               allAttendances={allAttendances}
               loading={loading}
               onLoadingChange={setLoading}
-              onAfterUpdate={async () => { await refresh(); updateGlobalState(); }}
+              onAfterUpdate={async () => { await refresh(); onAttendanceUpdate?.(); onTaskUpdate?.(); }}
             />
           ) : null,
           attachments: (

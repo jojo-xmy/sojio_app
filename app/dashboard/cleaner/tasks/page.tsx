@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/userStore';
 import { useCleanerTasks } from '@/hooks/usePageRefresh';
-import { useTaskStore } from '@/store/taskStore';
 import { TaskStatusBadge } from '@/components/TaskStatusBadge';
 import { TaskActionButtons } from '@/components/TaskActionButtons';
 import { TaskStatus } from '@/types/task';
@@ -15,10 +14,6 @@ export default function CleanerTasksPage() {
   const { tasks, loading, refresh } = useCleanerTasks();
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<TaskStatus | 'all'>('all');
-  const { selectedTaskId, setSelectedTask, clearTaskData } = useTaskStore();
-  
-  // 从全局状态获取选中的任务
-  const selectedTask = tasks.find(task => task.tasks?.id === selectedTaskId) || null;
 
   useEffect(() => {
     if (!user || user.role !== 'cleaner') {
@@ -45,8 +40,6 @@ export default function CleanerTasksPage() {
   }, [user?.id, refresh]);
 
   const handleStatusChange = (taskId: string, newStatus: TaskStatus) => {
-    // 清除全局状态中的任务数据，确保下次获取最新数据
-    clearTaskData(taskId);
     // 触发全局刷新以获取最新数据
     refresh();
   };

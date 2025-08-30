@@ -7,7 +7,6 @@ import { getCalendarTasks, getOwnerCalendarTasks, getAvailableCleanersForDate, a
 import { TaskCalendarEvent, AvailableCleaner } from '@/types/calendar';
 import { TaskDetailPanel } from '@/components/TaskDetailPanel';
 import { supabase } from '@/lib/supabase';
-import { useTaskStore } from '@/store/taskStore';
 
 interface CustomTaskCalendarProps {
   className?: string;
@@ -20,25 +19,11 @@ export const CustomTaskCalendar = forwardRef<{ refreshData: () => void }, Custom
     const [currentDate, setCurrentDate] = useState(new Date());
     const [events, setEvents] = useState<TaskCalendarEvent[]>([]);
     const [loading, setLoading] = useState(true);
-    const { selectedTaskId, setSelectedTask } = useTaskStore();
-    // 直接使用全局状态中的选中任务，确保数据一致性
-    const selectedEvent = events.find(event => event.task.id === selectedTaskId) || null;
-    useEffect(() => {
-      if (!selectedEvent) return;
-      if (!selectedEvent.task?.id) return;
-      // 监控选择的任务ID，帮助定位 refresh 使用的 task.id 是否丢失
-      console.log('CustomTaskCalendar selectedTaskId =', selectedTaskId, 'selectedEvent.task.id =', selectedEvent.task.id);
-    }, [selectedTaskId, selectedEvent?.task?.id]);
+    const [selectedEvent, setSelectedEvent] = useState<TaskCalendarEvent | null>(null);
     const [availableCleaners, setAvailableCleaners] = useState<AvailableCleaner[]>([]);
     const [selectedCleanerIds, setSelectedCleanerIds] = useState<string[]>([]);
     const [assignNotes, setAssignNotes] = useState('');
     const [assigning, setAssigning] = useState(false);
-
-    // 使用 ref 保存 onDataRefresh，避免作为依赖导致回调重建引发重复刷新
-    const onDataRefreshRef = useRef(onDataRefresh);
-    useEffect(() => {
-      onDataRefreshRef.current = onDataRefresh;
-    }, [onDataRefresh]);
 
     // 加载日历数据
     const loadCalendarData = useCallback(async (startDate: Date, endDate: Date) => {
@@ -76,16 +61,25 @@ export const CustomTaskCalendar = forwardRef<{ refreshData: () => void }, Custom
         
         setEvents(sortedEvents);
         
-        // 通知父组件数据已刷新（通过 ref 调用，避免依赖导致的重建）
-        onDataRefreshRef.current?.();
+        // 通知父组件数据已刷新
+        onDataRefresh?.();
       } catch (error) {
         console.error('加载日历数据失败:', error);
       } finally {
         setLoading(false);
       }
-    }, [user]);
+    }, [user, onDataRefresh]);
 
-
+    // 同步更新 selectedEvent，确保侧栏显示最新数据
+    useEffect(() => {
+      if (selectedEvent && events.length > 0) {
+        const updatedEvent = events.find(event => event.task.id === selectedEvent.task.id);
+        if (updatedEvent && JSON.stringify(updatedEvent) !== JSON.stringify(selectedEvent)) {
+          console.log('同步更新 selectedEvent:', updatedEvent);
+          setSelectedEvent(updatedEvent);
+        }
+      }
+    }, [events, selectedEvent]);
 
     // 暴露刷新方法给父组件
     useImperativeHandle(ref, () => ({
@@ -113,33 +107,29 @@ export const CustomTaskCalendar = forwardRef<{ refreshData: () => void }, Custom
       return () => {
         supabase.removeChannel(channel);
       };
-    }, [user?.id, currentDate]); // 移除 loadCalendarData 依赖，避免循环
+    }, [user?.id, currentDate, loadCalendarData]);
 
-    // 处理任务点击（仅改变选择状态，不重新加载数据）
-    const handleTaskClick = useCallback((event: TaskCalendarEvent) => {
+    // 处理任务点击（右侧面板展示并加载可用清洁员）
+    const handleTaskClick = useCallback(async (event: TaskCalendarEvent) => {
       console.log('任务被点击:', event);
-      // 只更新选中状态，不重新加载数据
-      setSelectedTask(event.task.id);
+      setSelectedEvent(event);
       
-      // 异步加载可用清洁员（不影响全局状态）
-      const loadAvailableCleaners = async () => {
-        try {
-          const dateStr = event.task.cleaningDate || event.task.checkInDate || event.task.date || '';
-          console.log('CustomTaskCalendar - 查询日期:', dateStr);
-          if (dateStr) {
-            const cleaners = await getAvailableCleanersForDate(dateStr);
-            console.log('CustomTaskCalendar - 获取到的可用清洁员:', cleaners);
-            setAvailableCleaners(cleaners);
-            setSelectedCleanerIds([]);
-          } else {
-            setAvailableCleaners([]);
-          }
-        } catch (error) {
-          console.error('获取可用清洁员失败:', error);
+      console.log('加载可用清洁员...');
+      try {
+        const dateStr = event.task.cleaningDate || event.task.checkInDate || event.task.date || '';
+        console.log('CustomTaskCalendar - 查询日期:', dateStr);
+        if (dateStr) {
+          const cleaners = await getAvailableCleanersForDate(dateStr);
+          console.log('CustomTaskCalendar - 获取到的可用清洁员:', cleaners);
+          setAvailableCleaners(cleaners);
+          setSelectedCleanerIds([]);
+        } else {
+          setAvailableCleaners([]);
         }
-      };
-      
-      loadAvailableCleaners();
+      } catch (error) {
+        console.error('获取可用清洁员失败:', error);
+        alert('获取可用清洁员失败');
+      }
     }, []);
 
     // 处理任务分配
@@ -373,6 +363,17 @@ export const CustomTaskCalendar = forwardRef<{ refreshData: () => void }, Custom
                 <div className="max-h-[calc(100vh-32px)] overflow-y-auto">
                   <TaskDetailPanel 
                     task={selectedEvent.task}
+                    onAttendanceUpdate={async () => {
+                      const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+                      const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+                      await loadCalendarData(startDate, endDate);
+                    }}
+                    onTaskUpdate={async () => {
+                      // 当任务详情更新时，同步更新 selectedEvent
+                      const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+                      const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+                      await loadCalendarData(startDate, endDate);
+                    }}
                   />
                 </div>
               )}

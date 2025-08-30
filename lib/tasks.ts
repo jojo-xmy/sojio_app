@@ -29,49 +29,7 @@ export async function getTaskById(id: string): Promise<Task | null> {
     return null;
   }
   
-  if (!data) {
-    return null;
-  }
-  
-  // 映射数据库字段到前端格式
-  const mappedTask: Task = {
-    id: data.id,
-    hotelId: data.hotel_id,
-    hotelName: data.hotel_name || '',
-    checkInDate: data.check_in_date || '',
-    checkInTime: data.check_in_time || '',
-    checkOutDate: data.check_out_date || '',
-    cleaningDate: data.cleaning_date || data.check_out_date || '',
-    assignedCleaners: data.assigned_cleaners || [],
-    status: data.status,
-    description: data.description || '',
-    note: data.note || '',
-    ownerNotes: data.owner_notes || '',
-    cleanerNotes: data.cleaner_notes || '',
-    images: data.images || [],
-    hotelAddress: data.hotel_address || '',
-    roomNumber: data.room_number || '',
-    lockPassword: data.lock_password || '',
-    specialInstructions: data.special_instructions || '',
-    guestCount: data.guest_count || 1,
-    acceptedBy: data.accepted_by || [],
-    completedAt: data.completed_at || '',
-    confirmedAt: data.confirmed_at || '',
-    createdBy: data.created_by || '',
-    createdAt: data.created_at || '',
-    updatedAt: data.updated_at || '',
-    // 保持兼容性
-    date: data.check_in_date || '',
-    inventory: data.inventory || {
-      towel: 0,
-      soap: 0,
-      shampoo: 0,
-      conditioner: 0,
-      toiletPaper: 0
-    }
-  };
-  
-  return mappedTask;
+  return data;
 }
 
 // 创建新任务

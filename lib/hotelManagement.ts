@@ -231,74 +231,19 @@ export async function getCalendarEntryByTaskId(taskId: string): Promise<Calendar
     throw new Error('获取入住登记失败');
   }
 
-  // 如果基于 task_id 未找到，尝试基于任务元信息回退匹配
-  let row = data as any;
-  if (!row) {
-    // 读取任务的 hotel_id / check_in_date / room_number
-    const { data: taskRow, error: taskErr } = await supabase
-      .from('tasks')
-      .select('hotel_id, check_in_date, room_number')
-      .eq('id', taskId)
-      .maybeSingle();
-
-    if (taskErr) {
-      console.error('回退匹配时读取任务失败:', taskErr);
-      return null;
-    }
-
-    if (!taskRow) {
-      return null;
-    }
-
-    // 先尝试：calendar_entries.check_out_date == tasks.check_in_date （退房日清扫）
-    let { data: fbData, error: fbErr } = await supabase
-      .from('calendar_entries')
-      .select('*')
-      .eq('hotel_id', taskRow.hotel_id)
-      .eq('check_out_date', taskRow.check_in_date)
-      .maybeSingle();
-    if (fbErr) {
-      console.error('回退匹配日历条目失败(按退房日):', fbErr);
-      return null;
-    }
-
-    // 若未命中，再尝试按入住日匹配（极端场景）
-    if (!fbData) {
-      const { data: fbData2, error: fbErr2 } = await supabase
-        .from('calendar_entries')
-        .select('*')
-        .eq('hotel_id', taskRow.hotel_id)
-        .eq('check_in_date', taskRow.check_in_date)
-        .maybeSingle();
-      if (fbErr2) {
-        console.error('回退匹配日历条目失败(按入住日):', fbErr2);
-        return null;
-      }
-      fbData = fbData2;
-    }
-
-    if (!fbData) return null;
-
-    // 可选：过滤房间号一致
-    if (taskRow.room_number && fbData.room_number && fbData.room_number !== taskRow.room_number) {
-      // 如房间号不一致，认为未匹配
-      return null;
-    }
-
-    row = fbData;
-  }
+  if (!data) return null;
 
   return {
-    id: row.id,
-    hotelId: row.hotel_id,
-    checkInDate: row.check_in_date,
-    checkOutDate: row.check_out_date,
-    guestCount: row.guest_count,
-    roomNumber: row.room_number || '',
-    ownerNotes: row.owner_notes || '',
-    createdBy: row.created_by,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
+    id: data.id,
+    hotelId: data.hotel_id,
+    checkInDate: data.check_in_date,
+    checkOutDate: data.check_out_date,
+    guestCount: data.guest_count,
+    roomNumber: data.room_number || '',
+    ownerNotes: data.owner_notes || '',
+    createdBy: data.created_by,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at
   } as CalendarEntry;
 }
 

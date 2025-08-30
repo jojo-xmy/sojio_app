@@ -11,6 +11,7 @@ import {
 } from '@/lib/hotelManagement';
 import { Hotel, CalendarEntry, CreateCalendarEntryData } from '@/types/hotel';
 import { supabase } from '@/lib/supabase';
+import { useTaskStore } from '@/store/taskStore';
 
 export default function HotelCalendarPage() {
   const params = useParams();
@@ -19,12 +20,15 @@ export default function HotelCalendarPage() {
   const hotelId = params.hotelId as string;
 
   const [hotel, setHotel] = useState<Hotel | null>(null);
-  const [calendarEntries, setCalendarEntries] = useState<CalendarEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingEntry, setEditingEntry] = useState<CalendarEntry | null>(null);
   const [creating, setCreating] = useState(false);
+  const { selectedTaskId, setSelectedTask, clearTaskData } = useTaskStore();
+  
+  // 从全局状态获取日历条目，如果没有则从数据库加载
+  const [calendarEntries, setCalendarEntries] = useState<CalendarEntry[]>([]);
 
   // 表单状态
   const [formData, setFormData] = useState<CreateCalendarEntryData>({
@@ -77,6 +81,13 @@ export default function HotelCalendarPage() {
       
       setHotel(hotelData);
       setCalendarEntries(entries);
+      
+      // 清除相关的全局任务状态，确保显示最新数据
+      entries.forEach(entry => {
+        if (entry.task_id) {
+          clearTaskData(entry.task_id);
+        }
+      });
     } catch (err) {
       setError('加载酒店数据失败');
       console.error('加载酒店数据失败:', err);
@@ -101,6 +112,7 @@ export default function HotelCalendarPage() {
         ownerNotes: ''
       });
       setShowCreateForm(false);
+      
       await loadHotelData(); // 重新加载数据
     } catch (err) {
       setError('创建日历条目失败');
@@ -126,6 +138,7 @@ export default function HotelCalendarPage() {
         roomNumber: '',
         ownerNotes: ''
       });
+      
       await loadHotelData(); // 重新加载数据
     } catch (err) {
       setError('更新日历条目失败');
@@ -140,6 +153,7 @@ export default function HotelCalendarPage() {
 
     try {
       await deleteCalendarEntry(entryId);
+      
       await loadHotelData(); // 重新加载数据
     } catch (err) {
       setError('删除日历条目失败');

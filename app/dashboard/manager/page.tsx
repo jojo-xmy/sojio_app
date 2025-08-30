@@ -12,6 +12,7 @@ import { getTaskCapabilities } from '@/lib/taskCapabilities';
 import { useManagerDashboard } from '@/hooks/usePageRefresh';
 import { Task } from '@/types/task';
 import { supabase } from '@/lib/supabase';
+import { useTaskStore } from '@/store/taskStore';
 
 
 export default function ManagerDashboard() {
@@ -19,11 +20,14 @@ export default function ManagerDashboard() {
   const user = useUserStore(s => s.user);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('calendar');
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const calendarRef = useRef<{ refreshData: () => void }>(null);
+  const { selectedTaskId, setSelectedTask } = useTaskStore();
   
   // 使用新的全局 refresh 管理器
   const { tasksWithAttendance, loading, refresh: loadAllAttendanceStatus } = useManagerDashboard();
+  
+  // 从全局状态获取选中的任务
+  const selectedTask = tasksWithAttendance.find(task => task.id === selectedTaskId) || null;
 
 
 
@@ -38,25 +42,24 @@ export default function ManagerDashboard() {
   }, [loadAllAttendanceStatus]);
 
   // 订阅实时变更：tasks 与 attendance 与 task_assignments
+  // 精简策略：仅刷新列表；日历自身包含订阅与刷新逻辑，无需此处重复触发
   useEffect(() => {
     if (!user) return;
     const channel = supabase
       .channel(`realtime-manager-dashboard-${user.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
         loadAllAttendanceStatus();
-        if (calendarRef.current) calendarRef.current.refreshData();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, () => {
         loadAllAttendanceStatus();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'task_assignments' }, () => {
         loadAllAttendanceStatus();
-        if (calendarRef.current) calendarRef.current.refreshData();
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user?.id, loadAllAttendanceStatus]);
+  }, [user?.id]);
 
 
 
@@ -156,7 +159,7 @@ export default function ManagerDashboard() {
                       confirmedAt={task.confirmedAt}
                       guestCount={task.guestCount}
                       showDetail={false} 
-                      onClick={() => setSelectedTask(task)}
+                      onClick={() => setSelectedTask(task.id)}
                       capabilities={caps}
                     />
                   );
@@ -175,7 +178,6 @@ export default function ManagerDashboard() {
                 <div className="max-h-[calc(100vh-32px)] overflow-y-auto">
                   <TaskDetailPanel 
                     task={selectedTask} 
-                    onAttendanceUpdate={handleAttendanceUpdate}
                   />
                 </div>
               )}

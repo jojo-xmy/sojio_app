@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Task, TaskStatus, UserRole } from '@/types/task';
 import { canOperateTask, transitionTask } from '@/lib/taskStatus';
 import { useUserStore } from '@/store/userStore';
+import { useTaskStore } from '@/store/taskStore';
 
 interface TaskActionButtonsProps {
   task: Task;
@@ -16,6 +17,7 @@ export const TaskActionButtons: React.FC<TaskActionButtonsProps> = ({
   className = ''
 }) => {
   const user = useUserStore(s => s.user);
+  const { clearTaskData } = useTaskStore();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,6 +41,8 @@ export const TaskActionButtons: React.FC<TaskActionButtonsProps> = ({
       );
 
       if (result.success) {
+        // 清除全局状态中的任务数据，确保下次获取最新数据
+        clearTaskData(task.id);
         onStatusChange?.(newStatus);
         console.log(`任务状态已更新为: ${newStatus}`);
       } else {

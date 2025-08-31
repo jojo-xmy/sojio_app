@@ -3,7 +3,7 @@ import { useUserStore } from '@/store/userStore';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
 import { RoleSelector } from '@/components/RoleSelector';
-import { OwnerTaskCalendar } from '@/components/OwnerTaskCalendar';
+import { GanttTaskTimeline } from '@/components/GanttTaskTimeline';
 import { TaskCreateForm } from '@/components/TaskCreateForm';
 
 
@@ -67,11 +67,11 @@ export default function OwnerDashboard() {
       </div>
 
       {/* 日历视图（内部已包含右侧任务详情面板） */}
-      <OwnerTaskCalendar 
+      <GanttTaskTimeline 
         ref={calendarRef}
         className="w-full" 
         onDataRefresh={() => {
-          console.log('日历数据已刷新');
+          console.log('时间线数据已刷新');
         }}
       />
 

@@ -260,11 +260,74 @@ export default function HotelCalendarPage() {
         </div>
       )}
 
-      {/* 日历视图 - 临时简化 */}
-      <div className="mb-8 p-8 bg-gray-50 border border-gray-200 rounded-lg text-center">
-        <p className="text-gray-600">日历视图功能正在开发中...</p>
-        <p className="text-sm text-gray-500 mt-2">当前有 {calendarEntries.length} 个日历条目</p>
-      </div>
+      {/* 入住登记列表视图 */}
+      {calendarEntries.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="text-gray-500 mb-4">暂无入住登记</div>
+          <button
+            onClick={() => setShowCreateForm(true)}
+            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            添加第一个入住登记
+          </button>
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {calendarEntries.map((entry) => (
+            <div
+              key={entry.id}
+              className="bg-white border border-gray-200 rounded-lg p-6"
+            >
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {entry.roomNumber ? `房间 ${entry.roomNumber}` : '未指定房间'}
+                  </h3>
+                  <p className="text-gray-600">
+                    👥 {entry.guestCount} 位客人
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleEditEntry(entry)}
+                    className="text-blue-600 hover:text-blue-800 text-sm"
+                  >
+                    编辑
+                  </button>
+                  <button
+                    onClick={() => handleDeleteEntry(entry.id)}
+                    className="text-red-600 hover:text-red-800 text-sm"
+                  >
+                    删除
+                  </button>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <span className="text-sm font-medium text-gray-700">入住日期:</span>
+                  <p className="text-gray-900">{new Date(entry.checkInDate).toLocaleDateString()}</p>
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-gray-700">退房日期:</span>
+                  <p className="text-gray-900">{new Date(entry.checkOutDate).toLocaleDateString()}</p>
+                </div>
+              </div>
+              
+              {entry.ownerNotes && (
+                <div>
+                  <span className="text-sm font-medium text-gray-700">房东备注:</span>
+                  <p className="text-gray-900 mt-1">{entry.ownerNotes}</p>
+                </div>
+              )}
+              
+              <div className="text-xs text-gray-500 mt-4">
+                创建时间: {new Date(entry.createdAt).toLocaleString()}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* 选中的入住登记详情 */}
       {selectedEntry && (

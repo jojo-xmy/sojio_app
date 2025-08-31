@@ -3,7 +3,7 @@ import { useUserStore } from '@/store/userStore';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
 import { RoleSelector } from '@/components/RoleSelector';
-import { TaskCalendar } from '@/components/TaskCalendar';
+import { OwnerTaskCalendar } from '@/components/OwnerTaskCalendar';
 import { TaskCreateForm } from '@/components/TaskCreateForm';
 
 
@@ -67,7 +67,7 @@ export default function OwnerDashboard() {
       </div>
 
       {/* 日历视图（内部已包含右侧任务详情面板） */}
-      <TaskCalendar 
+      <OwnerTaskCalendar 
         ref={calendarRef}
         className="w-full" 
         onDataRefresh={() => {

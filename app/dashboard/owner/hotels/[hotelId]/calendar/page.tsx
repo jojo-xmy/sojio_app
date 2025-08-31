@@ -11,6 +11,7 @@ import {
 } from '@/lib/hotelManagement';
 import { Hotel, CalendarEntry, CreateCalendarEntryData } from '@/types/hotel';
 import { supabase } from '@/lib/supabase';
+// 临时移除复杂的日历组件引用
 
 export default function HotelCalendarPage() {
   const params = useParams();
@@ -25,6 +26,7 @@ export default function HotelCalendarPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingEntry, setEditingEntry] = useState<CalendarEntry | null>(null);
   const [creating, setCreating] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState<CalendarEntry | null>(null);
 
   // 表单状态
   const [formData, setFormData] = useState<CreateCalendarEntryData>({
@@ -35,6 +37,9 @@ export default function HotelCalendarPage() {
     roomNumber: '',
     ownerNotes: ''
   });
+
+  // 表单验证状态
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user || user.role !== 'owner') {
@@ -60,8 +65,6 @@ export default function HotelCalendarPage() {
     return () => { supabase.removeChannel(channel); };
   }, [user, hotelId]);
 
-
-
   const loadHotelData = async () => {
     try {
       setLoading(true);
@@ -85,9 +88,29 @@ export default function HotelCalendarPage() {
     }
   };
 
+  // 验证表单数据
+  const validateFormData = () => {
+    if (!formData.checkInDate || !formData.checkOutDate) {
+      setValidationError('请选择入住和退房日期');
+      return false;
+    }
+
+    if (new Date(formData.checkInDate) >= new Date(formData.checkOutDate)) {
+      setValidationError('退房日期必须晚于入住日期');
+      return false;
+    }
+
+    setValidationError(null);
+    return true;
+  };
+
   const handleCreateEntry = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+
+    if (!validateFormData()) {
+      return;
+    }
 
     try {
       setCreating(true);
@@ -101,6 +124,7 @@ export default function HotelCalendarPage() {
         ownerNotes: ''
       });
       setShowCreateForm(false);
+      setValidationError(null);
       await loadHotelData(); // 重新加载数据
     } catch (err) {
       setError('创建日历条目失败');
@@ -114,6 +138,10 @@ export default function HotelCalendarPage() {
     e.preventDefault();
     if (!editingEntry) return;
 
+    if (!validateFormData()) {
+      return;
+    }
+
     try {
       setCreating(true);
       await updateCalendarEntry(editingEntry.id, formData);
@@ -126,6 +154,7 @@ export default function HotelCalendarPage() {
         roomNumber: '',
         ownerNotes: ''
       });
+      setValidationError(null);
       await loadHotelData(); // 重新加载数据
     } catch (err) {
       setError('更新日历条目失败');
@@ -169,6 +198,23 @@ export default function HotelCalendarPage() {
       roomNumber: '',
       ownerNotes: ''
     });
+    setValidationError(null);
+  };
+
+  const handleDateSelect = (date: string) => {
+    if (!showCreateForm && !editingEntry) {
+      // 如果不在编辑模式，点击日期可以快速创建新记录
+      setFormData(prev => ({
+        ...prev,
+        checkInDate: date,
+        checkOutDate: date
+      }));
+      setShowCreateForm(true);
+    }
+  };
+
+  const handleEntryClick = (entry: CalendarEntry) => {
+    setSelectedEntry(entry);
   };
 
   if (!user || user.role !== 'owner') {
@@ -194,7 +240,7 @@ export default function HotelCalendarPage() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-6 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{hotel.name} - 入住日历</h1>
@@ -214,71 +260,67 @@ export default function HotelCalendarPage() {
         </div>
       )}
 
-      {calendarEntries.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="text-gray-500 mb-4">暂无入住登记</div>
-          <button
-            onClick={() => setShowCreateForm(true)}
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            添加第一个入住登记
-          </button>
-        </div>
-      ) : (
-        <div className="grid gap-4">
-          {calendarEntries.map((entry) => (
-            <div
-              key={entry.id}
-              className="bg-white border border-gray-200 rounded-lg p-6"
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    {entry.roomNumber ? `房间 ${entry.roomNumber}` : '未指定房间'}
-                  </h3>
-                  <p className="text-gray-600">
-                    👥 {entry.guestCount} 位客人
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleEditEntry(entry)}
-                    className="text-blue-600 hover:text-blue-800 text-sm"
-                  >
-                    编辑
-                  </button>
-                  <button
-                    onClick={() => handleDeleteEntry(entry.id)}
-                    className="text-red-600 hover:text-red-800 text-sm"
-                  >
-                    删除
-                  </button>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <span className="text-sm font-medium text-gray-700">入住日期:</span>
-                  <p className="text-gray-900">{new Date(entry.checkInDate).toLocaleDateString()}</p>
-                </div>
-                <div>
-                  <span className="text-sm font-medium text-gray-700">退房日期:</span>
-                  <p className="text-gray-900">{new Date(entry.checkOutDate).toLocaleDateString()}</p>
-                </div>
-              </div>
-              
-              {entry.ownerNotes && (
-                <div>
-                  <span className="text-sm font-medium text-gray-700">房东备注:</span>
-                  <p className="text-gray-900 mt-1">{entry.ownerNotes}</p>
-                </div>
-              )}
-              
-              <div className="text-xs text-gray-500 mt-4">
-                创建时间: {new Date(entry.createdAt).toLocaleString()}
-              </div>
+      {/* 日历视图 - 临时简化 */}
+      <div className="mb-8 p-8 bg-gray-50 border border-gray-200 rounded-lg text-center">
+        <p className="text-gray-600">日历视图功能正在开发中...</p>
+        <p className="text-sm text-gray-500 mt-2">当前有 {calendarEntries.length} 个日历条目</p>
+      </div>
+
+      {/* 选中的入住登记详情 */}
+      {selectedEntry && (
+        <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">
+                {selectedEntry.roomNumber ? `房间 ${selectedEntry.roomNumber}` : '未指定房间'}
+              </h3>
+              <p className="text-gray-600">
+                👥 {selectedEntry.guestCount} 位客人
+              </p>
             </div>
-          ))}
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleEditEntry(selectedEntry)}
+                className="text-blue-600 hover:text-blue-800 text-sm"
+              >
+                编辑
+              </button>
+              <button
+                onClick={() => handleDeleteEntry(selectedEntry.id)}
+                className="text-red-600 hover:text-red-800 text-sm"
+              >
+                删除
+              </button>
+              <button
+                onClick={() => setSelectedEntry(null)}
+                className="text-gray-600 hover:text-gray-800 text-sm"
+              >
+                关闭
+              </button>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <span className="text-sm font-medium text-gray-700">入住日期:</span>
+              <p className="text-gray-900">{new Date(selectedEntry.checkInDate).toLocaleDateString()}</p>
+            </div>
+            <div>
+              <span className="text-sm font-medium text-gray-700">退房日期:</span>
+              <p className="text-gray-900">{new Date(selectedEntry.checkOutDate).toLocaleDateString()}</p>
+            </div>
+          </div>
+          
+          {selectedEntry.ownerNotes && (
+            <div>
+              <span className="text-sm font-medium text-gray-700">房东备注:</span>
+              <p className="text-gray-900 mt-1">{selectedEntry.ownerNotes}</p>
+            </div>
+          )}
+          
+          <div className="text-xs text-gray-500 mt-4">
+            创建时间: {new Date(selectedEntry.createdAt).toLocaleString()}
+          </div>
         </div>
       )}
 
@@ -289,6 +331,13 @@ export default function HotelCalendarPage() {
             <h2 className="text-xl font-bold mb-4">
               {editingEntry ? '编辑入住登记' : '添加入住登记'}
             </h2>
+            
+            {validationError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+                {validationError}
+              </div>
+            )}
+            
             <form onSubmit={editingEntry ? handleUpdateEntry : handleCreateEntry}>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -298,7 +347,10 @@ export default function HotelCalendarPage() {
                   type="date"
                   required
                   value={formData.checkInDate}
-                  onChange={(e) => setFormData({ ...formData, checkInDate: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, checkInDate: e.target.value });
+                    setValidationError(null);
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -310,7 +362,10 @@ export default function HotelCalendarPage() {
                   type="date"
                   required
                   value={formData.checkOutDate}
-                  onChange={(e) => setFormData({ ...formData, checkOutDate: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, checkOutDate: e.target.value });
+                    setValidationError(null);
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>

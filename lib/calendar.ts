@@ -39,6 +39,7 @@ export async function getCalendarTasks(
         )
       )
     `)
+    .order('check_out_date', { ascending: true, nullsFirst: false })
     .order('check_in_date', { ascending: true });
 
   // 强制刷新时添加随机查询参数避免缓存
@@ -46,10 +47,9 @@ export async function getCalendarTasks(
     query = query.limit(1000); // 添加 limit 强制重新查询
   }
 
-  // 开发环境：如果查询指定日期范围没有数据，则查询所有数据
+  // 查询指定日期范围内的任务（包括入住日期和退房日期）
   const { data: tasksInRange, error: rangeError } = await query
-    .gte('check_in_date', startDateStr)
-    .lte('check_in_date', endDateStr);
+    .or(`check_in_date.gte.${startDateStr},check_in_date.lte.${endDateStr},check_out_date.gte.${startDateStr},check_out_date.lte.${endDateStr}`);
 
   if (rangeError) {
     console.error('获取日历任务失败:', rangeError.message, rangeError.details, rangeError.hint);
@@ -99,24 +99,25 @@ export async function getCalendarTasks(
 
   // 转换为前端日历事件格式
   const calendarEvents: TaskCalendarEvent[] = (tasksToUse || []).map(task => {
-    // 使用数据库字段：check_in_date 和 check_in_time
-    const taskDate = new Date(task.check_in_date);
+    // 清扫任务应该显示在退房日期，如果没有退房日期则使用入住日期
+    const displayDate = task.check_out_date || task.check_in_date;
+    const taskDate = new Date(displayDate);
     
-    // 构建开始时间：check_in_date + check_in_time
+    // 构建开始时间：使用显示日期 + 默认清扫时间（上午9点）
     let startTime: Date;
-    if (task.check_in_time) {
-      // 如果有时刻，组合日期和时间
+    if (task.check_in_time && !task.check_out_date) {
+      // 如果没有退房日期但有入住时间，使用入住时间
       startTime = new Date(`${task.check_in_date}T${task.check_in_time}`);
     } else {
-      // 如果没有时刻，使用日期当天的默认时间（下午3点）
-      startTime = new Date(`${task.check_in_date}T15:00:00`);
+      // 清扫任务默认在退房日期的上午9点开始
+      startTime = new Date(`${displayDate}T09:00:00`);
     }
     
-    // 构建结束时间：如果有check_out_date使用它，否则默认2小时后
+    // 构建结束时间：清扫任务默认2小时完成
     let endTime: Date;
     if (task.check_out_date) {
-      // 如果有退房日期，使用退房日期的默认时间（上午10点）
-      endTime = new Date(`${task.check_out_date}T10:00:00`);
+      // 如果有退房日期，清扫任务在退房日期的上午11点结束
+      endTime = new Date(`${task.check_out_date}T11:00:00`);
     } else {
       // 否则使用开始时间后2小时
       endTime = new Date(startTime.getTime() + 2 * 60 * 60 * 1000);
@@ -185,6 +186,8 @@ export async function getCalendarTasks(
 
 // 获取指定日期的可用清洁员（简化版本：按日期而非时间段）
 export async function getAvailableCleanersForDate(date: string): Promise<AvailableCleaner[]> {
+  console.log('🔍 getAvailableCleanersForDate 被调用，参数:', { date });
+  
   // 第一步：取当天可用性条目（不做联表，避免因缺失外键导致结果被过滤）
   const { data: availability, error: availError } = await supabase
     .from('cleaner_availability')
@@ -192,9 +195,9 @@ export async function getAvailableCleanersForDate(date: string): Promise<Availab
     .eq('date', date)
     .order('created_at', { ascending: false }); // 确保获取最新可用性
 
-  console.log('可用性原始数据:', availability);
-  console.log('可用性查询错误:', availError);
-  console.log('查询日期:', date);
+  console.log('📊 可用性原始数据:', availability);
+  console.log('❌ 可用性查询错误:', availError);
+  console.log('📅 查询日期:', date);
 
   if (availError) {
     console.error('获取可用性数据失败:', availError);
@@ -370,24 +373,25 @@ export async function getTaskWithAssignments(taskId: string): Promise<TaskCalend
 
   if (!data) return null;
 
-  // 使用新的字段结构：check_in_date 和 check_in_time
-  const taskDate = new Date(data.check_in_date);
+  // 清扫任务应该显示在退房日期，如果没有退房日期则使用入住日期
+  const displayDate = data.check_out_date || data.check_in_date;
+  const taskDate = new Date(displayDate);
   
-  // 构建开始时间：check_in_date + check_in_time
+  // 构建开始时间：使用显示日期 + 默认清扫时间（上午9点）
   let startTime: Date;
-  if (data.check_in_time) {
-    // 如果有时刻，组合日期和时间
+  if (data.check_in_time && !data.check_out_date) {
+    // 如果没有退房日期但有入住时间，使用入住时间
     startTime = new Date(`${data.check_in_date}T${data.check_in_time}`);
   } else {
-    // 如果没有时刻，使用日期当天的默认时间（比如上午9点）
-    startTime = new Date(`${data.check_in_date}T09:00:00`);
+    // 清扫任务默认在退房日期的上午9点开始
+    startTime = new Date(`${displayDate}T09:00:00`);
   }
   
-  // 构建结束时间：如果有check_out_date使用它，否则默认2小时后
+  // 构建结束时间：清扫任务默认2小时完成
   let endTime: Date;
   if (data.check_out_date) {
-    // 如果有退房日期，使用退房日期的默认时间（比如下午3点）
-    endTime = new Date(`${data.check_out_date}T15:00:00`);
+    // 如果有退房日期，清扫任务在退房日期的上午11点结束
+    endTime = new Date(`${data.check_out_date}T11:00:00`);
   } else {
     // 否则使用开始时间后2小时
     endTime = new Date(startTime.getTime() + 2 * 60 * 60 * 1000);
@@ -492,12 +496,17 @@ export async function getOwnerCalendarTasks(
   const startDateStr = startDate.toISOString().split('T')[0];
   const endDateStr = endDate.toISOString().split('T')[0];
 
+  console.log('🏨 getOwnerCalendarTasks 被调用:', { startDateStr, endDateStr, ownerId });
+
   try {
     // 首先获取owner管理的酒店ID列表
     const { data: hotels, error: hotelError } = await supabase
       .from('hotels')
       .select('id')
       .eq('owner_id', ownerId);
+
+    console.log('🏨 获取到的酒店列表:', hotels);
+    console.log('❌ 酒店查询错误:', hotelError);
 
     if (hotelError) {
       console.error('Error fetching owner hotels:', hotelError);
@@ -510,6 +519,7 @@ export async function getOwnerCalendarTasks(
     }
 
     const hotelIds = hotels.map(h => h.id);
+    console.log('🏨 酒店ID列表:', hotelIds);
 
     // 然后查询这些酒店的任务
     const { data: tasks, error: taskError } = await supabase
@@ -532,9 +542,12 @@ export async function getOwnerCalendarTasks(
         )
       `)
       .in('hotel_id', hotelIds)
-      .gte('check_in_date', startDateStr)
-      .lte('check_in_date', endDateStr)
-      .order('check_in_date');
+      .or(`check_in_date.gte.${startDateStr},check_in_date.lte.${endDateStr},check_out_date.gte.${startDateStr},check_out_date.lte.${endDateStr}`)
+      .order('check_out_date', { ascending: true, nullsFirst: false })
+      .order('check_in_date', { ascending: true });
+
+    console.log('📋 获取到的任务数据:', tasks);
+    console.log('❌ 任务查询错误:', taskError);
 
     if (taskError) {
       console.error('Error fetching owner calendar tasks:', taskError);
@@ -573,12 +586,15 @@ export async function getOwnerCalendarTasks(
         cleanerNotes: task.cleaner_notes || ''
       };
 
+      // 清扫任务应该显示在退房日期，如果没有退房日期则使用入住日期
+      const displayDate = task.check_out_date || task.check_in_date;
+      
       return {
         id: task.id,
         title: task.hotel_name,
-        start: new Date(`${task.check_in_date}T00:00:00`),
-        end: new Date(`${task.check_in_date}T23:59:59`),
-        date: task.check_in_date,
+        start: new Date(`${displayDate}T09:00:00`),
+        end: new Date(`${displayDate}T11:00:00`),
+        date: displayDate,
         task: mappedTask,
         assignedCleaners,
         type: 'task'

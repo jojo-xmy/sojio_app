@@ -29,10 +29,17 @@ export const OwnerTaskCalendar = forwardRef<{ refreshData: () => void }, OwnerTa
     const loadCalendarData = useCallback(async (startDate: Date, endDate: Date) => {
       if (!user) return;
       
+      console.log('🔄 OwnerTaskCalendar - loadCalendarData 被调用:', { 
+        startDate: startDate.toISOString().split('T')[0], 
+        endDate: endDate.toISOString().split('T')[0],
+        userId: user.id 
+      });
+      
       try {
         setLoading(true);
         // 房东只能看到自己的任务
         const calendarEvents = await getOwnerCalendarTasks(startDate, endDate, user.id.toString());
+        console.log('📅 OwnerTaskCalendar - 获取到的日历事件:', calendarEvents);
         
         // 对任务进行优先级排序
         const sortedEvents = calendarEvents.sort((a, b) => {
@@ -55,14 +62,26 @@ export const OwnerTaskCalendar = forwardRef<{ refreshData: () => void }, OwnerTa
           return statusPriority[a.task.status] - statusPriority[b.task.status];
         });
         
+        console.log('📊 OwnerTaskCalendar - 排序后的事件:', sortedEvents);
         setEvents(sortedEvents);
         onDataRefresh?.();
       } catch (error) {
-        console.error('加载日历数据失败:', error);
+        console.error('❌ OwnerTaskCalendar - 加载日历数据失败:', error);
       } finally {
         setLoading(false);
       }
     }, [user, onDataRefresh]);
+
+    // 同步更新 selectedEvent，确保侧栏显示最新数据
+    useEffect(() => {
+      if (selectedEvent && events.length > 0) {
+        const updatedEvent = events.find(event => event.task.id === selectedEvent.task.id);
+        if (updatedEvent && JSON.stringify(updatedEvent) !== JSON.stringify(selectedEvent)) {
+          console.log('🔄 OwnerTaskCalendar - 同步更新 selectedEvent:', updatedEvent);
+          setSelectedEvent(updatedEvent);
+        }
+      }
+    }, [events, selectedEvent]);
 
     // 暴露刷新方法给父组件
     useImperativeHandle(ref, () => ({
@@ -74,16 +93,19 @@ export const OwnerTaskCalendar = forwardRef<{ refreshData: () => void }, OwnerTa
 
     // 处理任务点击
     const handleTaskClick = async (event: TaskCalendarEvent) => {
+      console.log('🎯 OwnerTaskCalendar - 任务被点击:', event);
       setSelectedEvent(event);
       
       // 如果是待分配任务，加载可用清洁工
       if (event.task.status === 'draft' || !event.assignedCleaners?.length) {
         try {
           const cleaningDate = new Date((event.task as any).cleaning_date || event.task.cleaningDate);
-          const cleaners = await getAvailableCleanersForDate(cleaningDate);
+          console.log('🧹 OwnerTaskCalendar - 查询清扫日期:', cleaningDate.toISOString().split('T')[0]);
+          const cleaners = await getAvailableCleanersForDate(cleaningDate.toISOString().split('T')[0]);
+          console.log('👥 OwnerTaskCalendar - 获取到的可用清洁员:', cleaners);
           setAvailableCleaners(cleaners);
         } catch (error) {
-          console.error('加载可用清洁工失败:', error);
+          console.error('❌ OwnerTaskCalendar - 加载可用清洁工失败:', error);
         }
       }
     };
@@ -143,6 +165,28 @@ export const OwnerTaskCalendar = forwardRef<{ refreshData: () => void }, OwnerTa
     const goToToday = () => {
       setCurrentDate(new Date());
     };
+
+    // 订阅实时变更：tasks 与 task_assignments
+    useEffect(() => {
+      if (!user) return;
+      const channel = supabase
+        .channel(`realtime-owner-calendar-${user.id}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
+          console.log('🔄 OwnerTaskCalendar - 检测到tasks表变更，刷新数据');
+          const { firstDay, lastDay } = getMonthRange(currentDate);
+          loadCalendarData(firstDay, lastDay);
+        })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'task_assignments' }, () => {
+          console.log('🔄 OwnerTaskCalendar - 检测到task_assignments表变更，刷新数据');
+          const { firstDay, lastDay } = getMonthRange(currentDate);
+          loadCalendarData(firstDay, lastDay);
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }, [user?.id, currentDate, loadCalendarData]);
 
     // 初始化加载
     useEffect(() => {

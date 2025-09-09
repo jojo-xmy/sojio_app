@@ -7,10 +7,118 @@ import { getCalendarTasks, getOwnerCalendarTasks, getAvailableCleanersForDate, a
 import { TaskCalendarEvent, AvailableCleaner } from '@/types/calendar';
 import { TaskDetailPanel } from '@/components/TaskDetailPanel';
 import { supabase } from '@/lib/supabase';
+import { addDays, startOfWeek, endOfWeek, isBefore, isAfter, min, max, isSameDay } from 'date-fns';
 
 interface OwnerTaskCalendarProps {
   className?: string;
   onDataRefresh?: () => void;
+}
+
+interface TaskSegment {
+  id: string;
+  title: string;
+  start: Date;
+  end: Date;
+  originalEvent: TaskCalendarEvent;
+  weekIndex: number;
+}
+
+/**
+ * 把跨周的任务拆成多个周段
+ */
+function splitTaskByWeek(event: TaskCalendarEvent, weekStartDates: Date[]): TaskSegment[] {
+  const segments: TaskSegment[] = [];
+  const checkInDate = new Date((event.task as any).check_in_date || event.task.checkInDate);
+  const checkOutDate = new Date((event.task as any).check_out_date || event.task.checkOutDate);
+  
+  let currentStart = checkInDate;
+  let weekIndex = 0;
+
+  while (isBefore(currentStart, checkOutDate) || isSameDay(currentStart, checkOutDate)) {
+    // 找到当前日期属于哪一周
+    const currentWeekStart = weekStartDates.find(weekStart => 
+      isSameDay(currentStart, weekStart) || 
+      (isAfter(currentStart, weekStart) && isBefore(currentStart, addDays(weekStart, 7)))
+    );
+    
+    if (!currentWeekStart) {
+      currentStart = addDays(currentStart, 1);
+      continue;
+    }
+    
+    const weekEnd = addDays(currentWeekStart, 6);
+    const segmentEnd = min([checkOutDate, weekEnd]);
+
+    segments.push({
+      id: `${event.id}-${weekIndex}`,
+      title: event.task.hotelName || '未知酒店',
+      start: currentStart,
+      end: segmentEnd,
+      originalEvent: event,
+      weekIndex: weekStartDates.indexOf(currentWeekStart)
+    });
+
+    currentStart = addDays(segmentEnd, 1);
+    weekIndex++;
+  }
+
+  return segments;
+}
+
+/**
+ * 获取任务在当天的堆叠索引
+ */
+function getStackIndex(segment: TaskSegment, dayEvents: TaskSegment[]): number {
+  // 按开始时间排序，确保堆叠顺序一致
+  const sortedSegments = [...dayEvents].sort((a, b) => {
+    const aStart = new Date((a.originalEvent.task as any).check_in_date || a.originalEvent.task.checkInDate);
+    const bStart = new Date((b.originalEvent.task as any).check_in_date || b.originalEvent.task.checkInDate);
+    return aStart.getTime() - bStart.getTime();
+  });
+  
+  return sortedSegments.indexOf(segment);
+}
+
+/**
+ * 为每周内的任务段分配层级（lane），避免相互覆盖
+ */
+function assignWeekLanes(segments: TaskSegment[]): Record<string, number> {
+  const lanes: Record<string, number> = {};
+  const occupied: Array<Record<number, boolean>> = []; // occupied[lane][dayOfWeek]
+
+  // 按开始星期几和长度排序，以稳定分配
+  const sorted = [...segments].sort((a, b) => {
+    const aStart = a.start.getDay();
+    const bStart = b.start.getDay();
+    if (aStart !== bStart) return aStart - bStart;
+    const aLen = Math.floor((a.end.getTime() - a.start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const bLen = Math.floor((b.end.getTime() - b.start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    return bLen - aLen; // 长的优先
+  });
+
+  for (const seg of sorted) {
+    const startDow = seg.start.getDay();
+    const endDow = seg.end.getDay();
+    let lane = 0;
+
+    while (true) {
+      if (!occupied[lane]) occupied[lane] = {};
+      let conflict = false;
+      for (let d = startDow; d <= endDow; d++) {
+        if (occupied[lane][d]) { conflict = true; break; }
+      }
+      if (!conflict) {
+        for (let d = startDow; d <= endDow; d++) {
+          occupied[lane][d] = true;
+        }
+        lanes[seg.id] = lane;
+        break;
+      }
+      lane++;
+    }
+  }
+
+  return lanes;
 }
 
 export const OwnerTaskCalendar = forwardRef<{ refreshData: () => void }, OwnerTaskCalendarProps>(
@@ -56,7 +164,9 @@ export const OwnerTaskCalendar = forwardRef<{ refreshData: () => void }, OwnerTa
             assigned: 2,
             in_progress: 3,
             completed: 4,
-            confirmed: 5
+            confirmed: 5,
+            open: 6,
+            accepted: 7
           };
           
           return statusPriority[a.task.status] - statusPriority[b.task.status];
@@ -124,31 +234,29 @@ export const OwnerTaskCalendar = forwardRef<{ refreshData: () => void }, OwnerTa
       startDate.setDate(startDate.getDate() - firstDay.getDay()); // 从周日开始
 
       const grid = [];
+      const weekStartDates = [];
+      
       for (let week = 0; week < 6; week++) {
+        const weekStart = new Date(startDate);
+        weekStart.setDate(startDate.getDate() + week * 7);
+        weekStartDates.push(weekStart);
+        
         const weekData = [];
         for (let day = 0; day < 7; day++) {
           const currentDate = new Date(startDate);
           currentDate.setDate(startDate.getDate() + week * 7 + day);
           
-          // 获取当天的任务 - 支持入住期间的连续显示
-          const dayEvents = events.filter(event => {
-            const checkInDate = new Date((event.task as any).check_in_date || event.task.checkInDate);
-            const checkOutDate = new Date((event.task as any).check_out_date || event.task.checkOutDate);
-            
-            // 检查当前日期是否在入住期间内（包含入住日和退房日）
-            return currentDate >= checkInDate && currentDate <= checkOutDate;
-          });
-
           weekData.push({
             date: currentDate,
-            events: dayEvents,
             isCurrentMonth: currentDate.getMonth() === date.getMonth(),
-            isToday: currentDate.toDateString() === new Date().toDateString()
+            isToday: currentDate.toDateString() === new Date().toDateString(),
+            weekIndex: week,
+            dayIndex: day
           });
         }
         grid.push(weekData);
       }
-      return grid;
+      return { grid, weekStartDates };
     };
 
     // 导航到上个月
@@ -202,11 +310,14 @@ export const OwnerTaskCalendar = forwardRef<{ refreshData: () => void }, OwnerTa
       );
     }
 
-    const calendarGrid = getCalendarGrid(currentDate);
+    const { grid: calendarGrid, weekStartDates } = getCalendarGrid(currentDate);
     const monthName = currentDate.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long' });
+    
+    // 拆分所有任务为周段
+    const allSegments = events.flatMap(event => splitTaskByWeek(event, weekStartDates));
 
     return (
-      <div className={`bg-white rounded-lg shadow-lg p-6 ${className}`}>
+      <div className={`bg-white rounded-lg shadow-lg p-6 ${className}`} style={{ position: 'relative', zIndex: 0 }}>
         {/* 日历头部 */}
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold text-gray-800">{monthName}</h2>
@@ -244,95 +355,108 @@ export const OwnerTaskCalendar = forwardRef<{ refreshData: () => void }, OwnerTa
               ))}
             </div>
 
-            {/* 日历网格 - 房东专用连续条形显示 */}
-            <div className="grid grid-cols-7">
-              {calendarGrid.map((week, weekIndex) =>
-                week.map((day, dayIndex) => (
-                  <div
-                    key={`${weekIndex}-${dayIndex}`}
-                    className={`
-                      min-h-[120px] border-r border-b border-gray-200 p-2 relative
-                      ${dayIndex === 0 ? 'border-l' : ''} 
-                      ${weekIndex === 0 ? 'border-t' : ''}
-                      ${!day.isCurrentMonth ? 'bg-gray-50 text-gray-400' : 'bg-white'}
-                      ${day.isToday ? 'bg-blue-50 border-blue-300' : ''}
-                    `}
-                  >
-                    {/* 日期 */}
-                    <div className="text-sm font-medium mb-2">
-                      {day.date.getDate()}
+            {/* 日历网格 - 每周一行 + 行级覆盖层渲染任务条 */}
+            <div className="flex flex-col">
+              {calendarGrid.map((week, weekIndex) => {
+                const weekSegments = allSegments.filter(s => s.weekIndex === weekIndex);
+                const laneMap = assignWeekLanes(weekSegments);
+                const maxLane = Math.max(-1, ...Object.values(laneMap)) + 1; // 该周需要的层数
+
+                return (
+                  <div key={`week-${weekIndex}`} className="relative">
+                    {/* 一周的7个日期格子 */}
+                    <div className="grid grid-cols-7">
+                      {week.map((day, dayIndex) => (
+                        <div
+                          key={`${weekIndex}-${dayIndex}`}
+                          className={`
+                            min-h-[120px] border-r border-b border-gray-200 p-2 relative
+                            ${dayIndex === 0 ? 'border-l' : ''} 
+                            ${weekIndex === 0 ? 'border-t' : ''}
+                            ${!day.isCurrentMonth ? 'bg-gray-50 text-gray-400' : 'bg-white'}
+                            ${day.isToday ? 'bg-blue-50 border-blue-300' : ''}
+                          `}
+                        >
+                          <div className="text-sm font-medium mb-2">{day.date.getDate()}</div>
+                          {/* 为任务条覆盖层预留高度（避免覆盖日期文字） */}
+                          <div style={{ height: `${Math.max(0, maxLane) * 28}px` }} />
+                        </div>
+                      ))}
                     </div>
 
-                    {/* 入住任务显示 */}
-                    <div className="space-y-1">
-                      {day.events.map((event, index) => {
-                        const checkInDate = new Date((event.task as any).check_in_date || event.task.checkInDate);
-                        const checkOutDate = new Date((event.task as any).check_out_date || event.task.checkOutDate);
-                        const cleaningDate = new Date((event.task as any).cleaning_date || event.task.cleaningDate);
-                        
-                        const isCleaningDay = day.date.toDateString() === cleaningDate.toDateString();
-                        
-                        // 为每个任务生成一致的颜色
+                    {/* 覆盖层：该周的任务条 */}
+                    <div className="absolute left-0 right-0" style={{ top: 26 }}>
+                      {weekSegments.map(segment => {
+                        const startDow = segment.start.getDay();
+                        const endDow = segment.end.getDay();
+                        const spanDays = endDow - startDow + 1;
+                        const lane = laneMap[segment.id] || 0;
+                        const cleaningDate = new Date((segment.originalEvent.task as any).cleaning_date || segment.originalEvent.task.cleaningDate);
+
+                        // 颜色
                         const taskColors = [
-                          'bg-blue-200 border-blue-300',
-                          'bg-green-200 border-green-300', 
-                          'bg-yellow-200 border-yellow-300',
-                          'bg-pink-200 border-pink-300',
-                          'bg-indigo-200 border-indigo-300',
-                          'bg-purple-200 border-purple-300'
+                          'bg-blue-200 border-blue-300 text-blue-800',
+                          'bg-green-200 border-green-300 text-green-800', 
+                          'bg-yellow-200 border-yellow-300 text-yellow-800',
+                          'bg-pink-200 border-pink-300 text-pink-800',
+                          'bg-indigo-200 border-indigo-300 text-indigo-800',
+                          'bg-purple-200 border-purple-300 text-purple-800'
                         ];
-                        // 简单的字符串哈希函数
                         const hashCode = (str: string) => {
                           let hash = 0;
-                          for (let i = 0; i < str.length; i++) {
-                            const char = str.charCodeAt(i);
-                            hash = ((hash << 5) - hash) + char;
-                            hash = hash & hash; // 转换为32位整数
-                          }
+                          for (let i = 0; i < str.length; i++) { hash = ((hash << 5) - hash) + str.charCodeAt(i); hash = hash & hash; }
                           return Math.abs(hash);
                         };
-                        const colorIndex = hashCode(event.id) % taskColors.length;
+                        const colorIndex = hashCode(segment.originalEvent.id) % taskColors.length;
                         const taskColor = taskColors[colorIndex];
-                        
-                        const isFirstDay = day.date.toDateString() === checkInDate.toDateString();
-                        const isLastDay = day.date.toDateString() === checkOutDate.toDateString();
-                        const isSingleDay = isFirstDay && isLastDay;
-                        
+
+                        const leftPercent = (startDow) * (100 / 7);
+                        const widthPercent = spanDays * (100 / 7);
+
+                        const isFirstDay = true; // 周段在本周内总是从自身start开始
+                        const isLastDay = true;  // 同理，到自身end结束
+
                         return (
-                          <div key={`${event.id}-${index}`} className="relative">
-                            {/* 入住条形背景 - 连续样式 */}
-                            <div
-                              className={`
-                                h-6 ${taskColor} cursor-pointer transition-colors
-                                ${isSingleDay ? 'rounded border' : ''}
-                                ${isFirstDay && !isSingleDay ? 'rounded-l border-l border-t border-b' : ''}
-                                ${isLastDay && !isSingleDay ? 'rounded-r border-r border-t border-b' : ''}
-                                ${!isFirstDay && !isLastDay ? 'border-t border-b' : ''}
-                              `}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleTaskClick(event);
-                              }}
-                              title={`${event.task.hotelName || '未知酒店'} - ${event.task.roomNumber || '未指定房间'}`}
-                            >
-                              <div className="text-xs px-1 py-0.5 truncate text-gray-700">
-                                {isFirstDay || isSingleDay ? (event.task.hotelName || '未知酒店') + ' - ' + (event.task.roomNumber || '未指定房间') : ''}
+                          <div
+                            key={segment.id}
+                            className="absolute cursor-pointer transition-all hover:shadow-md"
+                            style={{
+                              left: `${leftPercent}%`,
+                              top: `${lane * 28}px`,
+                              width: `${widthPercent}%`,
+                              height: '24px',
+                              zIndex: 5
+                            }}
+                            onClick={(e) => { e.stopPropagation(); handleTaskClick(segment.originalEvent); }}
+                            title={`${segment.originalEvent.task.hotelName || '未知酒店'} - ${segment.originalEvent.task.roomNumber || '未指定房间'}`}
+                          >
+                            <div className={`
+                              h-full rounded border ${taskColor} flex items-center px-2
+                            `}>
+                              <div className="text-xs truncate font-medium">
+                                {`${segment.originalEvent.task.hotelName || '未知酒店'} - ${segment.originalEvent.task.roomNumber || '未指定房间'}`}
                               </div>
                             </div>
-                            
-                            {/* 清扫任务状态标签 - 只在清扫日显示 */}
-                            {isCleaningDay && (
-                              <div className="absolute -top-1 -right-1 z-10">
-                                <TaskStatusBadge status={event.task.status} size="small" />
-                              </div>
-                            )}
+
+                            {/* 清扫日期标签，仅当清扫日在该周段内 */}
+                            {(() => {
+                              const cleaningDow = cleaningDate.getDay();
+                              const inThisWeek = cleaningDate >= segment.start && cleaningDate <= segment.end;
+                              if (!inThisWeek) return null;
+                              const tagLeftPercent = ((cleaningDow - startDow) / spanDays) * 100;
+                              return (
+                                <div className="absolute -top-1" style={{ left: `${tagLeftPercent}%`, zIndex: 6 }}>
+                                  <TaskStatusBadge status={segment.originalEvent.task.status} size="small" />
+                                </div>
+                              );
+                            })()}
                           </div>
                         );
                       })}
                     </div>
                   </div>
-                ))
-              )}
+                );
+              })}
             </div>
           </div>
 

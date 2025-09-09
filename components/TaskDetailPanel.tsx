@@ -1,5 +1,6 @@
 "use client";
 import { useState, ChangeEvent, FormEvent, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { Task } from '@/types/task';
 import { useUserStore } from '@/store/userStore';
 import { getUserAttendanceByTaskId, checkIn, checkOut, Attendance, getAttendanceByTaskId, getUserLatestAttendance } from '@/lib/attendance';
@@ -598,8 +599,8 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
         }}
       />
 
-      {/* Owner 入住登记编辑弹窗 */}
-      {user.role === 'owner' && ownerEditingEntry && (
+      {/* Owner 入住登记编辑弹窗（Portal） */}
+      {user.role === 'owner' && ownerEditingEntry && typeof document !== 'undefined' && ReactDOM.createPortal(
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ background: '#fff', borderRadius: 8, padding: 16, width: '90%', maxWidth: 480 }}>
             <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>编辑入住登记</h3>
@@ -630,7 +631,8 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
               <button onClick={saveOwnerEntry} style={{ padding: '8px 16px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}>保存</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* 分配清洁工面板 - 在任务卡片下方展开 */}

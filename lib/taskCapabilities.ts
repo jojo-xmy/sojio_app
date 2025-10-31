@@ -49,7 +49,6 @@ export interface TaskCapabilities {
 const KEY_FIELDS = new Set([
   'checkInDate',
   'checkInTime',
-  'roomNumber',
   'lockPassword',
   'description',
   'specialInstructions'

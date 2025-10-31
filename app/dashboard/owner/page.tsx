@@ -4,13 +4,17 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
 import { RoleSelector } from '@/components/RoleSelector';
 import { OwnerTaskCalendar } from '@/components/OwnerTaskCalendar';
-import { TaskCreateForm } from '@/components/TaskCreateForm';
+import { CalendarEntryForm, CalendarEntryFormData } from '@/components/CalendarEntryForm';
+import { createCalendarEntry } from '@/lib/services/calendarEntryService';
+import { supabase } from '@/lib/supabase';
 
 
 export default function OwnerDashboard() {
   const { user, isInitialized } = useUserStore();
   const router = useRouter();
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [ownerHotels, setOwnerHotels] = useState<Array<{id: string; name: string; address: string}>>([]);
   const calendarRef = useRef<{ refreshData: () => void }>(null);
 
   useEffect(() => {
@@ -21,8 +25,69 @@ export default function OwnerDashboard() {
       return;
     }
     
-    // 移除角色检查的重定向逻辑，让主dashboard页面处理角色重定向
+    if (user.role === 'owner') {
+      loadOwnerHotels();
+    }
   }, [user, isInitialized, router]);
+
+  const loadOwnerHotels = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('hotels')
+        .select('id, name, address')
+        .eq('owner_id', user.id)
+        .order('name');
+
+      if (error) {
+        console.error('加载酒店列表失败:', error);
+        return;
+      }
+
+      setOwnerHotels(data || []);
+    } catch (error) {
+      console.error('加载酒店列表失败:', error);
+    }
+  };
+
+  const handleCreateEntry = async (formData: CalendarEntryFormData) => {
+    if (!user) return;
+
+    try {
+      setCreating(true);
+      
+      // 使用表单中选择的酒店ID
+      if (!formData.hotelId) {
+        alert('请选择酒店');
+        return;
+      }
+      
+      const entryData = {
+        hotelId: formData.hotelId,
+        checkInDate: formData.checkInDate,
+        checkOutDate: formData.checkOutDate,
+        guestCount: formData.guestCount,
+        ownerNotes: formData.ownerNotes,
+        cleaningDates: formData.cleaningDates
+      };
+
+      // 使用新的服务层API创建入住登记（触发器会自动创建清扫任务）
+      const entry = await createCalendarEntry(entryData, user.id.toString());
+      
+      setShowCreateForm(false);
+      
+      // 刷新日历数据
+      if (calendarRef.current) {
+        calendarRef.current.refreshData();
+      }
+    } catch (err) {
+      console.error('创建入住登记失败:', err);
+      alert('创建入住登记失败');
+    } finally {
+      setCreating(false);
+    }
+  };
 
   // 移除角色检查的返回null逻辑，让页面正常渲染
   // 如果用户角色不匹配，主dashboard页面会自动重定向
@@ -76,17 +141,28 @@ export default function OwnerDashboard() {
       />
 
       {/* 任务创建表单 */}
-      <TaskCreateForm 
-        isOpen={showCreateForm} 
-        onClose={() => setShowCreateForm(false)}
-        onTaskCreated={() => {
-          console.log('房东任务创建成功');
-          // 使用ref调用日历组件的刷新方法
-          if (calendarRef.current) {
-            calendarRef.current.refreshData();
-          }
-        }}
-      />
+      {showCreateForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+            <CalendarEntryForm
+              initialData={{
+                hotelId: ownerHotels.length > 0 ? ownerHotels[0].id : '',
+                checkInDate: '',
+                checkOutDate: '',
+                guestCount: 1,
+                ownerNotes: '',
+                cleaningDates: []
+              }}
+              onSubmit={handleCreateEntry}
+              onCancel={() => setShowCreateForm(false)}
+              loading={creating}
+              title="新建入住任务"
+              hotels={ownerHotels}
+              showHotelSelection={true}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

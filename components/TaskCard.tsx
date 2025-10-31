@@ -28,7 +28,6 @@ export interface TaskCardProps {
   attendanceStatus?: 'none' | 'checked_in' | 'checked_out';
   // 新增字段
   hotelAddress?: string;
-  roomNumber?: string;
   lockPassword?: string;
   acceptedBy?: string[];
   completedAt?: string;
@@ -55,7 +54,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   onClick, 
   attendanceStatus,
   hotelAddress,
-  roomNumber,
   lockPassword,
   acceptedBy,
   completedAt,
@@ -81,11 +79,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 4 }}>{hotelName}</div>
-          {roomNumber && (
-            <div style={{ fontSize: 14, color: '#666', marginBottom: 4 }}>
-              房间：{roomNumber}
-            </div>
-          )}
           {guestCount !== undefined && (
             <div style={{ fontSize: 14, color: '#666', marginBottom: 4 }}>
               入住：{guestCount}人

@@ -7,6 +7,7 @@ import {
 } from '@/types/calendar';
 import { Task } from '@/types/task';
 import { UserProfile } from '@/types/user';
+import { notifyTaskAssigned } from './notificationService';
 
 
 // 获取日历视图的任务数据
@@ -47,9 +48,9 @@ export async function getCalendarTasks(
     query = query.limit(1000); // 添加 limit 强制重新查询
   }
 
-  // 查询指定日期范围内的任务（包括入住日期和退房日期）
+  // 查询指定日期范围内的任务（包括入住日期、退房日期和清扫日期）
   const { data: tasksInRange, error: rangeError } = await query
-    .or(`check_in_date.gte.${startDateStr},check_in_date.lte.${endDateStr},check_out_date.gte.${startDateStr},check_out_date.lte.${endDateStr}`);
+    .or(`check_in_date.gte.${startDateStr},check_in_date.lte.${endDateStr},check_out_date.gte.${startDateStr},check_out_date.lte.${endDateStr},cleaning_date.gte.${startDateStr},cleaning_date.lte.${endDateStr}`);
 
   if (rangeError) {
     console.error('获取日历任务失败:', rangeError.message, rangeError.details, rangeError.hint);
@@ -99,8 +100,8 @@ export async function getCalendarTasks(
 
   // 转换为前端日历事件格式
   const calendarEvents: TaskCalendarEvent[] = (tasksToUse || []).map(task => {
-    // 清扫任务应该显示在退房日期，如果没有退房日期则使用入住日期
-    const displayDate = task.check_out_date || task.check_in_date;
+    // 清扫任务应该显示在清扫日期，如果没有清扫日期则使用退房日期
+    const displayDate = task.cleaning_date || task.check_out_date || task.check_in_date;
     const taskDate = new Date(displayDate);
     
     // 构建开始时间：使用显示日期 + 默认清扫时间（上午9点）
@@ -145,7 +146,6 @@ export async function getCalendarTasks(
       cleanerNotes: task.cleaner_notes || '',
       images: task.images || [],
       hotelAddress: task.hotel_address || '',
-      roomNumber: task.room_number || '',
       lockPassword: task.lock_password || '',
       specialInstructions: task.special_instructions || '',
       guestCount: task.guest_count || 1, // 添加入住人数映射
@@ -172,7 +172,6 @@ export async function getCalendarTasks(
       start: startTime,
       end: endTime,
       status: task.status,
-      roomNumber: task.room_number,
       assignedCleaners,
       availableCleaners,
       type: 'task',
@@ -296,9 +295,22 @@ export async function assignTaskToCleaners(
   taskId: string,
   cleanerIds: string[],
   assignedBy: string,
-  notes?: string
+  notes?: string,
+  replaceMode: boolean = false
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    // 如果是替换模式，先删除现有的分配记录
+    if (replaceMode) {
+      const { error: deleteError } = await supabase
+        .from('task_assignments')
+        .delete()
+        .eq('task_id', taskId);
+
+      if (deleteError) {
+        throw deleteError;
+      }
+    }
+
     // 创建任务分配记录
     const assignments = cleanerIds.map(cleanerId => ({
       task_id: taskId,
@@ -331,6 +343,28 @@ export async function assignTaskToCleaners(
 
     // 短暂延迟确保数据库写入完成
     await new Promise(resolve => setTimeout(resolve, 100));
+
+    // 发送通知给分配的清洁员
+    try {
+      // 获取任务信息用于通知
+      const { data: taskData } = await supabase
+        .from('tasks')
+        .select('hotel_name, cleaning_date')
+        .eq('id', taskId)
+        .single();
+
+      if (taskData) {
+        await notifyTaskAssigned(
+          taskId, 
+          taskData.hotel_name, 
+          taskData.cleaning_date, 
+          cleanerIds
+        );
+      }
+    } catch (error) {
+      console.error('发送任务分配通知失败:', error);
+      // 不阻断主流程
+    }
 
     return { success: true };
   } catch (error) {
@@ -416,7 +450,6 @@ export async function getTaskWithAssignments(taskId: string): Promise<TaskCalend
     cleanerNotes: data.cleaner_notes || '',
     images: data.images || [],
     hotelAddress: data.hotel_address || '',
-    roomNumber: data.room_number || '',
     lockPassword: data.lock_password || '',
     specialInstructions: data.special_instructions || '',
     acceptedBy: data.accepted_by || [],
@@ -437,7 +470,7 @@ export async function getTaskWithAssignments(taskId: string): Promise<TaskCalend
 
   return {
     id: data.id,
-    title: `${data.hotel_name}${data.room_number ? ` - ${data.room_number}` : ''}`,
+    title: `${data.hotel_name}`,
     start: startTime,
     end: endTime,
     type: 'task',
@@ -488,6 +521,59 @@ export async function updateTaskStatus(
 }
 
 // 获取owner管理酒店的日历任务数据
+// 获取房东的清扫任务数据
+export async function getCleaningTasksByOwner(
+  ownerId: string,
+  startDate: Date,
+  endDate: Date
+): Promise<any[]> {
+  const startDateStr = startDate.toISOString().split('T')[0];
+  const endDateStr = endDate.toISOString().split('T')[0];
+
+  try {
+    // 首先获取owner管理的酒店ID列表
+    const { data: hotels, error: hotelError } = await supabase
+      .from('hotels')
+      .select('id')
+      .eq('owner_id', ownerId);
+
+    if (hotelError || !hotels || hotels.length === 0) {
+      return [];
+    }
+
+    const hotelIds = hotels.map(h => h.id);
+
+    // 查询清扫任务（有calendar_entry_id的任务）
+    const { data: tasks, error: taskError } = await supabase
+      .from('tasks')
+      .select(`
+        id,
+        hotel_id,
+        cleaning_date,
+        status,
+        calendar_entry_id,
+        hotel_name,
+        description
+      `)
+      .in('hotel_id', hotelIds)
+      .not('calendar_entry_id', 'is', null)
+      .not('cleaning_date', 'is', null)
+      .gte('cleaning_date', startDateStr)
+      .lte('cleaning_date', endDateStr)
+      .order('cleaning_date', { ascending: true });
+
+    if (taskError) {
+      console.error('获取清扫任务失败:', taskError);
+      return [];
+    }
+
+    return tasks || [];
+  } catch (error) {
+    console.error('获取清扫任务失败:', error);
+    return [];
+  }
+}
+
 export async function getOwnerCalendarTasks(
   startDate: Date,
   endDate: Date,
@@ -521,7 +607,7 @@ export async function getOwnerCalendarTasks(
     const hotelIds = hotels.map(h => h.id);
     console.log('🏨 酒店ID列表:', hotelIds);
 
-    // 然后查询这些酒店的任务
+    // 查询这些酒店的任务（基于清扫任务去重为入住区间）
     const { data: tasks, error: taskError } = await supabase
       .from('tasks')
       .select(`
@@ -542,7 +628,9 @@ export async function getOwnerCalendarTasks(
         )
       `)
       .in('hotel_id', hotelIds)
-      .or(`check_in_date.gte.${startDateStr},check_in_date.lte.${endDateStr},check_out_date.gte.${startDateStr},check_out_date.lte.${endDateStr}`)
+      // 仅获取与所选时间窗有重叠的入住区间：check_in_date <= end AND check_out_date >= start
+      .lte('check_in_date', endDateStr)
+      .gte('check_out_date', startDateStr)
       .order('check_out_date', { ascending: true, nullsFirst: false })
       .order('check_in_date', { ascending: true });
 
@@ -554,8 +642,26 @@ export async function getOwnerCalendarTasks(
       return [];
     }
 
-    // 转换为 TaskCalendarEvent 格式
-    const events: TaskCalendarEvent[] = (tasks || []).map(task => {
+    // 以 calendar_entry_id 为主键进行去重；忽略无 calendar_entry_id 的记录（新架构不应出现）
+    const entryMap = new Map<string, any>();
+    (tasks || [])
+      .filter((t: any) => !!t.calendar_entry_id)
+      .forEach((task: any) => {
+        const key = task.calendar_entry_id as string;
+        if (!entryMap.has(key)) {
+          entryMap.set(key, { ...task });
+        } else {
+          // 合并指派人员（去重）
+          const existing = entryMap.get(key);
+          const existingAssignments = existing.task_assignments || [];
+          const nextAssignments = task.task_assignments || [];
+          existing.task_assignments = [...existingAssignments, ...nextAssignments];
+          entryMap.set(key, existing);
+        }
+      });
+
+    // 转换为 TaskCalendarEvent（按入住区间显示，供前端按周拆分）
+    const events: TaskCalendarEvent[] = Array.from(entryMap.values()).map((task: any) => {
       const assignments = task.task_assignments || [];
       const assignedCleaners = assignments.map((assignment: any) => ({
         id: assignment.user_profiles?.id || '',
@@ -566,14 +672,14 @@ export async function getOwnerCalendarTasks(
         assignedAt: assignment.created_at
       }));
 
-      // 将数据库字段映射为Task接口字段
       const mappedTask: Task = {
         ...task,
+        id: task.id, // 明确保证为 tasks.id
+        hotelId: task.hotel_id,
         hotelName: task.hotel_name,
         checkInDate: task.check_in_date,
         checkOutDate: task.check_out_date,
         checkInTime: task.check_in_time,
-        roomNumber: task.room_number,
         lockPassword: task.lock_password,
         specialInstructions: task.special_instructions,
         hotelAddress: task.hotel_address,
@@ -586,19 +692,17 @@ export async function getOwnerCalendarTasks(
         cleanerNotes: task.cleaner_notes || ''
       };
 
-      // 清扫任务应该显示在退房日期，如果没有退房日期则使用入住日期
-      const displayDate = task.check_out_date || task.check_in_date;
-      
+      // start/end 字段对 UI 次要，分段算法使用 task.checkInDate/checkOutDate
       return {
-        id: task.id,
+        id: task.calendar_entry_id,
         title: task.hotel_name,
-        start: new Date(`${displayDate}T09:00:00`),
-        end: new Date(`${displayDate}T11:00:00`),
-        date: displayDate,
+        start: new Date(`${task.check_in_date}T00:00:00`),
+        end: new Date(`${task.check_out_date}T23:59:59`),
+        date: task.check_out_date,
         task: mappedTask,
         assignedCleaners,
         type: 'task'
-      };
+      } as TaskCalendarEvent;
     });
 
     console.log(`Loaded ${events.length} tasks for owner ${ownerId}`);

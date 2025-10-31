@@ -32,7 +32,17 @@ export async function getTaskById(id: string): Promise<Task | null> {
   return data;
 }
 
-// 创建新任务
+/**
+ * @deprecated 此函数已废弃，请勿直接创建任务
+ * 
+ * 任务应通过 calendar_entries 创建，数据库触发器会自动生成清扫任务
+ * 
+ * 迁移指南：
+ * - 旧代码：createTask({ hotelName, checkInDate, ... })
+ * - 新代码：createCalendarEntry({ hotelId, checkInDate, checkOutDate, cleaningDates, ... }, userId)
+ * 
+ * 此函数保留仅用于向后兼容，将在未来版本中移除
+ */
 export async function createTask(taskData: {
   hotelName: string;
   hotelId?: string;
@@ -44,11 +54,11 @@ export async function createTask(taskData: {
   description?: string;
   note?: string;
   hotelAddress?: string;
-  roomNumber?: string;
   lockPassword?: string;
   specialInstructions?: string;
   createdBy: string;
 }): Promise<Task | null> {
+  console.warn('⚠️ createTask() 已废弃，请使用 createCalendarEntry() 创建任务');
   const newTask = {
     hotel_name: taskData.hotelName,
     hotel_id: taskData.hotelId || null,
@@ -61,7 +71,6 @@ export async function createTask(taskData: {
     note: taskData.note || null,
     status: 'draft' as TaskStatus,
     hotel_address: taskData.hotelAddress || null,
-    room_number: taskData.roomNumber || null,
     lock_password: taskData.lockPassword || null,
     special_instructions: taskData.specialInstructions || null,
     created_by: taskData.createdBy,
@@ -83,7 +92,12 @@ export async function createTask(taskData: {
   return data;
 }
 
-// 更新任务状态（带权限验证）
+/**
+ * @deprecated 此函数已废弃，请使用 taskStatus.transitionTask()
+ * 
+ * 统一的权限检查和状态转换逻辑已迁移到 lib/taskStatus.ts
+ * 请使用 lib/services/taskService.ts 的 updateTaskStatus 方法
+ */
 export async function updateTaskStatus(
   taskId: string, 
   currentStatus: TaskStatus,
@@ -91,43 +105,11 @@ export async function updateTaskStatus(
   userId: string,
   userRole: UserRole
 ): Promise<{ success: boolean; error?: string }> {
-  // 权限检查
-  if (!canTransitionTask(currentStatus, newStatus, userRole)) {
-    return { 
-      success: false, 
-      error: `用户角色 ${userRole} 无法将任务从 ${currentStatus} 转换为 ${newStatus}` 
-    };
-  }
+  console.warn('⚠️ updateTaskStatus() 已废弃，请使用 taskService.updateTaskStatus()');
 
-  const updateData: any = {
-    status: newStatus,
-    updated_at: new Date().toISOString()
-  };
-
-  // 根据新状态添加特定字段
-  switch (newStatus) {
-    case 'accepted':
-      updateData.accepted_by = [userId];
-      break;
-    case 'completed':
-      updateData.completed_at = new Date().toISOString();
-      break;
-    case 'confirmed':
-      updateData.confirmed_at = new Date().toISOString();
-      break;
-  }
-
-  const { error } = await supabase
-    .from('tasks')
-    .update(updateData)
-    .eq('id', taskId);
-  
-  if (error) {
-    console.error('Error updating task status:', error);
-    return { success: false, error: error.message };
-  }
-  
-  return { success: true };
+  // 调用新的状态转换函数
+  const { transitionTask } = await import('./taskStatus');
+  return await transitionTask(taskId, currentStatus, newStatus, userId, userRole);
 }
 
 // 获取用户的任务
@@ -256,7 +238,6 @@ export async function updateTaskDetails(
     description?: string;
     note?: string;
     cleaningDate?: string;
-    roomNumber?: string;
     lockPassword?: string;
   }
 ): Promise<{ success: boolean; error?: string }> {
@@ -268,7 +249,6 @@ export async function updateTaskDetails(
     if (updates.description !== undefined) updateData.description = updates.description;
     if (updates.note !== undefined) updateData.note = updates.note;
     if (updates.cleaningDate !== undefined) updateData.cleaning_date = updates.cleaningDate;
-    if (updates.roomNumber !== undefined) updateData.room_number = updates.roomNumber;
     if (updates.lockPassword !== undefined) updateData.lock_password = updates.lockPassword;
 
     const { error } = await supabase
@@ -399,7 +379,6 @@ export async function getTasksByOwner(ownerId: string): Promise<Task[]> {
       checkInDate: task.check_in_date,
       checkOutDate: task.check_out_date,
       checkInTime: task.check_in_time,
-      roomNumber: task.room_number,
       lockPassword: task.lock_password,
       specialInstructions: task.special_instructions,
       hotelAddress: task.hotel_address,

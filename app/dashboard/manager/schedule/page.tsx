@@ -228,8 +228,8 @@ export default function TaskSchedulePage() {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {task.room_number || '未指定'}
+                            <div className="text-xs text-gray-500">
+                              {task.hotel_address || ''}
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
@@ -311,8 +311,8 @@ export default function TaskSchedulePage() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {task.room_number || '未指定'}
+                          <div className="text-xs text-gray-500">
+                            {task.hotel_address || ''}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -349,7 +349,7 @@ export default function TaskSchedulePage() {
                 <strong>日期:</strong> {new Date(selectedTask.date).toLocaleDateString()}
               </p>
               <p className="text-sm text-gray-600 mb-4">
-                <strong>房间:</strong> {selectedTask.room_number || '未指定'}
+                <strong>地址:</strong> {selectedTask.hotel_address || '未提供'}
               </p>
             </div>
             

@@ -36,7 +36,6 @@ export interface CalendarEntryEvent extends CalendarEvent {
   hotelId: string;
   hotelName: string;
   guestCount: number;
-  roomNumber?: string;
 }
 
 // 日历视图配置

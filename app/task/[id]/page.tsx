@@ -38,7 +38,6 @@ export default function TaskDetailPage() {
             createdAt: taskData.created_at || '',
             updatedAt: taskData.updated_at || '',
             hotelAddress: taskData.hotel_address || '',
-            roomNumber: taskData.room_number || '',
             lockPassword: taskData.lock_password || '',
             specialInstructions: taskData.special_instructions || '',
             inventory: taskData.inventory || {

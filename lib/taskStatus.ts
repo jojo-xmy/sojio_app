@@ -141,7 +141,6 @@ async function sendStatusChangeNotification(
       additionalData: {
         ...additionalData,
         lockPassword: task.lock_password,
-        roomNumber: task.room_number,
         hotelAddress: task.hotel_address
       }
     };

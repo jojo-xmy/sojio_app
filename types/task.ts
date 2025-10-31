@@ -59,7 +59,6 @@ export interface Task {
   
   // 任务详情
   hotelAddress?: string;        // 酒店地址
-  roomNumber?: string;          // 房间号
   lockPassword?: string;        // 门锁密码
   specialInstructions?: string; // 特殊说明
   guestCount?: number;          // 入住人数

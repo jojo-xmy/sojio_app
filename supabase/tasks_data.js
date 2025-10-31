@@ -85,11 +85,6 @@
     "column_default": "'draft'::text"
   },
   {
-    "column_name": "room_number",
-    "data_type": "text",
-    "column_default": null
-  },
-  {
     "column_name": "attendance_status",
     "data_type": "text",
     "column_default": null

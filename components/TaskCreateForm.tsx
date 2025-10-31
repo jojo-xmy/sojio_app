@@ -76,24 +76,23 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({ isOpen, onClose,
         return;
       }
 
-      // 创建calendar entry，触发器会自动创建对应的task
-      const { data, error } = await supabase
-        .from('calendar_entries')
-        .insert({
-          hotel_id: formData.hotelId,
-          check_in_date: formData.checkInDate,
-          check_out_date: formData.checkOutDate,
-          guest_count: formData.guestCount,
-          room_number: '', // 房东暂不指定房间号
-          owner_notes: formData.details || null,
-          created_by: user.id
-        })
-        .select()
-        .single();
+      // 使用新的服务层API创建入住登记（触发器会自动创建清扫任务）
+      const { createCalendarEntry } = await import('@/lib/services/calendarEntryService');
       
-      if (error) {
-        throw error;
-      }
+      const entryData = {
+        hotelId: formData.hotelId,
+        checkInDate: formData.checkInDate,
+        checkOutDate: formData.checkOutDate,
+        guestCount: formData.guestCount,
+        ownerNotes: formData.details || null,
+        cleaningDates: formData.checkOutDate
+          ? [formData.checkOutDate]
+          : formData.checkInDate
+            ? [formData.checkInDate]
+            : []
+      };
+      
+      const data = await createCalendarEntry(entryData, user.id.toString());
       
       console.log('Calendar entry创建成功，触发器将自动创建task:', data);
       alert('任务创建成功！');

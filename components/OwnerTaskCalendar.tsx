@@ -3,11 +3,11 @@ import React, { useState, useEffect, useCallback, useImperativeHandle, forwardRe
 import { useUserStore } from '@/store/userStore';
 import { TaskStatusBadge } from '@/components/TaskStatusBadge';
 import { TaskStatus } from '@/types/task';
-import { getCalendarTasks, getOwnerCalendarTasks, getAvailableCleanersForDate, assignTaskToCleaners } from '@/lib/calendar';
+import { getCalendarTasks, getOwnerCalendarTasks, getCleaningTasksByOwner, getAvailableCleanersForDate, assignTaskToCleaners } from '@/lib/calendar';
 import { TaskCalendarEvent, AvailableCleaner } from '@/types/calendar';
 import { TaskDetailPanel } from '@/components/TaskDetailPanel';
 import { supabase } from '@/lib/supabase';
-import { addDays, startOfWeek, endOfWeek, isBefore, isAfter, min, max, isSameDay, startOfDay } from 'date-fns';
+import { addDays, startOfWeek, endOfWeek, isBefore, isAfter, min, max, isSameDay, startOfDay, differenceInCalendarDays, format } from 'date-fns';
 
 interface OwnerTaskCalendarProps {
   className?: string;
@@ -126,12 +126,16 @@ export const OwnerTaskCalendar = forwardRef<{ refreshData: () => void }, OwnerTa
     const user = useUserStore(s => s.user);
     const [currentDate, setCurrentDate] = useState(new Date());
     const [events, setEvents] = useState<TaskCalendarEvent[]>([]);
+    const [cleaningTasks, setCleaningTasks] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedEvent, setSelectedEvent] = useState<TaskCalendarEvent | null>(null);
     const [availableCleaners, setAvailableCleaners] = useState<AvailableCleaner[]>([]);
     const [selectedCleanerIds, setSelectedCleanerIds] = useState<string[]>([]);
     const [assignNotes, setAssignNotes] = useState('');
     const [assigning, setAssigning] = useState(false);
+    
+    // 任务条覆盖层顶部偏移（与日期行高度对应）
+    const BAR_TOP = 28;
 
     // 加载日历数据
     const loadCalendarData = useCallback(async (startDate: Date, endDate: Date) => {
@@ -145,9 +149,14 @@ export const OwnerTaskCalendar = forwardRef<{ refreshData: () => void }, OwnerTa
       
       try {
         setLoading(true);
-        // 房东只能看到自己的任务
+        // 房东只能看到自己的任务（只获取入住任务）
         const calendarEvents = await getOwnerCalendarTasks(startDate, endDate, user.id.toString());
         console.log('📅 OwnerTaskCalendar - 获取到的日历事件:', calendarEvents);
+        
+        // 获取清扫任务数据
+        const cleaningTasksData = await getCleaningTasksByOwner(user.id.toString(), startDate, endDate);
+        console.log('🧹 OwnerTaskCalendar - 获取到的清扫任务:', cleaningTasksData);
+        setCleaningTasks(cleaningTasksData);
         
         // 对任务进行优先级排序
         const sortedEvents = calendarEvents.sort((a, b) => {
@@ -313,8 +322,11 @@ export const OwnerTaskCalendar = forwardRef<{ refreshData: () => void }, OwnerTa
     const { grid: calendarGrid, weekStartDates } = getCalendarGrid(currentDate);
     const monthName = currentDate.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long' });
     
-    // 拆分所有任务为周段
-    const allSegments = events.flatMap(event => splitTaskByWeek(event, weekStartDates));
+    // 拆分所有任务为周段（只处理入住任务，清扫任务通过状态徽章显示）
+    const allSegments = events.flatMap(event => {
+      const segments = splitTaskByWeek(event, weekStartDates);
+      return segments;
+    });
 
     return (
       <div className={`bg-white rounded-lg shadow-lg p-6 ${className}`} style={{ position: 'relative', zIndex: 0 }}>
@@ -384,14 +396,21 @@ export const OwnerTaskCalendar = forwardRef<{ refreshData: () => void }, OwnerTa
                       ))}
                     </div>
 
-                    {/* 覆盖层：该周的任务条 */}
-                    <div className="absolute left-0 right-0" style={{ top: 26 }}>
+                    {/* 覆盖层：该周的任务条（使用 Grid 精准对齐） */}
+                    <div
+                      className="absolute inset-x-0"
+                      style={{
+                        top: BAR_TOP,
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+                        gridAutoRows: '28px'
+                      }}
+                    >
                       {weekSegments.map(segment => {
                         const startDow = segment.start.getDay();
                         const endDow = segment.end.getDay();
                         const spanDays = endDow - startDow + 1;
                         const lane = laneMap[segment.id] || 0;
-                        const cleaningDate = new Date((segment.originalEvent.task as any).cleaning_date || segment.originalEvent.task.cleaningDate);
 
                         // 颜色
                         const taskColors = [
@@ -410,49 +429,55 @@ export const OwnerTaskCalendar = forwardRef<{ refreshData: () => void }, OwnerTa
                         const colorIndex = hashCode(segment.originalEvent.id) % taskColors.length;
                         const taskColor = taskColors[colorIndex];
 
-                        const leftPercent = (startDow) * (100 / 7);
-                        const widthPercent = spanDays * (100 / 7);
+                        const gridColumn = `${startDow + 1} / span ${spanDays}`;
+                        const gridRow = `${lane + 1}`;
 
-                        const isFirstDay = true; // 周段在本周内总是从自身start开始
-                        const isLastDay = true;  // 同理，到自身end结束
+                        const segStart = new Date(segment.start);
+                        segStart.setHours(0, 0, 0, 0);
+                        const segEnd = new Date(segment.end);
+                        segEnd.setHours(0, 0, 0, 0);
+                        const totalDays = differenceInCalendarDays(segEnd, segStart) + 1;
+
+                        const hotelId = (segment.originalEvent.task as any).hotelId;
+                        const cleaningTasksForSegment = cleaningTasks.filter((t: any) => {
+                          if (hotelId && t.hotel_id !== hotelId) return false;
+                          return t.cleaning_date >= format(segStart, 'yyyy-MM-dd')
+                            && t.cleaning_date <= format(segEnd, 'yyyy-MM-dd');
+                        });
 
                         return (
-                          <div
-                            key={segment.id}
-                            className="absolute cursor-pointer transition-all hover:shadow-md"
-                            style={{
-                              left: `${leftPercent}%`,
-                              top: `${lane * 28}px`,
-                              width: `${widthPercent}%`,
-                              height: '24px',
-                              zIndex: 5
-                            }}
-                            onClick={(e) => { e.stopPropagation(); handleTaskClick(segment.originalEvent); }}
-                            title={`${segment.originalEvent.task.hotelName || '未知酒店'} - ${segment.originalEvent.task.roomNumber || '未指定房间'}`}
-                          >
-                            <div className={`
-                              h-full rounded border ${taskColor} flex items-center px-2
-                            `}>
-                              <div className="text-xs truncate font-medium">
-                                {`${segment.originalEvent.task.hotelName || '未知酒店'}`}
-                              </div>
-                            </div>
-
-                            {/* 清扫日期标签，仅当清扫日在该周段内 */}
-                            {(() => {
-                              const cleanDay = startOfDay(cleaningDate);
-                              const segStart = startOfDay(segment.start);
-                              const segEnd = startOfDay(segment.end);
-                              const inThisWeek = cleanDay.getTime() >= segStart.getTime() && cleanDay.getTime() <= segEnd.getTime();
-                              if (!inThisWeek) return null;
-                              const cleaningDow = cleanDay.getDay();
-                              const tagLeftPercent = ((cleaningDow - startDow) / spanDays) * 100;
-                              return (
-                                <div className="absolute -top-1" style={{ left: `${tagLeftPercent}%`, zIndex: 6 }}>
-                                  <TaskStatusBadge status={segment.originalEvent.task.status} size="small" />
+                          <div key={segment.id} style={{ gridColumn, gridRow }} className="px-0.5">
+                            <div
+                              className={`h-6 rounded border ${taskColor} relative cursor-pointer flex items-center px-2`}
+                              title={`${segment.originalEvent.task.hotelName || '未知酒店'}`}
+                              onClick={(e) => { e.stopPropagation(); handleTaskClick(segment.originalEvent); }}
+                            >
+                              {!(segment.originalEvent as any).isCleaningTask && (
+                                <div className="text-xs truncate font-medium">
+                                  {`${segment.originalEvent.task.hotelName || '未知酒店'}`}
                                 </div>
-                              );
-                            })()}
+                              )}
+
+                              {cleaningTasksForSegment.map((ct: any, idx: number) => {
+                                const ctDate = new Date(ct.cleaning_date);
+                                ctDate.setHours(0, 0, 0, 0);
+                                const dayOffset = Math.max(0, Math.min(
+                                  differenceInCalendarDays(ctDate, segStart),
+                                  totalDays - 1
+                                ));
+                                const leftPercent = (dayOffset / totalDays) * 100;
+
+                                return (
+                                  <div
+                                    key={`${ct.id}-${idx}`}
+                                    className="absolute"
+                                    style={{ top: -6, left: `calc(${leftPercent}% + 2px)` }}
+                                  >
+                                    <TaskStatusBadge status={ct.status} size="small" />
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
                         );
                       })}

@@ -1,162 +1,21 @@
-[
-  {
-    "trigger_name": "on_auth_user_created",
-    "event_manipulation": "INSERT",
-    "event_object_table": "users",
-    "action_timing": "AFTER",
-    "action_statement": "EXECUTE FUNCTION handle_new_user()",
-    "trigger_schema": "auth"
-  },
-  {
-    "trigger_name": "trigger_handle_calendar_task_delete",
-    "event_manipulation": "DELETE",
-    "event_object_table": "calendar_entries",
-    "action_timing": "AFTER",
-    "action_statement": "EXECUTE FUNCTION handle_calendar_task_delete()",
-    "trigger_schema": "public"
-  },
-  {
-    "trigger_name": "trigger_manage_calendar_task_association",
-    "event_manipulation": "INSERT",
-    "event_object_table": "calendar_entries",
-    "action_timing": "BEFORE",
-    "action_statement": "EXECUTE FUNCTION manage_calendar_task_association()",
-    "trigger_schema": "public"
-  },
-  {
-    "trigger_name": "trigger_manage_calendar_task_association",
-    "event_manipulation": "UPDATE",
-    "event_object_table": "calendar_entries",
-    "action_timing": "BEFORE",
-    "action_statement": "EXECUTE FUNCTION manage_calendar_task_association()",
-    "trigger_schema": "public"
-  },
-  {
-    "trigger_name": "update_calendar_entries_updated_at",
-    "event_manipulation": "UPDATE",
-    "event_object_table": "calendar_entries",
-    "action_timing": "BEFORE",
-    "action_statement": "EXECUTE FUNCTION update_updated_at_column()",
-    "trigger_schema": "public"
-  },
-  {
-    "trigger_name": "update_cleaner_availability_updated_at",
-    "event_manipulation": "UPDATE",
-    "event_object_table": "cleaner_availability",
-    "action_timing": "BEFORE",
-    "action_statement": "EXECUTE FUNCTION update_updated_at_column()",
-    "trigger_schema": "public"
-  },
-  {
-    "trigger_name": "update_hotels_updated_at",
-    "event_manipulation": "UPDATE",
-    "event_object_table": "hotels",
-    "action_timing": "BEFORE",
-    "action_statement": "EXECUTE FUNCTION update_updated_at_column()",
-    "trigger_schema": "public"
-  },
-  {
-    "trigger_name": "update_registration_applications_updated_at",
-    "event_manipulation": "UPDATE",
-    "event_object_table": "registration_applications",
-    "action_timing": "BEFORE",
-    "action_statement": "EXECUTE FUNCTION update_updated_at_column()",
-    "trigger_schema": "public"
-  },
-  {
-    "trigger_name": "update_tasks_updated_at",
-    "event_manipulation": "UPDATE",
-    "event_object_table": "tasks",
-    "action_timing": "BEFORE",
-    "action_statement": "EXECUTE FUNCTION update_updated_at_column()",
-    "trigger_schema": "public"
-  },
-  {
-    "trigger_name": "update_user_profiles_updated_at",
-    "event_manipulation": "UPDATE",
-    "event_object_table": "user_profiles",
-    "action_timing": "BEFORE",
-    "action_statement": "EXECUTE FUNCTION update_updated_at_column()",
-    "trigger_schema": "public"
-  },
-  {
-    "trigger_name": "tr_check_filters",
-    "event_manipulation": "INSERT",
-    "event_object_table": "subscription",
-    "action_timing": "BEFORE",
-    "action_statement": "EXECUTE FUNCTION realtime.subscription_check_filters()",
-    "trigger_schema": "realtime"
-  },
-  {
-    "trigger_name": "tr_check_filters",
-    "event_manipulation": "UPDATE",
-    "event_object_table": "subscription",
-    "action_timing": "BEFORE",
-    "action_statement": "EXECUTE FUNCTION realtime.subscription_check_filters()",
-    "trigger_schema": "realtime"
-  },
-  {
-    "trigger_name": "enforce_bucket_name_length_trigger",
-    "event_manipulation": "INSERT",
-    "event_object_table": "buckets",
-    "action_timing": "BEFORE",
-    "action_statement": "EXECUTE FUNCTION storage.enforce_bucket_name_length()",
-    "trigger_schema": "storage"
-  },
-  {
-    "trigger_name": "enforce_bucket_name_length_trigger",
-    "event_manipulation": "UPDATE",
-    "event_object_table": "buckets",
-    "action_timing": "BEFORE",
-    "action_statement": "EXECUTE FUNCTION storage.enforce_bucket_name_length()",
-    "trigger_schema": "storage"
-  },
-  {
-    "trigger_name": "objects_delete_delete_prefix",
-    "event_manipulation": "DELETE",
-    "event_object_table": "objects",
-    "action_timing": "AFTER",
-    "action_statement": "EXECUTE FUNCTION storage.delete_prefix_hierarchy_trigger()",
-    "trigger_schema": "storage"
-  },
-  {
-    "trigger_name": "objects_insert_create_prefix",
-    "event_manipulation": "INSERT",
-    "event_object_table": "objects",
-    "action_timing": "BEFORE",
-    "action_statement": "EXECUTE FUNCTION storage.objects_insert_prefix_trigger()",
-    "trigger_schema": "storage"
-  },
-  {
-    "trigger_name": "objects_update_create_prefix",
-    "event_manipulation": "UPDATE",
-    "event_object_table": "objects",
-    "action_timing": "BEFORE",
-    "action_statement": "EXECUTE FUNCTION storage.objects_update_prefix_trigger()",
-    "trigger_schema": "storage"
-  },
-  {
-    "trigger_name": "update_objects_updated_at",
-    "event_manipulation": "UPDATE",
-    "event_object_table": "objects",
-    "action_timing": "BEFORE",
-    "action_statement": "EXECUTE FUNCTION storage.update_updated_at_column()",
-    "trigger_schema": "storage"
-  },
-  {
-    "trigger_name": "prefixes_create_hierarchy",
-    "event_manipulation": "INSERT",
-    "event_object_table": "prefixes",
-    "action_timing": "BEFORE",
-    "action_statement": "EXECUTE FUNCTION storage.prefixes_insert_trigger()",
-    "trigger_schema": "storage"
-  },
-  {
-    "trigger_name": "prefixes_delete_hierarchy",
-    "event_manipulation": "DELETE",
-    "event_object_table": "prefixes",
-    "action_timing": "AFTER",
-    "action_statement": "EXECUTE FUNCTION storage.delete_prefix_hierarchy_trigger()",
-    "trigger_schema": "storage"
-  }
-]
+| trigger_name                                | event_manipulation | event_object_schema | event_object_table        | action_statement                                           | action_timing |
+| ------------------------------------------- | ------------------ | ------------------- | ------------------------- | ---------------------------------------------------------- | ------------- |
+| on_auth_user_created                        | INSERT             | auth                | users                     | EXECUTE FUNCTION handle_new_user()                         | AFTER         |
+| trigger_handle_calendar_entries_delete_v2   | DELETE             | public              | calendar_entries          | EXECUTE FUNCTION handle_calendar_entries_delete_v2()       | AFTER         |
+| trigger_manage_calendar_tasks_v2            | INSERT, UPDATE     | public              | calendar_entries          | EXECUTE FUNCTION manage_calendar_tasks_v2()                | AFTER         |
+| update_calendar_entries_updated_at          | UPDATE             | public              | calendar_entries          | EXECUTE FUNCTION update_updated_at_column()                | BEFORE        |
+| update_cleaner_availability_updated_at      | UPDATE             | public              | cleaner_availability      | EXECUTE FUNCTION update_updated_at_column()                | BEFORE        |
+| update_hotels_updated_at                    | UPDATE             | public              | hotels                    | EXECUTE FUNCTION update_updated_at_column()                | BEFORE        |
+| update_registration_applications_updated_at | UPDATE             | public              | registration_applications | EXECUTE FUNCTION update_updated_at_column()                | BEFORE        |
+| update_tasks_updated_at                     | UPDATE             | public              | tasks                     | EXECUTE FUNCTION update_updated_at_column()                | BEFORE        |
+| update_user_profiles_updated_at             | UPDATE             | public              | user_profiles             | EXECUTE FUNCTION update_updated_at_column()                | BEFORE        |
+| tr_check_filters                            | INSERT             | realtime            | subscription              | EXECUTE FUNCTION realtime.subscription_check_filters()     | BEFORE        |
+| tr_check_filters                            | UPDATE             | realtime            | subscription              | EXECUTE FUNCTION realtime.subscription_check_filters()     | BEFORE        |
+| enforce_bucket_name_length_trigger          | INSERT             | storage             | buckets                   | EXECUTE FUNCTION storage.enforce_bucket_name_length()      | BEFORE        |
+| enforce_bucket_name_length_trigger          | UPDATE             | storage             | buckets                   | EXECUTE FUNCTION storage.enforce_bucket_name_length()      | BEFORE        |
+| objects_delete_delete_prefix                | DELETE             | storage             | objects                   | EXECUTE FUNCTION storage.delete_prefix_hierarchy_trigger() | AFTER         |
+| objects_insert_create_prefix                | INSERT             | storage             | objects                   | EXECUTE FUNCTION storage.objects_insert_prefix_trigger()   | BEFORE        |
+| objects_update_create_prefix                | UPDATE             | storage             | objects                   | EXECUTE FUNCTION storage.objects_update_prefix_trigger()   | BEFORE        |
+| update_objects_updated_at                   | UPDATE             | storage             | objects                   | EXECUTE FUNCTION storage.update_updated_at_column()        | BEFORE        |
+| prefixes_create_hierarchy                   | INSERT             | storage             | prefixes                  | EXECUTE FUNCTION storage.prefixes_insert_trigger()         | BEFORE        |
+| prefixes_delete_hierarchy                   | DELETE             | storage             | prefixes                  | EXECUTE FUNCTION storage.delete_prefix_hierarchy_trigger() | AFTER         |

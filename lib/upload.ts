@@ -10,7 +10,19 @@ export interface TaskImage {
   uploaded_at: string;
 }
 
-// 创建任务并上传图片的完整流程
+/**
+ * @deprecated 此函数已废弃，请勿直接创建任务
+ * 
+ * 任务应通过 calendar_entries 创建，数据库触发器会自动生成清扫任务
+ * 
+ * 迁移指南：
+ * - 旧代码：createTaskWithImages({ hotel_name, ... }, images)
+ * - 新代码：
+ *   1. createCalendarEntry({ hotelId, ... }, userId)
+ *   2. 单独上传图片到 tasks 的 task_images 表
+ * 
+ * 此函数保留仅用于向后兼容，将在未来版本中移除
+ */
 export async function createTaskWithImages(taskData: {
   hotel_name: string;
   hotel_id?: string;
@@ -23,6 +35,7 @@ export async function createTaskWithImages(taskData: {
   description: string | null;
   created_by: string;
 }, images: File[]): Promise<{ task: Task | null; images: TaskImage[] }> {
+  console.warn('⚠️ createTaskWithImages() 已废弃，请使用新的服务层API');
   try {
     console.log('开始创建任务:', taskData);
     

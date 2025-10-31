@@ -104,10 +104,6 @@ export function TaskAssignmentModal({
               <span>{task.task.hotelName}</span>
             </div>
             <div>
-              <span style={{ color: '#6b7280' }}>房间号：</span>
-              <span>{task.task.roomNumber || '未指定'}</span>
-            </div>
-            <div>
               <span style={{ color: '#6b7280' }}>日期：</span>
               <span>{task.task.checkInDate || task.task.date}</span>
             </div>

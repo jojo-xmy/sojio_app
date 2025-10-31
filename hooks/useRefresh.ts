@@ -5,7 +5,7 @@ import { CalendarEntry } from '@/types/hotel';
 import { Attendance, getAttendanceByTaskId, getUserLatestAttendance } from '@/lib/attendance';
 import { TaskImage, getTaskImages } from '@/lib/upload';
 import { getTaskById } from '@/lib/tasks';
-import { getCalendarEntryByTaskId } from '@/lib/hotelManagement';
+import { getCalendarEntryByTaskId } from '@/lib/services/calendarEntryService';
 import { useUserStore } from '@/store/userStore';
 
 // Hook for task-related data (attendance, images, status)

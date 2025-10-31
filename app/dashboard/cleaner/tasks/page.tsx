@@ -201,9 +201,6 @@ export default function CleanerTasksPage() {
                         <span className="font-medium">日期:</span> {new Date(task.date).toLocaleDateString()}
                       </div>
                       <div>
-                        <span className="font-medium">房间号:</span> {task.room_number || '未指定'}
-                      </div>
-                      <div>
                         <span className="font-medium">门锁密码:</span> {task.lock_password || '未提供'}
                       </div>
                     </div>

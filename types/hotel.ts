@@ -19,8 +19,8 @@ export interface CalendarEntry {
   checkInDate: string;
   checkOutDate: string;
   guestCount: number;
-  roomNumber?: string;
   ownerNotes?: string;
+  cleaningDates?: string[]; // 新增：清扫日期数组
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -66,8 +66,8 @@ export interface CreateCalendarEntryData {
   checkInDate: string;
   checkOutDate: string;
   guestCount: number;
-  roomNumber?: string;
   ownerNotes?: string;
+  cleaningDates?: string[]; // 新增：清扫日期数组
 }
 
 // 可用性设置数据

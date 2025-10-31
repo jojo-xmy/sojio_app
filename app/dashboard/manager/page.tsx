@@ -149,7 +149,6 @@ export default function ManagerDashboard() {
                       images={task.images}
                       attendanceStatus={task.attendanceStatus}
                       hotelAddress={task.hotelAddress}
-                      roomNumber={task.roomNumber}
                       lockPassword={task.lockPassword}
                       acceptedBy={task.acceptedBy}
                       completedAt={task.completedAt}

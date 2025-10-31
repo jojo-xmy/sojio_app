@@ -7,7 +7,7 @@ import { getCalendarTasks, getOwnerCalendarTasks, getAvailableCleanersForDate, a
 import { TaskCalendarEvent, AvailableCleaner } from '@/types/calendar';
 import { TaskDetailPanel } from '@/components/TaskDetailPanel';
 import { supabase } from '@/lib/supabase';
-import { addDays, startOfWeek, endOfWeek, isBefore, isAfter, min, max, isSameDay } from 'date-fns';
+import { addDays, startOfWeek, endOfWeek, isBefore, isAfter, min, max, isSameDay, startOfDay } from 'date-fns';
 
 interface OwnerTaskCalendarProps {
   className?: string;
@@ -434,15 +434,18 @@ export const OwnerTaskCalendar = forwardRef<{ refreshData: () => void }, OwnerTa
                               h-full rounded border ${taskColor} flex items-center px-2
                             `}>
                               <div className="text-xs truncate font-medium">
-                                {`${segment.originalEvent.task.hotelName || '未知酒店'} - ${segment.originalEvent.task.roomNumber || '未指定房间'}`}
+                                {`${segment.originalEvent.task.hotelName || '未知酒店'}`}
                               </div>
                             </div>
 
                             {/* 清扫日期标签，仅当清扫日在该周段内 */}
                             {(() => {
-                              const cleaningDow = cleaningDate.getDay();
-                              const inThisWeek = cleaningDate >= segment.start && cleaningDate <= segment.end;
+                              const cleanDay = startOfDay(cleaningDate);
+                              const segStart = startOfDay(segment.start);
+                              const segEnd = startOfDay(segment.end);
+                              const inThisWeek = cleanDay.getTime() >= segStart.getTime() && cleanDay.getTime() <= segEnd.getTime();
                               if (!inThisWeek) return null;
+                              const cleaningDow = cleanDay.getDay();
                               const tagLeftPercent = ((cleaningDow - startDow) / spanDays) * 100;
                               return (
                                 <div className="absolute -top-1" style={{ left: `${tagLeftPercent}%`, zIndex: 6 }}>

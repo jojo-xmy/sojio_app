@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { Task, TaskStatus, UserRole, canTransitionTask } from '@/types/task';
+import { transitionTask } from './taskStatus';
 
 // 获取所有任务
 export async function getAllTasks(): Promise<Task[]> {
@@ -296,6 +297,57 @@ export async function updateOwnerNotes(taskId: string, ownerNotes: string): Prom
   } catch (error) {
     console.error('更新房东备注失败:', error);
     return { success: false, error: error instanceof Error ? error.message : '更新房东备注失败' };
+  }
+}
+
+export async function confirmTaskWithManagerReport(
+  taskId: string,
+  managerId: string,
+  reportNotes: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { data: taskRow, error: taskError } = await supabase
+      .from('tasks')
+      .select('status')
+      .eq('id', taskId)
+      .single();
+
+    if (taskError || !taskRow) {
+      throw new Error(taskError?.message || '未找到任务');
+    }
+
+    const currentStatus = taskRow.status as TaskStatus;
+
+    if (!['completed', 'confirmed'].includes(currentStatus)) {
+      throw new Error('仅在任务已完成后才能确认并推送给房东');
+    }
+
+    const { error: updateError } = await supabase
+      .from('tasks')
+      .update({
+        manager_report_notes: reportNotes || null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', taskId);
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    if (currentStatus !== 'confirmed') {
+      const result = await transitionTask(taskId, currentStatus, 'confirmed', managerId, 'manager');
+      if (!result.success) {
+        throw new Error(result.error || '任务状态更新失败');
+      }
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('确认任务并推送房东失败:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '确认任务并推送房东失败'
+    };
   }
 }
 

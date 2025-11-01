@@ -23,7 +23,7 @@ export interface TaskCardProps {
   viewMode?: 'list' | 'calendar' | 'detail';
   // 能力矩阵与插槽（可选）
   capabilities?: TaskCapabilities;
-  renderBlocks?: Partial<Record<'attendanceSummary' | 'attendanceActions' | 'attachments' | 'notes' | 'acknowledgement' | 'assignmentAction' | 'taskAcceptance' | 'taskPublish' | 'taskEdit' | 'ownerMessage' | 'taskDescription' | 'managerActions', React.ReactNode>>;
+  renderBlocks?: Partial<Record<'attendanceSummary' | 'attendanceActions' | 'attachments' | 'notes' | 'acknowledgement' | 'assignmentAction' | 'taskAcceptance' | 'taskPublish' | 'taskEdit' | 'ownerMessage' | 'taskDescription' | 'managerActions' | 'cleanerNotes' | 'managerReport', React.ReactNode>>;
   onClick?: () => void;
   attendanceStatus?: 'none' | 'checked_in' | 'checked_out';
   // 新增字段
@@ -192,6 +192,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {renderBlocks.ownerMessage}
           {renderBlocks.taskDescription}
+          {capabilities.visibleBlocks.includes('cleanerNotes') && renderBlocks.cleanerNotes}
+          {capabilities.visibleBlocks.includes('managerReport') && renderBlocks.managerReport}
           {capabilities.visibleBlocks.includes('taskAcceptance') && renderBlocks.taskAcceptance}
           {capabilities.visibleBlocks.includes('attendanceSummary') && renderBlocks.attendanceSummary}
           {capabilities.visibleBlocks.includes('attendanceActions') && renderBlocks.attendanceActions}

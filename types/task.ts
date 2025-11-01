@@ -66,6 +66,7 @@ export interface Task {
   // 新增：备注传递链
   ownerNotes?: string;          // 来源于 calendar_entries.owner_notes
   cleanerNotes?: string;        // 清洁员退勤填写
+  managerReportNotes?: string;  // 经理确认后给房东的清扫报告
   
   // 备品信息
   inventory?: {

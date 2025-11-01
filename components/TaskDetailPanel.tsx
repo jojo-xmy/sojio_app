@@ -17,7 +17,7 @@ import { getAvailableCleanersForDate, assignTaskToCleaners, getTaskWithAssignmen
 import { updateCalendarEntry, deleteCalendarEntry } from '@/lib/services/calendarEntryService';
 // 使用基于 tasks.calendar_entry_id 的查询，避免依赖 calendar_entries.task_id
 // import { getCalendarEntryByTaskId } from '@/lib/hotelManagement'; // 不再使用
-import { publishTask, acceptTask, rejectTask, updateTaskDetails, updateOwnerNotes, deleteTask } from '@/lib/tasks';
+import { publishTask, acceptTask, rejectTask, updateTaskDetails, updateOwnerNotes, deleteTask, confirmTaskWithManagerReport } from '@/lib/tasks';
 import { CalendarEntryForm, CalendarEntryFormData } from './CalendarEntryForm';
 
 interface TaskDetailPanelProps {
@@ -45,6 +45,8 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
     lockPassword: task.lockPassword || ''
   });
   const [ownerNotesDraft, setOwnerNotesDraft] = useState(task.ownerNotes || '');
+  const [managerReportDraft, setManagerReportDraft] = useState(task.managerReportNotes || task.cleanerNotes || '');
+  const [savingReport, setSavingReport] = useState(false);
   // 备品统计（保留，暂不抽离）
   const [inventory, setInventory] = useState({ towel: '', soap: '' });
   const [inventorySubmitted, setInventorySubmitted] = useState(false);
@@ -56,6 +58,10 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
     ownerNotes?: string;
     cleaningDates?: string[];
   }>(null);
+
+ useEffect(() => {
+   setManagerReportDraft(task.managerReportNotes ?? task.cleanerNotes ?? '');
+ }, [task.id, task.managerReportNotes, task.cleanerNotes]);
 
   const loadAssignedCleanerProfiles = useCallback(async () => {
     try {
@@ -234,6 +240,35 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
     }
   };
 
+  const handleManagerReportConfirm = async () => {
+    if (!user) return;
+    try {
+      setSavingReport(true);
+      const trimmed = managerReportDraft.trim();
+      if (!trimmed) {
+        alert('请填写清扫报告内容');
+        setSavingReport(false);
+        return;
+      }
+
+      const result = await confirmTaskWithManagerReport(task.id, user.id.toString(), trimmed);
+      if (!result.success) {
+        alert(result.error || '确认失败');
+        return;
+      }
+
+      await refresh();
+      onAttendanceUpdate?.();
+      onTaskUpdate?.();
+      alert('清扫报告已确认并推送给房东');
+    } catch (error) {
+      console.error('确认清扫报告失败:', error);
+      alert('确认清扫报告失败');
+    } finally {
+      setSavingReport(false);
+    }
+  };
+
   // 处理任务编辑保存
   const handleEditSave = async () => {
     try {
@@ -402,6 +437,96 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
               </div>
             </div>
           ),
+          cleanerNotes: user.role === 'manager' && (
+            <div style={{
+              border: '1px solid #e5e7eb',
+              borderRadius: 8,
+              padding: 12,
+              backgroundColor: '#f1f5f9',
+              marginBottom: 12
+            }}>
+              <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: '#475569' }}>
+                清洁员备注
+              </h4>
+              <div style={{ fontSize: 14, color: '#1f2937', lineHeight: 1.6 }}>
+                {task.cleanerNotes ? task.cleanerNotes : '清洁员尚未填写退勤备注。'}
+              </div>
+            </div>
+          ),
+          managerReport: user.role === 'manager'
+            ? (
+              <div style={{
+                border: '1px solid #dbeafe',
+                borderRadius: 8,
+                padding: 16,
+                backgroundColor: '#eff6ff',
+                marginBottom: 16
+              }}>
+                <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: '#1d4ed8' }}>
+                  推送给房东的清扫报告
+                </h4>
+                <textarea
+                  value={managerReportDraft}
+                  onChange={(e) => setManagerReportDraft(e.target.value)}
+                  style={{
+                    width: '100%',
+                    minHeight: 120,
+                    padding: 10,
+                    borderRadius: 8,
+                    border: '1px solid #bfdbfe',
+                    fontSize: 14,
+                    lineHeight: 1.6,
+                    color: '#1f2937'
+                  }}
+                  placeholder={task.cleanerNotes ? '基于清洁员备注整理后推送给房东' : '填写需推送给房东的清扫报告'}
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
+                  <span style={{ fontSize: 12, color: '#2563eb' }}>
+                    {task.status === 'confirmed'
+                      ? '任务已确认，修改后再次推送会同步给房东'
+                      : '确认后任务状态将变为“已确认”，并通知房东'}
+                  </span>
+                  <button
+                    onClick={handleManagerReportConfirm}
+                    disabled={savingReport || managerReportDraft.trim().length === 0}
+                    style={{
+                      padding: '8px 18px',
+                      background: savingReport || managerReportDraft.trim().length === 0 ? '#9ca3af' : '#2563eb',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: 6,
+                      fontWeight: 600,
+                      fontSize: 14,
+                      cursor: savingReport || managerReportDraft.trim().length === 0 ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {savingReport
+                      ? '处理中...'
+                      : task.status === 'confirmed' ? '更新并通知房东' : '确认并通知房东'}
+                  </button>
+                </div>
+              </div>
+            )
+            : user.role === 'owner'
+              ? (
+                <div style={{
+                  border: '1px solid #bef264',
+                  borderRadius: 8,
+                  padding: 16,
+                  backgroundColor: '#ecfccb',
+                  marginBottom: 16
+                }}>
+                  <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: '#3f6212' }}>
+                    管理员确认的清扫报告
+                  </h4>
+                  <div style={{ fontSize: 14, color: '#1f2937', lineHeight: 1.6 }}>
+                    {task.managerReportNotes && task.managerReportNotes.trim().length > 0
+                      ? task.managerReportNotes
+                      : '经理尚未推送清扫报告。'}
+                  </div>
+                </div>
+              )
+              : null,
           managerActions: user.role === 'manager' ? (
             <div style={{ marginTop: 16 }}>
               {/* 编辑任务表单 */}

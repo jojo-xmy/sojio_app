@@ -112,6 +112,9 @@ export function getTaskCapabilities(
       
       // 显示附件（只读）
       if (!caps.visibleBlocks.includes('attachments')) caps.visibleBlocks.push('attachments');
+      if (status === 'confirmed') {
+        if (!caps.visibleBlocks.includes('managerReport')) caps.visibleBlocks.push('managerReport');
+      }
     }
   }
 
@@ -139,6 +142,10 @@ export function getTaskCapabilities(
     }
     if (status === 'completed') {
       caps.canConfirmCompletion = true;
+    }
+    if (status === 'completed' || status === 'confirmed') {
+      if (!caps.visibleBlocks.includes('cleanerNotes')) caps.visibleBlocks.push('cleanerNotes');
+      if (!caps.visibleBlocks.includes('managerReport')) caps.visibleBlocks.push('managerReport');
     }
     // 出勤汇总与附件只读（经理）
     if (status !== 'draft') {

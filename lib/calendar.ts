@@ -145,6 +145,7 @@ export async function getCalendarTasks(
       note: task.note || '',
       ownerNotes: task.owner_notes || '',
       cleanerNotes: task.cleaner_notes || '',
+      managerReportNotes: task.manager_report_notes || '',
       images: task.images || [],
       hotelAddress: task.hotel_address || '',
       lockPassword: task.lock_password || '',
@@ -449,6 +450,7 @@ export async function getTaskWithAssignments(taskId: string): Promise<TaskCalend
     note: data.note || '',
     ownerNotes: data.owner_notes || '',
     cleanerNotes: data.cleaner_notes || '',
+    managerReportNotes: data.manager_report_notes || '',
     images: data.images || [],
     hotelAddress: data.hotel_address || '',
     lockPassword: data.lock_password || '',
@@ -674,13 +676,13 @@ export async function getOwnerCalendarTasks(
       }));
 
       const mappedTask: Task = {
-        ...task,
         id: task.id, // 明确保证为 tasks.id
         hotelId: task.hotel_id,
         hotelName: task.hotel_name,
         checkInDate: task.check_in_date,
         checkOutDate: task.check_out_date,
         checkInTime: task.check_in_time,
+        cleaningDate: task.cleaning_date || task.check_out_date || task.check_in_date,
         lockPassword: task.lock_password,
         specialInstructions: task.special_instructions,
         hotelAddress: task.hotel_address,
@@ -688,9 +690,17 @@ export async function getOwnerCalendarTasks(
         createdAt: task.created_at,
         updatedAt: task.updated_at,
         guestCount: task.guest_count,
-        assignedCleaners: assignedCleaners.map((c: any) => c.name) || [],
         ownerNotes: task.owner_notes || '',
-        cleanerNotes: task.cleaner_notes || ''
+        cleanerNotes: task.cleaner_notes || '',
+        managerReportNotes: task.manager_report_notes || '',
+        status: task.status,
+        description: task.description || '',
+        note: task.note || '',
+        images: task.images || [],
+        acceptedBy: task.accepted_by || [],
+        completedAt: task.completed_at || '',
+        confirmedAt: task.confirmed_at || '',
+        assignedCleaners: assignedCleaners.map((c: any) => c.name) || []
       };
 
       // start/end 字段对 UI 次要，分段算法使用 task.checkInDate/checkOutDate

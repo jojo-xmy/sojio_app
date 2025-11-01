@@ -32,6 +32,7 @@ function mapTaskFromDB(row: any): Task {
     guestCount: row.guest_count,
     ownerNotes: row.owner_notes,
     cleanerNotes: row.cleaner_notes,
+    managerReportNotes: row.manager_report_notes,
     acceptedBy: row.accepted_by || [],
     completedAt: row.completed_at,
     confirmedAt: row.confirmed_at,

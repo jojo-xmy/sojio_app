@@ -278,8 +278,9 @@ export async function setCleanerAvailability(
 
 // 批量设置清洁员可用性
 export async function batchSetCleanerAvailability(
-  cleanerId: string, 
-  availabilityList: AvailabilityData[]
+  cleanerId: string,
+  availabilityList: AvailabilityData[],
+  datesToRemove: string[] = []
 ): Promise<CleanerAvailability[]> {
   const availabilityData = availabilityList.map(item => ({
     cleaner_id: cleanerId,
@@ -288,20 +289,39 @@ export async function batchSetCleanerAvailability(
     notes: item.notes
   }));
 
-  const { data, error } = await supabase
-    .from('cleaner_availability')
-    .upsert(availabilityData)
-    .select();
+  try {
+    const operations: Array<Promise<unknown>> = [];
 
-  if (error) {
+    if (availabilityData.length > 0) {
+      operations.push(
+        supabase
+          .from('cleaner_availability')
+          .upsert(availabilityData)
+          .select()
+      );
+    }
+
+    if (datesToRemove.length > 0) {
+      operations.push(
+        supabase
+          .from('cleaner_availability')
+          .delete()
+          .eq('cleaner_id', cleanerId)
+          .in('date', datesToRemove)
+      );
+    }
+
+    const results = await Promise.all(operations);
+
+    // 短暂延迟确保数据库写入完成
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    const upsertResult = results.find(r => Array.isArray((r as any)?.data)) as { data?: CleanerAvailability[] } | undefined;
+    return upsertResult?.data || [];
+  } catch (error) {
     console.error('批量设置清洁员可用性失败:', error);
     throw new Error('批量设置清洁员可用性失败');
   }
-
-  // 短暂延迟确保数据库写入完成
-  await new Promise(resolve => setTimeout(resolve, 100));
-
-  return data || [];
 }
 
 // 获取指定日期的可用清洁员

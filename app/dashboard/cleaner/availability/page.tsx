@@ -1,11 +1,11 @@
 "use client";
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/userStore';
 import { 
   getCleanerAvailability, 
-  setCleanerAvailability, 
-  batchSetCleanerAvailability 
+  batchSetCleanerAvailability,
+  getCleanerTasks
 } from '@/lib/hotelManagement';
 import { CleanerAvailability, AvailabilityData } from '@/types/hotel';
 import { supabase } from '@/lib/supabase';
@@ -21,6 +21,10 @@ export default function CleanerAvailabilityPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartDate, setDragStartDate] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [confirmedDates, setConfirmedDates] = useState<Set<string>>(new Set());
+  const [assignedTaskDates, setAssignedTaskDates] = useState<Set<string>>(new Set());
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingDates, setEditingDates] = useState<Set<string>>(new Set());
 
   const formatDate = (date: Date): string => {
     const year = date.getFullYear();
@@ -40,7 +44,7 @@ export default function CleanerAvailabilityPage() {
       router.push('/dashboard');
       return;
     }
-    loadAvailability();
+    loadMonthData();
   }, [user, router, currentMonth]);
 
   // 订阅可用性与任务变更，当前月视图刷新
@@ -49,10 +53,10 @@ export default function CleanerAvailabilityPage() {
     const channel = supabase
       .channel(`realtime-cleaner-availability-${user.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cleaner_availability' }, () => {
-        loadAvailability();
+        loadMonthData();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
-        loadAvailability();
+        loadMonthData();
       })
       .subscribe();
 
@@ -61,31 +65,48 @@ export default function CleanerAvailabilityPage() {
 
 
 
-  const loadAvailability = async () => {
+  const loadMonthData = async () => {
     if (!user) return;
     
     try {
       setLoading(true);
       const startDate = `${currentMonth}-01`;
-      const endDate = getLastDayOfMonth(currentMonth);
+      const [year, month] = currentMonth.split('-');
+      const lastDay = new Date(parseInt(year, 10), parseInt(month, 10), 0).getDate();
+      const endDate = `${currentMonth}-${String(lastDay).padStart(2, '0')}`;
+
       const availabilityList = await getCleanerAvailability(
         user.id.toString(), 
         startDate, 
         endDate
       );
       setAvailability(availabilityList);
+
+      let cleanerTaskAssignments: any[] = [];
+      try {
+        cleanerTaskAssignments = await getCleanerTasks(user.id.toString(), true);
+      } catch (taskError) {
+        console.error('加载清洁员任务失败:', taskError);
+      }
+
+      const taskDateSet = new Set<string>();
+      cleanerTaskAssignments.forEach(assignment => {
+        const task = assignment.tasks;
+        if (!task) return;
+        const rawDate = task.cleaning_date || task.check_out_date || task.check_in_date;
+        if (!rawDate) return;
+        if (rawDate >= startDate && rawDate <= endDate) {
+          taskDateSet.add(rawDate);
+        }
+      });
+      setAssignedTaskDates(taskDateSet);
+      setError(null);
     } catch (err) {
       setError('加载可用性数据失败');
       console.error('加载可用性数据失败:', err);
     } finally {
       setLoading(false);
     }
-  };
-
-  const getLastDayOfMonth = (yearMonth: string): string => {
-    const [year, month] = yearMonth.split('-');
-    const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
-    return `${yearMonth}-${String(lastDay).padStart(2, '0')}`;
   };
 
   const getDaysInMonth = (yearMonth: string): Date[] => {
@@ -100,35 +121,45 @@ export default function CleanerAvailabilityPage() {
     return days;
   };
 
-  const getAvailabilityForDate = (date: Date): CleanerAvailability | null => {
-    const dateStr = formatDate(date);
-    return availability.find(a => a.date === dateStr) || null;
-  };
-
   const isDateAvailable = (date: Date): boolean => {
     const dateStr = formatDate(date);
-    return availability.some(a => a.date === dateStr);
+    return confirmedDates.has(dateStr);
   };
+
+  const pendingAdditions = useMemo(() => {
+    if (!isEditMode) return [];
+    return Array.from(editingDates).filter(date => !confirmedDates.has(date));
+  }, [editingDates, confirmedDates, isEditMode]);
+
+  const pendingRemovals = useMemo(() => {
+    if (!isEditMode) return [];
+    return Array.from(confirmedDates).filter(date => !editingDates.has(date));
+  }, [editingDates, confirmedDates, isEditMode]);
+
+  const hasChanges = pendingAdditions.length > 0 || pendingRemovals.length > 0;
 
   const handleDateClick = (date: Date, event: React.MouseEvent) => {
     event.preventDefault();
+    if (!isEditMode) return;
+    
     const dateStr = formatDate(date);
     const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
     
     if (isPast) return;
 
-    // 单击切换选择状态
-    const newSelected = new Set(selectedDates);
-    if (newSelected.has(dateStr)) {
-      newSelected.delete(dateStr);
+    const newEditing = new Set(editingDates);
+    if (newEditing.has(dateStr)) {
+      newEditing.delete(dateStr);
     } else {
-      newSelected.add(dateStr);
+      newEditing.add(dateStr);
     }
-    setSelectedDates(newSelected);
+    setEditingDates(newEditing);
   };
 
   const handleMouseDown = (date: Date, event: React.MouseEvent) => {
     event.preventDefault();
+    if (!isEditMode) return;
+    
     const dateStr = formatDate(date);
     const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
     
@@ -136,40 +167,36 @@ export default function CleanerAvailabilityPage() {
 
     setIsDragging(true);
     setDragStartDate(dateStr);
-    
-    // 开始拖拽时不立即切换状态，等待拖拽结束
   };
 
   const handleMouseEnter = (date: Date) => {
-    if (!isDragging || !dragStartDate) return;
+    if (!isDragging || !dragStartDate || !isEditMode) return;
     
     const dateStr = formatDate(date);
     const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
     
     if (isPast) return;
 
-    // 拖拽过程中选择范围内的日期
     const startDate = new Date(dragStartDate);
     const endDate = date;
     const [from, to] = startDate <= endDate ? [startDate, endDate] : [endDate, startDate];
     
-    const newSelected = new Set<string>();
+    const newEditing = new Set<string>(editingDates);
     const current = new Date(from);
     
-    // 拖拽时总是添加范围内的日期
     while (current <= to) {
       const currentStr = formatDate(current);
       const currentDate = new Date(current);
       const isCurrentPast = currentDate < new Date(new Date().setHours(0, 0, 0, 0));
       
       if (!isCurrentPast) {
-        newSelected.add(currentStr);
+        newEditing.add(currentStr);
       }
       
       current.setDate(current.getDate() + 1);
     }
     
-    setSelectedDates(newSelected);
+    setEditingDates(newEditing);
   };
 
   const handleMouseUp = () => {
@@ -192,12 +219,14 @@ export default function CleanerAvailabilityPage() {
   }, [isDragging]);
 
   const handleQuickSet = (pattern: 'weekdays' | 'weekends' | 'all' | 'clear') => {
+    if (!isEditMode) return;
+    
     const days = getDaysInMonth(currentMonth);
-    const newSelected = new Set<string>();
+    const newEditing = new Set<string>();
 
     if (pattern !== 'clear') {
       days.forEach(day => {
-        const dayOfWeek = day.getDay(); // 0 = Sunday, 6 = Saturday
+        const dayOfWeek = day.getDay();
         const isPast = day < new Date(new Date().setHours(0, 0, 0, 0));
         
         if (isPast) return;
@@ -205,10 +234,10 @@ export default function CleanerAvailabilityPage() {
         let shouldSet = false;
         switch (pattern) {
           case 'weekdays':
-            shouldSet = dayOfWeek >= 1 && dayOfWeek <= 5; // Monday to Friday
+            shouldSet = dayOfWeek >= 1 && dayOfWeek <= 5;
             break;
           case 'weekends':
-            shouldSet = dayOfWeek === 0 || dayOfWeek === 6; // Saturday and Sunday
+            shouldSet = dayOfWeek === 0 || dayOfWeek === 6;
             break;
           case 'all':
             shouldSet = true;
@@ -216,18 +245,33 @@ export default function CleanerAvailabilityPage() {
         }
 
         if (shouldSet) {
-          newSelected.add(formatDate(day));
+          newEditing.add(formatDate(day));
         }
       });
     }
 
-    setSelectedDates(newSelected);
+    setEditingDates(newEditing);
+  };
+
+  const handleEnterEditMode = () => {
+    setIsEditMode(true);
+    setEditingDates(new Set(confirmedDates));
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+    setEditingDates(new Set());
   };
 
   const handleSave = async () => {
-    if (!user || saving) return;
+    if (!user || saving || !isEditMode) return;
 
-    const availabilityList: AvailabilityData[] = Array.from(selectedDates).map(dateStr => ({
+    if (!hasChanges) {
+      setIsEditMode(false);
+      return;
+    }
+
+    const availabilityList: AvailabilityData[] = pendingAdditions.map(dateStr => ({
       date: dateStr,
       availableHours: {
         morning: true,
@@ -239,8 +283,10 @@ export default function CleanerAvailabilityPage() {
 
     try {
       setSaving(true);
-      await batchSetCleanerAvailability(user.id.toString(), availabilityList);
-      await loadAvailability();
+      await batchSetCleanerAvailability(user.id.toString(), availabilityList, pendingRemovals);
+      await loadMonthData();
+      setIsEditMode(false);
+      setEditingDates(new Set());
       setError(null);
     } catch (err) {
       setError('保存日程失败');
@@ -250,13 +296,17 @@ export default function CleanerAvailabilityPage() {
     }
   };
 
-  // 初始化选中状态
   useEffect(() => {
-    const availableDates = new Set(availability.map(a => a.date));
-    setSelectedDates(availableDates);
+    const confirmedSet = new Set(availability.map(a => a.date));
+    setConfirmedDates(confirmedSet);
   }, [availability]);
 
   const changeMonth = (direction: 'prev' | 'next') => {
+    if (isEditMode && hasChanges) {
+      const confirmed = window.confirm('当前有未保存的修改，切换月份将丢失这些修改。是否继续？');
+      if (!confirmed) return;
+    }
+
     const [year, month] = currentMonth.split('-');
     let newYear = parseInt(year);
     let newMonth = parseInt(month);
@@ -277,6 +327,11 @@ export default function CleanerAvailabilityPage() {
       }
     }
 
+    setIsEditMode(false);
+    setEditingDates(new Set());
+    setSelectedDates(new Set());
+    setConfirmedDates(new Set());
+    setAssignedTaskDates(new Set());
     setCurrentMonth(`${newYear}-${String(newMonth).padStart(2, '0')}`);
   };
 
@@ -294,39 +349,68 @@ export default function CleanerAvailabilityPage() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
+      {/* 顶部导航栏 */}
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">日程注册</h1>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-4">
           <button
-            onClick={() => handleQuickSet('weekdays')}
-            disabled={saving}
-            className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm hover:bg-blue-200 disabled:opacity-50 transition-colors shadow-sm hover:shadow-md"
+            onClick={() => router.push('/dashboard/cleaner')}
+            className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200"
           >
-            工作日
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            <span className="font-medium">返回主页</span>
           </button>
-          <button
-            onClick={() => handleQuickSet('weekends')}
-            disabled={saving}
-            className="px-4 py-2 bg-green-100 text-green-700 rounded-lg text-sm hover:bg-green-200 disabled:opacity-50 transition-colors shadow-sm hover:shadow-md"
-          >
-            周末
-          </button>
-          <button
-            onClick={() => handleQuickSet('all')}
-            disabled={saving}
-            className="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg text-sm hover:bg-purple-200 disabled:opacity-50 transition-colors shadow-sm hover:shadow-md"
-          >
-            全月
-          </button>
-          <button
-            onClick={() => handleQuickSet('clear')}
-            disabled={saving}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 disabled:opacity-50 transition-colors shadow-sm hover:shadow-md"
-          >
-            清空
-          </button>
+          <div className="h-8 w-px bg-gray-300"></div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">日程管理</h1>
+            <p className="text-sm text-gray-500 mt-0.5">
+              {isEditMode ? '编辑模式：点击日期进行选择或取消' : '查看模式：当前已确认的可用日程'}
+            </p>
+          </div>
         </div>
       </div>
+
+      {isEditMode && (
+        <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex justify-between items-center">
+            <div className="text-sm text-blue-800">
+              <span className="font-semibold">快捷选择：</span>
+              <span className="ml-2 text-blue-600">点击下方按钮快速设置日程模板</span>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleQuickSet('weekdays')}
+                disabled={saving}
+                className="px-3 py-1.5 bg-white text-blue-700 border border-blue-300 rounded-md text-xs font-medium hover:bg-blue-50 disabled:opacity-50 transition-colors"
+              >
+                工作日
+              </button>
+              <button
+                onClick={() => handleQuickSet('weekends')}
+                disabled={saving}
+                className="px-3 py-1.5 bg-white text-green-700 border border-green-300 rounded-md text-xs font-medium hover:bg-green-50 disabled:opacity-50 transition-colors"
+              >
+                周末
+              </button>
+              <button
+                onClick={() => handleQuickSet('all')}
+                disabled={saving}
+                className="px-3 py-1.5 bg-white text-purple-700 border border-purple-300 rounded-md text-xs font-medium hover:bg-purple-50 disabled:opacity-50 transition-colors"
+              >
+                全月
+              </button>
+              <button
+                onClick={() => handleQuickSet('clear')}
+                disabled={saving}
+                className="px-3 py-1.5 bg-white text-gray-700 border border-gray-300 rounded-md text-xs font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              >
+                清空
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
@@ -393,35 +477,71 @@ export default function CleanerAvailabilityPage() {
                   const isCurrentMonth = cellDate.getMonth() === parseInt(month) - 1;
                   const isToday = cellDate.getTime() === today.getTime();
                   const isPast = cellDate < today;
-                  const isSelected = selectedDates.has(dateStr);
-                  const isAvailable = isDateAvailable(cellDate);
+                  const isConfirmed = confirmedDates.has(dateStr);
+                  const isEditing = editingDates.has(dateStr);
+                  const hasTask = assignedTaskDates.has(dateStr);
                   
+                  let cellBg = 'bg-white';
+                  let cellBorder = 'border-gray-100';
+                  let cellHover = 'hover:bg-blue-50';
+                  let textColor = '';
+                  
+                  if (!isCurrentMonth) {
+                    cellBg = 'bg-gray-50';
+                    textColor = 'text-gray-400';
+                  } else if (isPast) {
+                    cellBg = 'bg-gray-50';
+                    textColor = 'text-gray-400 opacity-50';
+                    cellHover = '';
+                  } else if (isEditMode) {
+                    if (isEditing) {
+                      cellBg = 'bg-blue-500';
+                      textColor = 'text-white';
+                      cellHover = 'hover:bg-blue-600';
+                    } else {
+                      cellHover = isEditMode ? 'hover:bg-blue-50 hover:border-blue-200' : 'hover:bg-gray-50';
+                    }
+                  } else {
+                    if (isToday) {
+                      cellBg = 'bg-yellow-50';
+                      cellBorder = 'border-yellow-200';
+                    }
+                    cellHover = '';
+                  }
+
                   cells.push(
                     <div
                       key={dateStr}
-                                             className={`
-                         aspect-square p-1 border-r border-b border-gray-100 cursor-pointer transition-colors
-                         ${!isCurrentMonth ? 'bg-gray-50 text-gray-400' : ''}
-                         ${isPast ? 'opacity-30 cursor-not-allowed' : 'hover:bg-blue-50'}
-                         ${isToday && !isSelected ? 'bg-yellow-100' : ''}
-                         ${isSelected ? 'bg-blue-500 text-white shadow-md' : ''}
-                         ${isDragging ? 'user-select-none' : ''}
-                       `}
+                      className={`
+                        aspect-square p-1 border-r border-b ${cellBorder} transition-all duration-200 relative
+                        ${cellBg}
+                        ${cellHover}
+                        ${isEditMode && !isPast ? 'cursor-pointer' : 'cursor-default'}
+                        ${isDragging ? 'user-select-none' : ''}
+                      `}
                       onMouseDown={(e) => handleMouseDown(cellDate, e)}
                       onMouseEnter={() => handleMouseEnter(cellDate)}
                       onClick={(e) => handleDateClick(cellDate, e)}
                     >
-                                             <div className="h-full flex flex-col items-center justify-center relative">
-                         <div className="text-sm font-medium">
-                           {cellDate.getDate()}
-                         </div>
-                         {isAvailable && (
-                           <div className="absolute bottom-1 w-2 h-2 bg-green-500 rounded-full shadow-sm"></div>
-                         )}
-                         {isSelected && (
-                           <div className="absolute top-0.5 right-0.5 w-2 h-2 bg-white rounded-full opacity-80"></div>
-                         )}
-                       </div>
+                      <div className="h-full flex flex-col items-center justify-center relative">
+                        <div className={`text-sm font-medium ${textColor}`}>
+                          {cellDate.getDate()}
+                        </div>
+                        
+                        {!isEditMode && (isConfirmed || hasTask) && (
+                          <div className={`absolute bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full shadow-sm ${
+                            hasTask ? 'bg-red-500' : 'bg-green-500'
+                          }`}></div>
+                        )}
+                        
+                        {isEditMode && isEditing && (
+                          <div className="absolute top-1 right-1">
+                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   );
                 }
@@ -433,68 +553,168 @@ export default function CleanerAvailabilityPage() {
         </div>
       )}
 
-      {/* 操作按钮 */}
-      <div className="mt-8 flex justify-between items-center max-w-2xl mx-auto">
-        <div className="text-sm text-gray-600 bg-gray-50 px-4 py-2 rounded-lg">
-          已选择 <span className="font-semibold text-blue-600">{selectedDates.size}</span> 天
-        </div>
-        <div className="flex gap-3">
-                     <button
-             onClick={handleSave}
-             disabled={saving}
-             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-md hover:shadow-lg"
-           >
-            {saving ? (
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                保存中...
-              </div>
-            ) : (
-              '保存日程'
-            )}
+      {/* 日历下方操作按钮 */}
+      <div className="mt-8 flex justify-center max-w-2xl mx-auto">
+        {!isEditMode ? (
+          <button
+            onClick={handleEnterEditMode}
+            className="px-8 py-3 bg-blue-600 text-white rounded-lg text-base font-medium hover:bg-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            添加/修改日程
           </button>
-        </div>
+        ) : (
+          <div className="flex gap-4">
+            <button
+              onClick={handleCancelEdit}
+              disabled={saving}
+              className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg text-base font-medium hover:bg-gray-200 disabled:opacity-50 transition-all duration-200 shadow-md hover:shadow-lg"
+            >
+              取消
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving || !hasChanges}
+              className={`px-8 py-3 rounded-lg text-base font-medium transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2 ${
+                saving || !hasChanges
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-green-600 text-white hover:bg-green-700'
+              }`}
+            >
+              {saving ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  保存中...
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  保存日程
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* 图例 */}
-      <div className="mt-8 max-w-2xl mx-auto">
-                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-            使用说明
-          </h3>
-                     <div className="grid grid-cols-2 gap-3 text-xs">
-             <div className="flex items-center gap-2">
-               <div className="w-3 h-3 bg-blue-500 rounded shadow-sm"></div>
-               <span>已选择日期</span>
-             </div>
-             <div className="flex items-center gap-2">
-               <div className="w-3 h-3 bg-yellow-100 border border-yellow-300 rounded shadow-sm"></div>
-               <span>今天</span>
-             </div>
-             <div className="flex items-center gap-2">
-               <div className="w-2 h-2 bg-green-500 rounded-full shadow-sm"></div>
-               <span>已保存的可用日期</span>
-             </div>
-             <div className="flex items-center gap-2">
-               <div className="w-2 h-2 bg-red-500 rounded-full shadow-sm"></div>
-               <span>已分配任务</span>
-             </div>
+      {/* 状态统计 */}
+      {isEditMode && (
+        <div className="mt-6 max-w-2xl mx-auto">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-6 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-blue-500 rounded"></div>
+                  <span className="text-gray-700">已选择</span>
+                  <span className="font-bold text-blue-600 text-lg">{editingDates.size}</span>
+                  <span className="text-gray-500">天</span>
+                </div>
+                {hasChanges && (
+                  <>
+                    <div className="h-4 w-px bg-gray-300"></div>
+                    <div className="flex items-center gap-4">
+                      {pendingAdditions.length > 0 && (
+                        <div className="flex items-center gap-1.5">
+                          <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                          </svg>
+                          <span className="text-green-700 font-medium">+{pendingAdditions.length}</span>
+                        </div>
+                      )}
+                      {pendingRemovals.length > 0 && (
+                        <div className="flex items-center gap-1.5">
+                          <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                          </svg>
+                          <span className="text-red-700 font-medium">-{pendingRemovals.length}</span>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+              {!hasChanges && (
+                <span className="text-xs text-gray-500 bg-white px-3 py-1 rounded-full">无修改</span>
+              )}
+            </div>
           </div>
-          <div className="mt-3 text-xs text-gray-600 space-y-1">
-            <p className="flex items-center gap-2">
-              <span className="w-1 h-1 bg-blue-500 rounded-full"></span>
-              单击日期选择/取消选择
-            </p>
-            <p className="flex items-center gap-2">
-              <span className="w-1 h-1 bg-blue-500 rounded-full"></span>
-              按住鼠标拖拽可批量选择日期
-            </p>
-            <p className="flex items-center gap-2">
-              <span className="w-1 h-1 bg-blue-500 rounded-full"></span>
-              使用快捷按钮可快速选择工作日、周末或全月
-            </p>
+        </div>
+      )}
+
+      {!isEditMode && (
+        <div className="mt-6 max-w-2xl mx-auto">
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10 bg-green-500 rounded-full">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-gray-900">已确认可用日程</div>
+                  <div className="text-xs text-gray-600 mt-0.5">共 <span className="font-bold text-green-600">{confirmedDates.size}</span> 天可接受任务</div>
+                </div>
+              </div>
+              {assignedTaskDates.size > 0 && (
+                <div className="text-xs text-gray-600 bg-white px-3 py-1.5 rounded-full border border-gray-200">
+                  <span className="text-red-600 font-semibold">{assignedTaskDates.size}</span> 天已有任务安排
+                </div>
+              )}
+            </div>
           </div>
+        </div>
+      )}
+
+      {/* 图例说明 */}
+      <div className="mt-6 max-w-2xl mx-auto">
+        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+              <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {isEditMode ? '编辑模式说明' : '图例说明'}
+            </h3>
+          </div>
+          
+          {isEditMode ? (
+            <div className="space-y-2 text-xs text-gray-600">
+              <div className="flex items-start gap-2">
+                <div className="w-4 h-4 bg-blue-500 rounded mt-0.5 flex-shrink-0"></div>
+                <p><span className="font-medium text-gray-800">蓝色背景：</span>已选中的日期，点击可取消选择</p>
+              </div>
+              <div className="flex items-start gap-2">
+                <div className="w-4 h-4 bg-white border border-gray-300 rounded mt-0.5 flex-shrink-0"></div>
+                <p><span className="font-medium text-gray-800">白色背景：</span>未选中的日期，点击可添加选择</p>
+              </div>
+              <div className="flex items-start gap-2">
+                <svg className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+                </svg>
+                <p><span className="font-medium text-gray-800">拖拽选择：</span>按住鼠标并拖动可批量选择连续日期</p>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 bg-green-500 rounded-full shadow-sm"></div>
+                <span className="text-gray-700">已确认可用日期</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 bg-red-500 rounded-full shadow-sm"></div>
+                <span className="text-gray-700">已有任务安排</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-yellow-50 border border-yellow-200 rounded"></div>
+                <span className="text-gray-700">今天</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

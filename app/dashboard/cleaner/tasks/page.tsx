@@ -7,6 +7,7 @@ import { TaskStatusBadge } from '@/components/TaskStatusBadge';
 import { TaskActionButtons } from '@/components/TaskActionButtons';
 import { TaskStatus } from '@/types/task';
 import { supabase } from '@/lib/supabase';
+import { getAttendanceByTaskId } from '@/lib/attendance';
 
 export default function CleanerTasksPage() {
   const router = useRouter();
@@ -14,6 +15,42 @@ export default function CleanerTasksPage() {
   const { tasks, loading, refresh } = useCleanerTasks();
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<TaskStatus | 'all'>('all');
+  const [attendanceRecords, setAttendanceRecords] = useState<Record<string, any[]>>({});
+
+  useEffect(() => {
+    console.log('CleanerTasksPage: 状态更新', { 
+      loading, 
+      tasksCount: tasks.length, 
+      user: user?.id 
+    });
+  }, [loading, tasks, user]);
+
+  // 加载考勤记录
+  useEffect(() => {
+    const loadAttendanceRecords = async () => {
+      if (!tasks.length || !user) return;
+      
+      console.log('开始加载考勤记录，任务数量:', tasks.length, '用户ID:', user.id);
+      const records: Record<string, any[]> = {};
+      for (const taskAssignment of tasks) {
+        const taskId = taskAssignment.task_id;
+        if (taskId) {
+          try {
+            const attendance = await getAttendanceByTaskId(taskId);
+            console.log(`任务 ${taskId} 的考勤记录:`, attendance);
+            // 只保留当前用户的考勤记录（注意：使用 user_id 字段）
+            records[taskId] = attendance.filter(record => record.user_id === user.id.toString());
+            console.log(`任务 ${taskId} 当前用户的考勤记录:`, records[taskId]);
+          } catch (error) {
+            console.error(`获取任务 ${taskId} 考勤记录失败:`, error);
+          }
+        }
+      }
+      setAttendanceRecords(records);
+    };
+
+    loadAttendanceRecords();
+  }, [tasks, user]);
 
   useEffect(() => {
     if (!user || user.role !== 'cleaner') {
@@ -56,8 +93,17 @@ export default function CleanerTasksPage() {
   };
 
   const getTaskPriority = (task: any) => {
-    const taskDate = new Date(task.tasks?.date);
+    const taskData = task.tasks;
+    if (!taskData) return 'normal';
+    
+    const dateStr = taskData.cleaning_date || taskData.check_out_date || taskData.check_in_date;
+    if (!dateStr) return 'normal';
+    
+    const taskDate = new Date(dateStr);
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    taskDate.setHours(0, 0, 0, 0);
+    
     const diffTime = taskDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
@@ -198,53 +244,72 @@ export default function CleanerTasksPage() {
                     
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
                       <div>
-                        <span className="font-medium">日期:</span> {new Date(task.date).toLocaleDateString()}
+                        <span className="font-medium">清扫日期:</span> {task.cleaning_date ? new Date(task.cleaning_date).toLocaleDateString() : '未设置'}
                       </div>
                       <div>
                         <span className="font-medium">门锁密码:</span> {task.lock_password || '未提供'}
                       </div>
+                      <div>
+                        <span className="font-medium">酒店地址:</span> {task.hotel_address || '未提供'}
+                      </div>
                     </div>
                   </div>
                   
-                  <div className="text-xs text-gray-500">
-                    分配时间: {new Date(taskAssignment.assigned_at).toLocaleString()}
-                  </div>
                 </div>
 
-                {task.description && (
-                  <div className="mb-4">
-                    <span className="text-sm font-medium text-gray-700">任务描述:</span>
-                    <p className="text-sm text-gray-600 mt-1">{task.description}</p>
-                  </div>
-                )}
-
-                {task.note && (
-                  <div className="mb-4">
-                    <span className="text-sm font-medium text-gray-700">备注:</span>
-                    <p className="text-sm text-gray-600 mt-1">{task.note}</p>
-                  </div>
-                )}
-
-                {taskAssignment.notes && (
-                  <div className="mb-4">
-                    <span className="text-sm font-medium text-gray-700">分配备注:</span>
-                    <p className="text-sm text-gray-600 mt-1">{taskAssignment.notes}</p>
-                  </div>
-                )}
-
-                {task.hotel_address && (
-                  <div className="mb-4">
-                    <span className="text-sm font-medium text-gray-700">地址:</span>
-                    <p className="text-sm text-gray-600 mt-1">📍 {task.hotel_address}</p>
-                  </div>
-                )}
-
-                {task.special_instructions && (
-                  <div className="mb-4">
-                    <span className="text-sm font-medium text-gray-700">特殊说明:</span>
-                    <p className="text-sm text-gray-600 mt-1">{task.special_instructions}</p>
-                  </div>
-                )}
+                {/* 考勤记录 */}
+                {(() => {
+                  const taskId = taskAssignment.task_id;
+                  const attendance = attendanceRecords[taskId] || [];
+                  
+                  // 找到出勤和退勤记录
+                  const checkInRecord = attendance.find(record => record.status === 'checked_in' && record.check_in_time);
+                  const checkOutRecord = attendance.find(record => record.status === 'checked_out' && record.check_out_time);
+                  
+                  return (
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                            </svg>
+                            <span className="text-xs font-medium text-green-800">出勤时间</span>
+                          </div>
+                          <div className="text-sm font-semibold text-green-900">
+                            {checkInRecord?.check_in_time 
+                              ? new Date(checkInRecord.check_in_time).toLocaleString('zh-CN', {
+                                  month: 'numeric',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })
+                              : '未出勤'}
+                          </div>
+                        </div>
+                        
+                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <svg className="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                            </svg>
+                            <span className="text-xs font-medium text-orange-800">退勤时间</span>
+                          </div>
+                          <div className="text-sm font-semibold text-orange-900">
+                            {checkOutRecord?.check_out_time 
+                              ? new Date(checkOutRecord.check_out_time).toLocaleString('zh-CN', {
+                                  month: 'numeric',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })
+                              : '未退勤'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* 任务操作按钮 */}
                 <div className="mt-4 pt-4 border-t border-gray-200">
@@ -252,32 +317,6 @@ export default function CleanerTasksPage() {
                     task={task}
                     onStatusChange={(newStatus) => handleStatusChange(taskAssignment.task_id, newStatus)}
                   />
-                </div>
-
-                {/* 任务进度 */}
-                <div className="mt-4">
-                  <div className="flex justify-between text-xs text-gray-500 mb-1">
-                    <span>任务进度</span>
-                    <span>{Math.round((task.status === 'draft' ? 0 : 
-                      task.status === 'open' ? 10 :
-                      task.status === 'assigned' ? 30 :
-                      task.status === 'accepted' ? 50 :
-                      task.status === 'in_progress' ? 70 :
-                      task.status === 'completed' ? 90 : 100))}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                      style={{ 
-                        width: `${task.status === 'draft' ? 0 : 
-                          task.status === 'open' ? 10 :
-                          task.status === 'assigned' ? 30 :
-                          task.status === 'accepted' ? 50 :
-                          task.status === 'in_progress' ? 70 :
-                          task.status === 'completed' ? 90 : 100}%` 
-                      }}
-                    ></div>
-                  </div>
                 </div>
               </div>
             );

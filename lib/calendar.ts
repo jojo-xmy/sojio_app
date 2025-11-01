@@ -682,6 +682,7 @@ export async function getOwnerCalendarTasks(
         checkInDate: task.check_in_date,
         checkOutDate: task.check_out_date,
         checkInTime: task.check_in_time,
+        roomNumber: task.room_number,
         cleaningDate: task.cleaning_date || task.check_out_date || task.check_in_date,
         lockPassword: task.lock_password,
         specialInstructions: task.special_instructions,
@@ -692,7 +693,6 @@ export async function getOwnerCalendarTasks(
         guestCount: task.guest_count,
         ownerNotes: task.owner_notes || '',
         cleanerNotes: task.cleaner_notes || '',
-        managerReportNotes: task.manager_report_notes || '',
         status: task.status,
         description: task.description || '',
         note: task.note || '',
@@ -700,7 +700,9 @@ export async function getOwnerCalendarTasks(
         acceptedBy: task.accepted_by || [],
         completedAt: task.completed_at || '',
         confirmedAt: task.confirmed_at || '',
-        assignedCleaners: assignedCleaners.map((c: any) => c.name) || []
+        assignedCleaners: assignedCleaners.map((c: any) => c.name) || [],
+        // 保留 calendar_entry_id 供前端徽章筛选使用
+        ...(task.calendar_entry_id ? { calendar_entry_id: task.calendar_entry_id } : {})
       };
 
       // start/end 字段对 UI 次要，分段算法使用 task.checkInDate/checkOutDate

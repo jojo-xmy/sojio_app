@@ -74,18 +74,27 @@ export function useCleanerTasks() {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('useCleanerTasks: 用户未登录');
+      return;
+    }
     
     try {
+      console.log('useCleanerTasks: 开始加载任务，用户ID:', user.id);
       setLoading(true);
       const taskList = await getCleanerTasks(user.id.toString(), true);
+      console.log('useCleanerTasks: 成功加载任务，数量:', taskList.length);
       setTasks(taskList);
     } catch (error) {
-      console.error('加载清洁员任务失败:', error);
+      console.error('useCleanerTasks: 加载清洁员任务失败:', error);
     } finally {
       setLoading(false);
     }
   }, [user]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   return {
     tasks,

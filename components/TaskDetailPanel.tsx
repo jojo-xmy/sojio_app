@@ -1,7 +1,8 @@
 "use client";
-import { useState, ChangeEvent, FormEvent, useEffect } from 'react';
+import { useState, ChangeEvent, FormEvent, useEffect, useMemo, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import { Task } from '@/types/task';
+import { UserProfile } from '@/types/user';
 import { useUserStore } from '@/store/userStore';
 import { getUserAttendanceByTaskId, checkIn, checkOut, Attendance, getAttendanceByTaskId, getUserLatestAttendance } from '@/lib/attendance';
 import { uploadImagesToExistingTask, getTaskImages, TaskImage } from '@/lib/upload';
@@ -12,7 +13,7 @@ import { AttachmentGallery } from '@/components/AttachmentGallery';
 import { getTaskCapabilities } from '@/lib/taskCapabilities';
 import { TaskCard } from '@/components/TaskCard';
 import { useGlobalRefresh } from '@/hooks/useRefresh';
-import { getAvailableCleanersForDate, assignTaskToCleaners } from '@/lib/calendar';
+import { getAvailableCleanersForDate, assignTaskToCleaners, getTaskWithAssignments } from '@/lib/calendar';
 import { updateCalendarEntry, deleteCalendarEntry } from '@/lib/services/calendarEntryService';
 // 使用基于 tasks.calendar_entry_id 的查询，避免依赖 calendar_entries.task_id
 // import { getCalendarEntryByTaskId } from '@/lib/hotelManagement'; // 不再使用
@@ -32,8 +33,10 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
   const [uploading, setUploading] = useState(false);
   const [showAssignPanel, setShowAssignPanel] = useState(false);
   const [availableCleaners, setAvailableCleaners] = useState<any[]>([]);
+  const [assignedCleanerProfiles, setAssignedCleanerProfiles] = useState<UserProfile[]>([]);
   const [assigning, setAssigning] = useState(false);
   const [selectedCleaners, setSelectedCleaners] = useState<string[]>([]);
+  const [selectionDirty, setSelectionDirty] = useState(false);
   const [assignmentNotes, setAssignmentNotes] = useState('');
   const [editingTask, setEditingTask] = useState(false);
   const [editFormData, setEditFormData] = useState({
@@ -53,6 +56,84 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
     ownerNotes?: string;
     cleaningDates?: string[];
   }>(null);
+
+  const loadAssignedCleanerProfiles = useCallback(async () => {
+    try {
+      const result = await getTaskWithAssignments(task.id);
+      if (result?.assignedCleaners) {
+        setAssignedCleanerProfiles(result.assignedCleaners);
+      } else {
+        setAssignedCleanerProfiles([]);
+      }
+    } catch (error) {
+      console.error('加载任务分配详情失败:', error);
+      setAssignedCleanerProfiles([]);
+    }
+  }, [task.id]);
+
+  useEffect(() => {
+    loadAssignedCleanerProfiles();
+  }, [loadAssignedCleanerProfiles]);
+
+  const assignedCleanerIds = useMemo(() => {
+    if (assignedCleanerProfiles.length > 0) {
+      return assignedCleanerProfiles
+        .map(profile => profile.id)
+        .filter((id): id is string => Boolean(id));
+    }
+    if (taskDetails?.assignedCleaners && taskDetails.assignedCleaners.length > 0) {
+      return taskDetails.assignedCleaners;
+    }
+    return [];
+  }, [assignedCleanerProfiles, taskDetails?.assignedCleaners]);
+
+  const hasAssignedCleaners = assignedCleanerIds.length > 0 || (task.assignedCleaners?.length ?? 0) > 0;
+  const currentAssignedCleaners = assignedCleanerIds;
+
+  useEffect(() => {
+    if (showAssignPanel && !selectionDirty && assignedCleanerIds.length > 0) {
+      setSelectedCleaners(assignedCleanerIds);
+    }
+  }, [showAssignPanel, selectionDirty, assignedCleanerIds]);
+
+  const assignedCleanerNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+
+    assignedCleanerProfiles.forEach(profile => {
+      if (profile?.id) {
+        map.set(profile.id, profile.name || '未知清洁员');
+      }
+    });
+
+    if (assignedCleanerProfiles.length === 0 && taskDetails?.assignedCleaners && task.assignedCleaners) {
+      taskDetails.assignedCleaners.forEach((cleanerId: string, index: number) => {
+        const name = task.assignedCleaners?.[index];
+        if (cleanerId && name) {
+          map.set(cleanerId, name);
+        }
+      });
+    }
+
+    availableCleaners.forEach((cleaner: any) => {
+      if (cleaner?.id && cleaner?.name) {
+        map.set(cleaner.id, cleaner.name);
+      }
+    });
+
+    return map;
+  }, [assignedCleanerProfiles, taskDetails?.assignedCleaners, task.assignedCleaners, availableCleaners]);
+
+  const selectedCleanerChips = useMemo(() => {
+    return selectedCleaners.map(cleanerId => ({
+      id: cleanerId,
+      name: assignedCleanerNameMap.get(cleanerId) || '未知清洁员'
+    }));
+  }, [selectedCleaners, assignedCleanerNameMap]);
+
+  const handleRemoveSelectedCleaner = (cleanerId: string) => {
+    setSelectionDirty(true);
+    setSelectedCleaners(prev => prev.filter(id => id !== cleanerId));
+  };
 
   useEffect(() => { /* useTask 内部已处理加载 */ }, [task.id, user?.id]);
 
@@ -116,6 +197,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
 
   // 处理清洁工选择
   const handleCleanerToggle = (cleanerId: string) => {
+    setSelectionDirty(true);
     setSelectedCleaners(prev => 
       prev.includes(cleanerId)
         ? prev.filter(id => id !== cleanerId)
@@ -133,11 +215,13 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
       const res = await assignTaskToCleaners(task.id, selectedCleaners, user.id, assignmentNotes, true);
       if (res.success) {
         await refresh();
+        await loadAssignedCleanerProfiles();
         onAttendanceUpdate?.();
         onTaskUpdate?.();
         setShowAssignPanel(false);
         setSelectedCleaners([]);
         setAssignmentNotes('');
+        setSelectionDirty(false);
         alert('人员分配已更新');
       } else {
         alert(res.error || '分配失败');
@@ -480,7 +564,8 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                         setAvailableCleaners([]);
                       }
                       // 初始化已选择的清洁员为当前已分配的清洁员
-                      setSelectedCleaners(task.assignedCleaners || []);
+                      setSelectionDirty(false);
+                      setSelectedCleaners(currentAssignedCleaners);
                       setShowAssignPanel(true);
                     }}
                     style={{ 
@@ -494,7 +579,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                       cursor: 'pointer' 
                     }}
                   >
-                    更改人员
+                    {hasAssignedCleaners ? '更改人员分配' : '分配清洁人员'}
                   </button>
                 )}
               </div>
@@ -622,6 +707,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                 setShowAssignPanel(false);
                 setSelectedCleaners([]);
                 setAssignmentNotes('');
+                setSelectionDirty(false);
               }}
               style={{ 
                 color: '#6b7280', 
@@ -635,16 +721,16 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
             </button>
           </div>
 
-          {/* 当前已分配的清洁工显示 */}
-          {task.assignedCleaners && task.assignedCleaners.length > 0 && (
+          {/* 当前已选择的清洁工显示 */}
+          {selectedCleanerChips.length > 0 && (
             <div style={{ marginBottom: 16, padding: 12, backgroundColor: '#dbeafe', borderRadius: 6 }}>
               <div style={{ fontSize: 14, fontWeight: 500, color: '#1e40af', marginBottom: 8 }}>
-                当前已分配清洁工：
+                当前已选择清洁工：
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {task.assignedCleaners.map((cleanerName, index) => (
+                {selectedCleanerChips.map(({ id, name }) => (
                   <div
-                    key={index}
+                    key={id}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -656,13 +742,10 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                       fontSize: 12
                     }}
                   >
-                    <span style={{ color: '#1e40af' }}>{cleanerName}</span>
+                    <span style={{ color: '#1e40af' }}>{name}</span>
                     <button
                       type="button"
-                      onClick={() => {
-                        const newCleaners = task.assignedCleaners.filter((_, i) => i !== index);
-                        setSelectedCleaners(newCleaners);
-                      }}
+                      onClick={() => handleRemoveSelectedCleaner(id)}
                       style={{
                         background: 'none',
                         border: 'none',
@@ -766,6 +849,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                 setShowAssignPanel(false);
                 setSelectedCleaners([]);
                 setAssignmentNotes('');
+                setSelectionDirty(false);
               }}
               style={{ 
                 padding: '8px 16px', 

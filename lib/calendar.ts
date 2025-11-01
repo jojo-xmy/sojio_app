@@ -40,6 +40,7 @@ export async function getCalendarTasks(
         )
       )
     `)
+    .order('cleaning_date', { ascending: true, nullsFirst: false })
     .order('check_out_date', { ascending: true, nullsFirst: false })
     .order('check_in_date', { ascending: true });
 
@@ -271,9 +272,9 @@ async function getCleanerTaskCountsForDate(date: string): Promise<Record<string,
     .from('task_assignments')
     .select(`
       cleaner_id,
-      tasks!inner(check_in_date)
+      tasks!inner(cleaning_date)
     `)
-    .eq('tasks.check_in_date', date)
+    .eq('tasks.cleaning_date', date)
     .order('assigned_at', { ascending: false }); // 确保获取最新分配
 
   if (error) {

@@ -348,11 +348,6 @@
   },
   {
     "schema_name": "public",
-    "function_name": "handle_calendar_entries_delete_v2",
-    "function_definition": "CREATE OR REPLACE FUNCTION public.handle_calendar_entries_delete_v2()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\r\nBEGIN\r\n    -- 删除所有关联的任务\r\n    DELETE FROM public.tasks \r\n    WHERE calendar_entry_id = OLD.id;\r\n    \r\n    RETURN OLD;\r\nEND;\r\n$function$\n"
-  },
-  {
-    "schema_name": "public",
     "function_name": "handle_calendar_task_delete",
     "function_definition": "CREATE OR REPLACE FUNCTION public.handle_calendar_task_delete()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n    -- 删除对应的任务\n    IF OLD.task_id IS NOT NULL THEN\n        DELETE FROM public.tasks WHERE id = OLD.task_id;\n    END IF;\n    RETURN OLD;\nEND;\n$function$\n"
   },

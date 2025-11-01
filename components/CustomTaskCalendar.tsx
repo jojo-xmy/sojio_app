@@ -58,8 +58,16 @@ export const CustomTaskCalendar = forwardRef<{ refreshData: () => void }, Custom
           
           return statusPriority[a.task.status] - statusPriority[b.task.status];
         });
-        
-        setEvents(sortedEvents);
+
+        const filteredEvents = user.role === 'cleaner'
+          ? sortedEvents.filter(event =>
+              event.assignedCleaners?.some(cleaner =>
+                cleaner?.id?.toString() === user.id.toString()
+              )
+            )
+          : sortedEvents;
+
+        setEvents(filteredEvents);
         
         // 通知父组件数据已刷新
         onDataRefresh?.();
@@ -77,6 +85,8 @@ export const CustomTaskCalendar = forwardRef<{ refreshData: () => void }, Custom
         if (updatedEvent && JSON.stringify(updatedEvent) !== JSON.stringify(selectedEvent)) {
           console.log('同步更新 selectedEvent:', updatedEvent);
           setSelectedEvent(updatedEvent);
+        } else if (!updatedEvent) {
+          setSelectedEvent(null);
         }
       }
     }, [events, selectedEvent]);
@@ -201,7 +211,19 @@ export const CustomTaskCalendar = forwardRef<{ refreshData: () => void }, Custom
           
           // 获取当天的任务
           const dayEvents = events.filter(event => {
-            const eventDate = new Date((event.task as any).check_in_date || event.task.checkInDate);
+            const rawDate =
+              (event.task as any).cleaning_date ||
+              event.task.cleaningDate ||
+              (event.task as any).check_out_date ||
+              event.task.checkOutDate ||
+              (event.task as any).check_in_date ||
+              event.task.checkInDate;
+
+            if (!rawDate) {
+              return false;
+            }
+
+            const eventDate = new Date(rawDate);
             return eventDate.toDateString() === currentDate.toDateString();
           });
 

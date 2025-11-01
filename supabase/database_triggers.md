@@ -1,7 +1,6 @@
 | trigger_name                                | event_manipulation | event_object_schema | event_object_table        | action_statement                                           | action_timing |
 | ------------------------------------------- | ------------------ | ------------------- | ------------------------- | ---------------------------------------------------------- | ------------- |
 | on_auth_user_created                        | INSERT             | auth                | users                     | EXECUTE FUNCTION handle_new_user()                         | AFTER         |
-| trigger_handle_calendar_entries_delete_v2   | DELETE             | public              | calendar_entries          | EXECUTE FUNCTION handle_calendar_entries_delete_v2()       | AFTER         |
 | trigger_manage_calendar_tasks_v2            | INSERT, UPDATE     | public              | calendar_entries          | EXECUTE FUNCTION manage_calendar_tasks_v2()                | AFTER         |
 | update_calendar_entries_updated_at          | UPDATE             | public              | calendar_entries          | EXECUTE FUNCTION update_updated_at_column()                | BEFORE        |
 | update_cleaner_availability_updated_at      | UPDATE             | public              | cleaner_availability      | EXECUTE FUNCTION update_updated_at_column()                | BEFORE        |

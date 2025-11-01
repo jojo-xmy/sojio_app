@@ -22,6 +22,13 @@ export default function CleanerAvailabilityPage() {
   const [dragStartDate, setDragStartDate] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const formatDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // 当前月份
   const [currentMonth, setCurrentMonth] = useState(() => {
     const now = new Date();
@@ -94,18 +101,18 @@ export default function CleanerAvailabilityPage() {
   };
 
   const getAvailabilityForDate = (date: Date): CleanerAvailability | null => {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = formatDate(date);
     return availability.find(a => a.date === dateStr) || null;
   };
 
   const isDateAvailable = (date: Date): boolean => {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = formatDate(date);
     return availability.some(a => a.date === dateStr);
   };
 
   const handleDateClick = (date: Date, event: React.MouseEvent) => {
     event.preventDefault();
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = formatDate(date);
     const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
     
     if (isPast) return;
@@ -122,7 +129,7 @@ export default function CleanerAvailabilityPage() {
 
   const handleMouseDown = (date: Date, event: React.MouseEvent) => {
     event.preventDefault();
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = formatDate(date);
     const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
     
     if (isPast) return;
@@ -136,7 +143,7 @@ export default function CleanerAvailabilityPage() {
   const handleMouseEnter = (date: Date) => {
     if (!isDragging || !dragStartDate) return;
     
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = formatDate(date);
     const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
     
     if (isPast) return;
@@ -151,7 +158,7 @@ export default function CleanerAvailabilityPage() {
     
     // 拖拽时总是添加范围内的日期
     while (current <= to) {
-      const currentStr = current.toISOString().split('T')[0];
+      const currentStr = formatDate(current);
       const currentDate = new Date(current);
       const isCurrentPast = currentDate < new Date(new Date().setHours(0, 0, 0, 0));
       
@@ -209,7 +216,7 @@ export default function CleanerAvailabilityPage() {
         }
 
         if (shouldSet) {
-          newSelected.add(day.toISOString().split('T')[0]);
+          newSelected.add(formatDate(day));
         }
       });
     }
@@ -382,7 +389,7 @@ export default function CleanerAvailabilityPage() {
                   const cellDate = new Date(startDate);
                   cellDate.setDate(startDate.getDate() + i);
                   
-                  const dateStr = cellDate.toISOString().split('T')[0];
+                  const dateStr = formatDate(cellDate);
                   const isCurrentMonth = cellDate.getMonth() === parseInt(month) - 1;
                   const isToday = cellDate.getTime() === today.getTime();
                   const isPast = cellDate < today;

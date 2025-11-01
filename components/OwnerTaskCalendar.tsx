@@ -438,12 +438,35 @@ export const OwnerTaskCalendar = forwardRef<{ refreshData: () => void }, OwnerTa
                         segEnd.setHours(0, 0, 0, 0);
                         const totalDays = differenceInCalendarDays(segEnd, segStart) + 1;
 
-                        const hotelId = (segment.originalEvent.task as any).hotelId;
-                        const cleaningTasksForSegment = cleaningTasks.filter((t: any) => {
-                          if (hotelId && t.hotel_id !== hotelId) return false;
-                          return t.cleaning_date >= format(segStart, 'yyyy-MM-dd')
-                            && t.cleaning_date <= format(segEnd, 'yyyy-MM-dd');
+                        const entryId = (segment.originalEvent.task as any).calendar_entry_id;
+                        const startStr = format(segStart, 'yyyy-MM-dd');
+                        const endStr = format(segEnd, 'yyyy-MM-dd');
+                        // 仅匹配当前入住登记的清扫任务，并限定在该周段的日期范围内
+                        const ctInSegment = cleaningTasks.filter((t: any) => {
+                          return t.calendar_entry_id === entryId && t.cleaning_date >= startStr && t.cleaning_date <= endStr;
                         });
+                        // 去重：同一天只显示一个徽章（按状态优先级汇总）
+                        const statusPriority: Record<TaskStatus, number> = {
+                          draft: 1,
+                          open: 2,
+                          assigned: 3,
+                          accepted: 4,
+                          in_progress: 5,
+                          completed: 6,
+                          confirmed: 7
+                        };
+                        const dedupByDate = new Map<string, any>();
+                        ctInSegment.forEach((ct: any) => {
+                          const existing = dedupByDate.get(ct.cleaning_date);
+                          if (!existing) {
+                            dedupByDate.set(ct.cleaning_date, ct);
+                          } else {
+                            const a = statusPriority[existing.status as TaskStatus] || 0;
+                            const b = statusPriority[ct.status as TaskStatus] || 0;
+                            if (b >= a) dedupByDate.set(ct.cleaning_date, ct);
+                          }
+                        });
+                        const cleaningBadges = Array.from(dedupByDate.values());
 
                         return (
                           <div key={segment.id} style={{ gridColumn, gridRow }} className="px-0.5">
@@ -458,7 +481,7 @@ export const OwnerTaskCalendar = forwardRef<{ refreshData: () => void }, OwnerTa
                                 </div>
                               )}
 
-                              {cleaningTasksForSegment.map((ct: any, idx: number) => {
+                              {cleaningBadges.map((ct: any, idx: number) => {
                                 const ctDate = new Date(ct.cleaning_date);
                                 ctDate.setHours(0, 0, 0, 0);
                                 const dayOffset = Math.max(0, Math.min(

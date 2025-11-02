@@ -187,17 +187,14 @@ export async function publishTask(taskId: string): Promise<{ success: boolean; e
 // 接受任务（assigned -> accepted状态转换）
 export async function acceptTask(taskId: string, cleanerId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const { error } = await supabase
-      .from('tasks')
-      .update({
-        status: 'accepted',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', taskId)
-      .eq('status', 'assigned'); // 只有assigned状态的任务可以接受
+    // 使用transitionTask来确保触发通知
+    const { transitionTask } = await import('./taskStatus');
+    const result = await transitionTask(taskId, 'assigned', 'accepted', cleanerId, 'cleaner', {
+      acceptedBy: [cleanerId]
+    });
 
-    if (error) {
-      throw error;
+    if (!result.success) {
+      throw new Error(result.error || '接受任务失败');
     }
 
     return { success: true };

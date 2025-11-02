@@ -201,6 +201,28 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
     }
   };
 
+  // 通知Manager
+  const notifyManagers = async () => {
+    if (!confirm('确定要通知该酒店的Manager吗？')) return;
+    
+    try {
+      setLoading(true);
+      const { notifyManagersAboutNewEntry } = await import('@/lib/taskStatus');
+      const result = await notifyManagersAboutNewEntry(task.id, user.id);
+      
+      if (result.success) {
+        alert(`成功通知 ${result.notifiedCount} 个Manager！`);
+      } else {
+        alert(`通知失败：${result.error || '未知错误'}`);
+      }
+    } catch (e) {
+      console.error('通知Manager失败:', e);
+      alert('通知Manager失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // 处理清洁工选择
   const handleCleanerToggle = (cleanerId: string) => {
     setSelectionDirty(true);
@@ -415,6 +437,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
               </div>
               {user.role === 'owner' && (
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
+                  <button onClick={notifyManagers} style={{ padding: '6px 12px', background: '#10b981', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>📢 通知Manager</button>
                   <button onClick={openOwnerEdit} style={{ padding: '6px 12px', background: '#6b7280', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>编辑入住登记</button>
                   <button onClick={deleteOwnerEntry} style={{ padding: '6px 12px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>删除</button>
                 </div>

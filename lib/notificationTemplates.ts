@@ -10,7 +10,8 @@ export type NotificationTemplateType =
   | 'task_confirmed'     // 任务确认
   | 'task_reminder'      // 任务提醒
   | 'daily_summary'      // 每日总结
-  | 'weekly_report';     // 周报
+  | 'weekly_report'      // 周报
+  | 'new_entry_created'; // 新入住登记创建（Owner手动通知Manager）
 
 // 通知模板配置
 export interface NotificationTemplate {
@@ -96,6 +97,15 @@ export const NOTIFICATION_TEMPLATES: Record<NotificationTemplateType, Notificati
     priority: 'low',
     roles: ['manager', 'owner'],
     statuses: ['completed', 'confirmed']
+  },
+  new_entry_created: {
+    type: 'new_entry_created',
+    title: '新入住登记通知',
+    description: 'Owner创建了新的入住登记，需要Manager安排清洁任务',
+    emoji: '📋',
+    priority: 'high',
+    roles: ['manager'],
+    statuses: ['draft', 'open']
   }
 };
 
@@ -123,6 +133,8 @@ export function createMessageTemplate(
       return createDailySummaryMessage(data);
     case 'weekly_report':
       return createWeeklyReportMessage(data);
+    case 'new_entry_created':
+      return createNewEntryMessage(data);
     default:
       return createDefaultMessage(data);
   }
@@ -286,6 +298,41 @@ function createWeeklyReportMessage(data: NotificationData): LineMessageTemplate 
 • 客户满意度：${data.additionalData?.satisfaction || 'N/A'}
 
 🏆 优秀清洁员：${data.additionalData?.topCleaner || 'N/A'}`
+    }
+  };
+}
+
+// 新入住登记通知消息
+function createNewEntryMessage(data: NotificationData): LineMessageTemplate {
+  const checkInDate = data.additionalData?.checkInDate 
+    ? new Date(data.additionalData.checkInDate).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
+    : '未设置';
+  const checkOutDate = data.additionalData?.checkOutDate 
+    ? new Date(data.additionalData.checkOutDate).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
+    : '未设置';
+  const cleaningDate = data.additionalData?.cleaningDate 
+    ? new Date(data.additionalData.cleaningDate).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
+    : '未设置';
+
+  return {
+    type: 'text',
+    content: {
+      text: `${NOTIFICATION_TEMPLATES.new_entry_created.emoji} ${NOTIFICATION_TEMPLATES.new_entry_created.title}
+
+🏨 酒店：${data.taskName}
+📍 地址：${data.additionalData?.hotelAddress || '未提供'}
+👤 登记人：${data.userName}
+
+📅 入住日期：${checkInDate}
+📤 退房日期：${checkOutDate}
+🧹 清扫日期：${cleaningDate}
+👥 入住人数：${data.additionalData?.guestCount || 1}人
+
+🔐 门锁密码：${data.additionalData?.lockPassword || '请查看详情'}
+
+⏰ 通知时间：${new Date(data.timestamp).toLocaleString('zh-CN', { timeZone: 'Asia/Tokyo' })}
+
+请及时安排清洁员进行任务分配。`
     }
   };
 }

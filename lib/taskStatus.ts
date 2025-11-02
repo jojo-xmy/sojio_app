@@ -87,6 +87,74 @@ export async function transitionTask(
   }
 }
 
+// 获取通知接收者
+async function getNotificationRecipients(
+  taskId: string,
+  toStatus: TaskStatus
+): Promise<Array<{ userId: string; role: UserRole }>> {
+  const recipients: Array<{ userId: string; role: UserRole }> = [];
+
+  try {
+    // 获取任务信息（包括酒店ID）
+    const { data: task } = await supabase
+      .from('tasks')
+      .select('*, assigned_cleaners, created_by, hotel_id')
+      .eq('id', taskId)
+      .single();
+
+    if (!task) {
+      console.error('[通知] 任务不存在');
+      return recipients;
+    }
+
+    console.log('[通知] 任务酒店ID:', task.hotel_id);
+
+    switch (toStatus) {
+      case 'assigned':
+        // 通知被分配的清洁员
+        if (task.assigned_cleaners && Array.isArray(task.assigned_cleaners)) {
+          task.assigned_cleaners.forEach((cleanerId: string) => {
+            recipients.push({ userId: cleanerId, role: 'cleaner' });
+          });
+        }
+        break;
+
+      case 'accepted':
+      case 'in_progress':
+      case 'completed':
+        // 通知该酒店的Manager（根据 manager_hotels 表查询）
+        if (task.hotel_id) {
+          const { data: managerRelations } = await supabase
+            .from('manager_hotels')
+            .select('manager_id')
+            .eq('hotel_id', task.hotel_id);
+          
+          if (managerRelations && managerRelations.length > 0) {
+            console.log('[通知] 找到该酒店的Manager:', managerRelations.length, '个');
+            managerRelations.forEach(relation => {
+              recipients.push({ userId: relation.manager_id, role: 'manager' });
+            });
+          } else {
+            console.log('[通知] 该酒店没有分配Manager');
+          }
+        }
+        break;
+
+      case 'confirmed':
+        // 通知任务创建者（Owner）
+        if (task.created_by) {
+          recipients.push({ userId: task.created_by, role: 'owner' });
+        }
+        break;
+    }
+
+    return recipients;
+  } catch (error) {
+    console.error('[通知] 获取通知接收者失败:', error);
+    return recipients;
+  }
+}
+
 // 发送状态变更通知
 async function sendStatusChangeNotification(
   taskId: string,
@@ -96,6 +164,11 @@ async function sendStatusChangeNotification(
   userRole: UserRole,
   additionalData?: Record<string, any>
 ) {
+  console.log('[通知] ===== 开始发送状态变更通知 =====');
+  console.log('[通知] 任务ID:', taskId);
+  console.log('[通知] 状态变更:', `${fromStatus} → ${toStatus}`);
+  console.log('[通知] 操作用户ID:', userId);
+  
   try {
     // 获取任务信息
     const { data: task } = await supabase
@@ -105,11 +178,12 @@ async function sendStatusChangeNotification(
       .single();
 
     if (!task) {
-      console.error('任务不存在，无法发送通知');
+      console.error('[通知] 任务不存在，无法发送通知');
       return;
     }
+    console.log('[通知] 任务信息:', { hotel_name: task.hotel_name, cleaning_date: task.cleaning_date });
 
-    // 获取用户信息
+    // 获取操作用户信息
     const { data: user } = await supabase
       .from('user_profiles')
       .select('*')
@@ -117,40 +191,81 @@ async function sendStatusChangeNotification(
       .single();
 
     if (!user) {
-      console.error('用户不存在，无法发送通知');
+      console.error('[通知] 用户不存在，无法发送通知');
       return;
     }
+    console.log('[通知] 操作用户:', user.name);
 
     // 确定通知类型
     const notificationType = getNotificationType(fromStatus, toStatus);
     if (!notificationType) {
-      console.log('无需发送通知的状态转换');
+      console.log('[通知] 无需发送通知的状态转换');
+      return;
+    }
+    console.log('[通知] 通知类型:', notificationType);
+
+    // 获取通知接收者
+    const recipients = await getNotificationRecipients(taskId, toStatus);
+    if (recipients.length === 0) {
+      console.log('[通知] 没有需要通知的接收者');
       return;
     }
 
-    // 创建通知数据
-    const notificationData: NotificationData = {
-      taskId,
-      taskName: task.hotel_name,
-      fromStatus,
-      toStatus,
-      userId,
-      userName: user.name,
-      userRole,
-      timestamp: new Date().toISOString(),
-      additionalData: {
-        ...additionalData,
-        lockPassword: task.lock_password,
-        hotelAddress: task.hotel_address
-      }
-    };
+    console.log(`[通知] 准备通知 ${recipients.length} 个接收者:`, recipients);
 
-    // 发送通知
-    await sendTaskNotification(notificationData);
-    console.log(`已发送 ${notificationType} 通知`);
+    // 为每个接收者创建通知数据并发送
+    for (const recipient of recipients) {
+      try {
+        // 获取接收者的LINE ID
+        const { data: recipientUser } = await supabase
+          .from('user_profiles')
+          .select('line_user_id, name')
+          .eq('id', recipient.userId)
+          .single();
+
+        if (!recipientUser || !recipientUser.line_user_id) {
+          console.log(`[通知] 接收者 ${recipient.userId} 未绑定LINE账号，跳过`);
+          continue;
+        }
+
+        console.log(`[通知] 准备发送给: ${recipientUser.name} (LINE ID: ${recipientUser.line_user_id})`);
+
+        // 创建通知数据
+        const notificationData: NotificationData = {
+          taskId,
+          taskName: task.hotel_name,
+          fromStatus,
+          toStatus,
+          userId,
+          userName: user.name,
+          userRole,
+          timestamp: new Date().toISOString(),
+          additionalData: {
+            ...additionalData,
+            lockPassword: task.lock_password,
+            hotelAddress: task.hotel_address,
+            cleaningDate: task.cleaning_date
+          }
+        };
+
+        // 发送通知（直接使用LINE User ID）
+        const { notificationService } = await import('./notifications');
+        const success = await notificationService.sendTaskStatusNotificationToLine(
+          recipientUser.line_user_id,
+          notificationData
+        );
+        
+        console.log(`[通知] 发送结果: ${success ? '✅ 成功' : '❌ 失败'} - ${recipientUser.name} (${recipient.role})`);
+
+      } catch (error) {
+        console.error(`[通知] 向接收者 ${recipient.userId} 发送通知失败:`, error);
+      }
+    }
+
+    console.log('[通知] ===== 通知发送流程结束 =====');
 
   } catch (error) {
-    console.error('发送通知失败:', error);
+    console.error('[通知] 发送通知失败:', error);
   }
 }
 
@@ -262,6 +377,140 @@ export function getTaskProgress(status: TaskStatus): number {
     confirmed: 100
   };
   return progressMap[status] || 0;
+}
+
+// 手动通知Manager（用于Owner创建入住登记后）
+export async function notifyManagersAboutNewEntry(
+  taskId: string,
+  userId: string
+): Promise<{ success: boolean; error?: string; notifiedCount: number }> {
+  console.log('[通知] ===== 手动通知Manager =====');
+  console.log('[通知] 任务ID:', taskId);
+  console.log('[通知] 操作用户ID:', userId);
+
+  try {
+    // 获取任务信息
+    const { data: task } = await supabase
+      .from('tasks')
+      .select('*, hotel_id')
+      .eq('id', taskId)
+      .single();
+
+    if (!task) {
+      console.error('[通知] 任务不存在');
+      return { success: false, error: '任务不存在', notifiedCount: 0 };
+    }
+
+    // 获取操作用户信息
+    const { data: user } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (!user) {
+      console.error('[通知] 用户不存在');
+      return { success: false, error: '用户不存在', notifiedCount: 0 };
+    }
+
+    // 获取该酒店的所有Manager
+    if (!task.hotel_id) {
+      console.error('[通知] 任务没有关联酒店');
+      return { success: false, error: '任务没有关联酒店', notifiedCount: 0 };
+    }
+
+    const { data: managerRelations } = await supabase
+      .from('manager_hotels')
+      .select('manager_id')
+      .eq('hotel_id', task.hotel_id);
+
+    if (!managerRelations || managerRelations.length === 0) {
+      console.log('[通知] 该酒店没有分配Manager');
+      return { success: false, error: '该酒店没有分配Manager', notifiedCount: 0 };
+    }
+
+    console.log('[通知] 找到 Manager:', managerRelations.length, '个');
+
+    let successCount = 0;
+
+    // 为每个Manager发送通知
+    for (const relation of managerRelations) {
+      try {
+        // 获取Manager的LINE ID
+        const { data: manager } = await supabase
+          .from('user_profiles')
+          .select('line_user_id, name')
+          .eq('id', relation.manager_id)
+          .single();
+
+        if (!manager || !manager.line_user_id) {
+          console.log(`[通知] Manager ${relation.manager_id} 未绑定LINE账号，跳过`);
+          continue;
+        }
+
+        console.log(`[通知] 准备发送给: ${manager.name} (LINE ID: ${manager.line_user_id})`);
+
+        // 创建通知数据（使用统一格式）
+        const notificationData: NotificationData = {
+          taskId,
+          taskName: task.hotel_name,
+          fromStatus: task.status,
+          toStatus: task.status,
+          userId,
+          userName: user.name,
+          userRole: 'owner',
+          timestamp: new Date().toISOString(),
+          additionalData: {
+            lockPassword: task.lock_password,
+            hotelAddress: task.hotel_address,
+            cleaningDate: task.cleaning_date,
+            checkInDate: task.check_in_date,
+            checkOutDate: task.check_out_date,
+            guestCount: task.guest_count,
+            isManualNotification: true
+          }
+        };
+
+        // 使用消息模板系统创建消息
+        const { createMessageTemplate } = await import('./notificationTemplates');
+        const message = createMessageTemplate('new_entry_created', notificationData);
+
+        // 发送通知
+        const { notificationService } = await import('./notifications');
+        const success = await notificationService.sendLineMessage(
+          manager.line_user_id,
+          message
+        );
+
+        if (success) {
+          successCount++;
+          console.log(`[通知] 通知发送成功: ${manager.name}`);
+        } else {
+          console.log(`[通知] 通知发送失败: ${manager.name}`);
+        }
+
+      } catch (error) {
+        console.error(`[通知] 向Manager ${relation.manager_id} 发送通知失败:`, error);
+      }
+    }
+
+    console.log('[通知] ===== 通知Manager完成 =====');
+    console.log('[通知] 成功通知:', successCount, '个Manager');
+
+    return { 
+      success: successCount > 0, 
+      notifiedCount: successCount,
+      error: successCount === 0 ? '所有Manager都未能成功通知' : undefined
+    };
+
+  } catch (error) {
+    console.error('[通知] 通知Manager失败:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : '未知错误',
+      notifiedCount: 0
+    };
+  }
 }
 
 // 检查任务是否已完成

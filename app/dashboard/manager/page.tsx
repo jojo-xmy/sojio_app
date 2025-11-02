@@ -82,6 +82,21 @@ export default function ManagerDashboard() {
             {viewMode === 'list' ? '日历视图' : '列表视图'}
           </button>
           <button 
+            onClick={() => router.push('/dashboard/manager/hotels')}
+            style={{ 
+              padding: '8px 20px', 
+              background: '#3b82f6', 
+              color: '#fff', 
+              border: 'none', 
+              borderRadius: 6, 
+              fontWeight: 600, 
+              fontSize: 16, 
+              cursor: 'pointer' 
+            }}
+          >
+            酒店列表
+          </button>
+          <button 
             onClick={() => router.push('/dashboard/manager/applications')}
             style={{ 
               padding: '8px 20px', 

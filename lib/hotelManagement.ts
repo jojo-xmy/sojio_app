@@ -10,7 +10,6 @@ import {
   AssignTaskData
 } from '@/types/hotel';
 import { TaskStatus } from '@/types/task';
-import { notifyTaskCreated, notifyCleaningDatesUpdated } from './notificationService';
 
 // 酒店管理API
 
@@ -537,15 +536,9 @@ export async function generateTasksFromCalendarEntry(entryId: string): Promise<{
         // 不返回错误，因为任务已经创建成功
       }
 
-      // 发送通知给管理员
-      try {
-        // 获取管理员ID（这里需要根据实际业务逻辑获取）
-        // 暂时使用创建者ID，实际应该获取该酒店的管理员ID
-        await notifyTaskCreated(taskIds[0], hotel.name, cleaningDates[0], entry.createdBy);
-      } catch (error) {
-        console.error('发送任务创建通知失败:', error);
-        // 不阻断主流程
-      }
+      // 注意：该函数已废弃，任务现在通过数据库触发器自动创建
+      // 如需通知Manager，请使用 notifyManagersAboutNewEntry() 函数
+      console.warn('[废弃警告] generateTasksFromCalendarEntry 已废弃，请使用触发器自动创建任务');
     }
 
     return { success: true, taskIds };

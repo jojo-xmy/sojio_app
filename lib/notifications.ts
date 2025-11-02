@@ -42,11 +42,36 @@ export class NotificationService {
   // 发送LINE消息 - 通过后端API
   async sendLineMessage(userId: string, message: LineMessageTemplate): Promise<boolean> {
     if (!this.config.enableNotifications) {
-      console.log('通知功能已禁用');
+      console.log('[通知] 通知功能已禁用');
       return false;
     }
 
+    console.log('[通知] 准备发送LINE消息:', {
+      userId,
+      messageType: message.type,
+      hasContent: !!message.content,
+      contentText: message.content?.text
+    });
+
     try {
+      // 转换消息格式为LINE API需要的格式
+      let lineMessage;
+      if (message.type === 'text' && message.content && message.content.text) {
+        lineMessage = { 
+          type: 'text', 
+          text: message.content.text 
+        };
+      } else {
+        console.error('[通知] 消息格式错误:', message);
+        throw new Error('消息格式错误或文本为空');
+      }
+
+      console.log('[通知] 调用API发送消息:', {
+        type: lineMessage.type,
+        textLength: lineMessage.text?.length,
+        textPreview: lineMessage.text?.substring(0, 50)
+      });
+
       const response = await fetch('/api/line/send-message', {
         method: 'POST',
         headers: {
@@ -54,25 +79,55 @@ export class NotificationService {
         },
         body: JSON.stringify({
           userId,
-          message,
+          message: lineMessage,
         }),
       });
 
+      const responseData = await response.json();
+      
       if (!response.ok) {
-        const error = await response.json();
-        console.error('发送LINE消息失败:', error);
+        console.error('[通知] LINE API返回错误:', {
+          status: response.status,
+          error: responseData
+        });
         return false;
       }
 
-      console.log('LINE消息发送成功');
+      console.log('[通知] LINE消息发送成功');
       return true;
     } catch (error) {
-      console.error('发送LINE消息时出错:', error);
+      console.error('[通知] 发送LINE消息时出错:', error);
       return false;
     }
   }
 
-  // 发送任务状态变更通知
+  // 发送任务状态变更通知（直接使用LINE User ID）
+  async sendTaskStatusNotificationToLine(lineUserId: string, notification: NotificationData): Promise<boolean> {
+    if (!lineUserId) {
+      console.log('[通知] LINE User ID 为空');
+      return false;
+    }
+
+    console.log('[通知] 创建消息模板，通知数据:', {
+      taskName: notification.taskName,
+      fromStatus: notification.fromStatus,
+      toStatus: notification.toStatus,
+      userName: notification.userName
+    });
+
+    const message = this.createTaskStatusMessage(notification);
+    
+    console.log('[通知] 消息模板创建完成:', {
+      type: message.type,
+      hasContent: !!message.content,
+      hasText: !!(message.content as any)?.text,
+      textLength: (message.content as any)?.text?.length
+    });
+
+    return await this.sendLineMessage(lineUserId, message);
+  }
+
+  // 发送任务状态变更通知（通过数据库查询LINE ID）
   async sendTaskStatusNotification(notification: NotificationData): Promise<boolean> {
     const message = this.createTaskStatusMessage(notification);
     
@@ -91,6 +146,14 @@ export class NotificationService {
   private createTaskStatusMessage(notification: NotificationData): LineMessageTemplate {
     const { taskName, fromStatus, toStatus, userName, timestamp } = notification;
     
+    console.log('[通知] createTaskStatusMessage 输入参数:', {
+      taskName,
+      fromStatus,
+      toStatus,
+      userName,
+      timestamp
+    });
+    
     const statusDisplay = {
       draft: '草稿',
       open: '待分配',
@@ -101,14 +164,24 @@ export class NotificationService {
       confirmed: '已确认'
     };
 
+    const statusSpecificMsg = this.getStatusSpecificMessage(fromStatus, toStatus);
+    
     const messageText = `🔄 任务状态更新
 
-📋 任务：${taskName}
-👤 操作人：${userName}
-📊 状态：${statusDisplay[fromStatus]} → ${statusDisplay[toStatus]}
-⏰ 时间：${new Date(timestamp).toLocaleString()}
+📋 任务：${taskName || '未知任务'}
+👤 操作人：${userName || '未知用户'}
+📊 状态：${statusDisplay[fromStatus] || fromStatus} → ${statusDisplay[toStatus] || toStatus}
+⏰ 时间：${new Date(timestamp).toLocaleString('zh-CN', { timeZone: 'Asia/Tokyo' })}
 
-${this.getStatusSpecificMessage(fromStatus, toStatus)}`;
+${statusSpecificMsg}`;
+
+    console.log('[通知] createTaskStatusMessage 生成的消息文本长度:', messageText.length);
+    console.log('[通知] createTaskStatusMessage 消息预览:', messageText.substring(0, 100));
+
+    if (!messageText || messageText.trim().length === 0) {
+      console.error('[通知] 生成的消息文本为空!');
+      throw new Error('生成的消息文本为空');
+    }
 
     return {
       type: 'text',
@@ -136,17 +209,26 @@ ${this.getStatusSpecificMessage(fromStatus, toStatus)}`;
     }
   }
 
-  // 获取用户的LINE ID（模拟）
+  // 获取用户的LINE ID
   private async getUserLineId(userId: string): Promise<string | null> {
-    // TODO: 从数据库获取用户的LINE ID
-    // 这里暂时返回模拟数据
-    const mockLineIds: Record<string, string> = {
-      '1': 'U1234567890abcdef', // 山田太郎
-      '2': 'U2345678901bcdefg', // 佐藤花子
-      '3': 'U3456789012cdefgh', // 鈴木一郎
-    };
-    
-    return mockLineIds[userId] || null;
+    try {
+      const { supabase } = await import('./supabase');
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('line_user_id')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('查询用户LINE ID失败:', error);
+        return null;
+      }
+
+      return data?.line_user_id || null;
+    } catch (error) {
+      console.error('获取用户LINE ID时出错:', error);
+      return null;
+    }
   }
 
   // 批量发送通知

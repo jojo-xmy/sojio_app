@@ -7,7 +7,6 @@ import {
 } from '@/types/calendar';
 import { Task } from '@/types/task';
 import { UserProfile } from '@/types/user';
-import { notifyTaskAssigned } from './notificationService';
 
 
 // 获取日历视图的任务数据
@@ -346,25 +345,78 @@ export async function assignTaskToCleaners(
     // 短暂延迟确保数据库写入完成
     await new Promise(resolve => setTimeout(resolve, 100));
 
-    // 发送通知给分配的清洁员
+    // 触发通知系统（状态已更新，只发送通知）
     try {
-      // 获取任务信息用于通知
+      console.log('[分配任务] 触发通知发送给清洁员...');
+      
+      // 获取任务和Manager信息
       const { data: taskData } = await supabase
         .from('tasks')
-        .select('hotel_name, cleaning_date')
+        .select('*, hotel_id')
         .eq('id', taskId)
         .single();
 
-      if (taskData) {
-        await notifyTaskAssigned(
-          taskId, 
-          taskData.hotel_name, 
-          taskData.cleaning_date, 
-          cleanerIds
-        );
+      const { data: managerData } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', assignedBy)
+        .single();
+
+      if (taskData && managerData) {
+        // 为每个被分配的清洁员发送通知
+        for (const cleanerId of cleanerIds) {
+          try {
+            // 获取清洁员的LINE ID
+            const { data: cleanerData } = await supabase
+              .from('user_profiles')
+              .select('line_user_id, name')
+              .eq('id', cleanerId)
+              .single();
+
+            if (!cleanerData || !cleanerData.line_user_id) {
+              console.log(`[分配任务] 清洁员 ${cleanerId} 未绑定LINE账号，跳过`);
+              continue;
+            }
+
+            console.log(`[分配任务] 发送通知给: ${cleanerData.name}`);
+
+            // 创建通知数据
+            const { NotificationData } = await import('./notifications');
+            const notificationData: any = {
+              taskId,
+              taskName: taskData.hotel_name,
+              fromStatus: 'open',
+              toStatus: 'assigned',
+              userId: assignedBy,
+              userName: managerData.name,
+              userRole: 'manager',
+              timestamp: new Date().toISOString(),
+              additionalData: {
+                lockPassword: taskData.lock_password,
+                hotelAddress: taskData.hotel_address,
+                cleaningDate: taskData.cleaning_date
+              }
+            };
+
+            // 使用消息模板创建消息
+            const { createMessageTemplate } = await import('./notificationTemplates');
+            const message = createMessageTemplate('task_assigned', notificationData);
+
+            // 发送通知
+            const { notificationService } = await import('./notifications');
+            const success = await notificationService.sendLineMessage(
+              cleanerData.line_user_id,
+              message
+            );
+
+            console.log(`[分配任务] 通知${success ? '成功' : '失败'}: ${cleanerData.name}`);
+          } catch (error) {
+            console.error(`[分配任务] 向清洁员 ${cleanerId} 发送通知失败:`, error);
+          }
+        }
       }
     } catch (error) {
-      console.error('发送任务分配通知失败:', error);
+      console.error('[分配任务] 发送通知失败:', error);
       // 不阻断主流程
     }
 

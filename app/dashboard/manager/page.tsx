@@ -21,6 +21,7 @@ export default function ManagerDashboard() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('calendar');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isDetailExpanded, setIsDetailExpanded] = useState(false);
   const calendarRef = useRef<{ refreshData: () => void }>(null);
   
   // 使用新的全局 refresh 管理器
@@ -111,7 +112,17 @@ export default function ManagerDashboard() {
       ) : (
         <div style={{ display: 'flex', gap: 24 }}>
           {/* 任务列表 */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div 
+            className="transition-all duration-500 ease-in-out cursor-pointer"
+            style={{ 
+              flex: isDetailExpanded ? '0 0 35%' : '1',
+              minWidth: isDetailExpanded ? '400px' : 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8
+            }}
+            onClick={() => isDetailExpanded && setIsDetailExpanded(false)}
+          >
             {loading ? (
               <div style={{ color: '#888', textAlign: 'center', padding: '2rem' }}>加载中...</div>
             ) : (
@@ -141,7 +152,10 @@ export default function ManagerDashboard() {
                       confirmedAt={task.confirmedAt}
                       guestCount={task.guestCount}
                       showDetail={false} 
-                      onClick={() => setSelectedTask(task)}
+                      onClick={() => {
+                        setSelectedTask(task);
+                        setIsDetailExpanded(true);
+                      }}
                       capabilities={caps}
                     />
                   );
@@ -152,12 +166,36 @@ export default function ManagerDashboard() {
           </div>
 
           {/* 右侧任务面板（sticky 居中显示，滚动时保持） */}
-          <div style={{ width: 360 }}>
+          <div 
+            className="shrink-0 transition-all duration-500 ease-in-out"
+            style={{ 
+              width: isDetailExpanded ? 'calc(65% - 1.5rem)' : '360px',
+              flex: isDetailExpanded ? '1' : '0 0 360px'
+            }}
+          >
             <div className="sticky" style={{ top: 16 }}>
               {!selectedTask ? (
-                <div className="text-gray-500 flex items-center justify-center" style={{ height: 'calc(100vh - 32px)' }}>选择一个任务查看详情</div>
+                <div 
+                  className="text-gray-500 flex items-center justify-center transition-opacity duration-300"
+                  style={{ height: 'calc(100vh - 32px)' }}
+                >
+                  <div className="text-center px-4">
+                    <div className="text-lg font-medium mb-2">📋</div>
+                    <div className="text-sm">点击任务卡片以查看详情</div>
+                  </div>
+                </div>
               ) : (
                 <div className="max-h-[calc(100vh-32px)] overflow-y-auto">
+                  <div className="mb-3 flex items-center justify-between">
+                    <button
+                      onClick={() => setIsDetailExpanded(!isDetailExpanded)}
+                      className="text-xs px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-md transition-all duration-200 flex items-center gap-1.5 shadow-sm hover:shadow"
+                      title={isDetailExpanded ? "收缩详情面板" : "展开详情面板"}
+                    >
+                      <span>{isDetailExpanded ? '◀' : '▶'}</span>
+                      <span>{isDetailExpanded ? '收缩' : '展开'}</span>
+                    </button>
+                  </div>
                   <TaskDetailPanel 
                     task={selectedTask} 
                     onAttendanceUpdate={handleAttendanceUpdate}

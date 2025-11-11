@@ -24,6 +24,7 @@ export const CustomTaskCalendar = forwardRef<{ refreshData: () => void }, Custom
     const [selectedCleanerIds, setSelectedCleanerIds] = useState<string[]>([]);
     const [assignNotes, setAssignNotes] = useState('');
     const [assigning, setAssigning] = useState(false);
+    const [isDetailExpanded, setIsDetailExpanded] = useState(false);
 
     // 加载日历数据
     const loadCalendarData = useCallback(async (startDate: Date, endDate: Date) => {
@@ -123,6 +124,7 @@ export const CustomTaskCalendar = forwardRef<{ refreshData: () => void }, Custom
     const handleTaskClick = useCallback(async (event: TaskCalendarEvent) => {
       console.log('任务被点击:', event);
       setSelectedEvent(event);
+      setIsDetailExpanded(true); // 展开详情面板
       
       console.log('加载可用清洁员...');
       try {
@@ -304,7 +306,14 @@ export const CustomTaskCalendar = forwardRef<{ refreshData: () => void }, Custom
 
         {/* 主体：左侧日历 + 右侧任务面板 */}
         <div className="flex gap-4">
-          <div className="flex-1">
+          <div 
+            className="transition-all duration-500 ease-in-out cursor-pointer"
+            style={{ 
+              flex: isDetailExpanded ? '0 0 35%' : '1',
+              minWidth: isDetailExpanded ? '400px' : 'auto'
+            }}
+            onClick={() => isDetailExpanded && setIsDetailExpanded(false)}
+          >
             {/* 星期标题 */}
             <div className="grid grid-cols-7 gap-1 mb-2">
               {['日', '一', '二', '三', '四', '五', '六'].map(day => (
@@ -379,14 +388,36 @@ export const CustomTaskCalendar = forwardRef<{ refreshData: () => void }, Custom
           </div>
 
           {/* 右侧任务面板（固定在视口垂直居中，随滚动保持中部） */}
-          <div className="w-[360px] shrink-0 border-l pl-4">
+          <div 
+            className="shrink-0 border-l pl-4 transition-all duration-500 ease-in-out"
+            style={{ 
+              width: isDetailExpanded ? 'calc(65% - 1rem)' : '360px',
+              flex: isDetailExpanded ? '1' : '0 0 360px'
+            }}
+          >
             <div className="sticky" style={{ top: 16 }}>
               {!selectedEvent ? (
-                <div className="text-gray-500 flex items-center justify-center" style={{ height: 'calc(100vh - 32px)' }}>
-                  选择一个任务以查看详情并进行分配
+                <div 
+                  className="text-gray-500 flex items-center justify-center transition-opacity duration-300"
+                  style={{ height: 'calc(100vh - 32px)' }}
+                >
+                  <div className="text-center px-4">
+                    <div className="text-lg font-medium mb-2">📅</div>
+                    <div className="text-sm">点击日历中的任务以查看详情</div>
+                  </div>
                 </div>
               ) : (
                 <div className="max-h-[calc(100vh-32px)] overflow-y-auto">
+                  <div className="mb-3 flex items-center justify-between">
+                    <button
+                      onClick={() => setIsDetailExpanded(!isDetailExpanded)}
+                      className="text-xs px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-md transition-all duration-200 flex items-center gap-1.5 shadow-sm hover:shadow"
+                      title={isDetailExpanded ? "收缩详情面板" : "展开详情面板"}
+                    >
+                      <span>{isDetailExpanded ? '◀' : '▶'}</span>
+                      <span>{isDetailExpanded ? '收缩' : '展开'}</span>
+                    </button>
+                  </div>
                   <TaskDetailPanel 
                     task={selectedEvent.task}
                     onAttendanceUpdate={async () => {

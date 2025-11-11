@@ -4,7 +4,7 @@ import { ReactNode } from 'react';
 import { UserStateInitializer } from '@/components/UserStateInitializer';
 
 export const metadata = {
-  title: 'HUG Cleaning App',
+  title: 'SoJio Clean Hub',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

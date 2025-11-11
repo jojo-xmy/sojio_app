@@ -2,7 +2,8 @@
 import { useUserStore } from '@/store/userStore';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
-import { RoleSelector } from '@/components/RoleSelector';
+import { DashboardHeader } from '@/components/DashboardHeader';
+import { HeaderButton } from '@/components/HeaderButton';
 import { OwnerTaskCalendar } from '@/components/OwnerTaskCalendar';
 import { CalendarEntryForm, CalendarEntryFormData } from '@/components/CalendarEntryForm';
 import { createCalendarEntry } from '@/lib/services/calendarEntryService';
@@ -93,76 +94,62 @@ export default function OwnerDashboard() {
   // 如果用户角色不匹配，主dashboard页面会自动重定向
 
   return (
-    <div style={{ maxWidth: 1200, margin: '2rem auto', padding: '0 1rem' }}>
-      <RoleSelector showLogout={true} compactMode={false} />
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 600 }}>我的任务日历</h2>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <button 
-            onClick={() => setShowCreateForm(true)}
-            style={{ 
-              padding: '8px 20px', 
-              background: '#f59e0b', 
-              color: '#fff', 
-              border: 'none', 
-              borderRadius: 6, 
-              fontWeight: 600, 
-              fontSize: 16, 
-              cursor: 'pointer' 
-            }}
-          >
-            新建入住任务
-          </button>
-          <button 
-            onClick={() => router.push('/dashboard/owner/hotels')}
-            style={{ 
-              padding: '8px 20px', 
-              background: '#10b981', 
-              color: '#fff', 
-              border: 'none', 
-              borderRadius: 6, 
-              fontWeight: 600, 
-              fontSize: 16, 
-              cursor: 'pointer' 
-            }}
-          >
-            管理酒店
-          </button>
-        </div>
-      </div>
-
-      {/* 日历视图（内部已包含右侧任务详情面板） */}
-      <OwnerTaskCalendar 
-        ref={calendarRef}
-        className="w-full" 
-        onDataRefresh={() => {
-          console.log('日历数据已刷新');
-        }}
+    <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
+      <DashboardHeader 
+        title="我的任务日历"
+        actions={
+          <>
+            <HeaderButton 
+              onClick={() => setShowCreateForm(true)}
+              variant="warning"
+              icon="➕"
+            >
+              新建入住任务
+            </HeaderButton>
+            <HeaderButton 
+              onClick={() => router.push('/dashboard/owner/hotels')}
+              variant="success"
+              icon="🏨"
+            >
+              管理酒店
+            </HeaderButton>
+          </>
+        }
       />
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 1rem' }}>
+        {/* 日历视图（内部已包含右侧任务详情面板） */}
+        <OwnerTaskCalendar 
+          ref={calendarRef}
+          className="w-full" 
+          onDataRefresh={() => {
+            console.log('日历数据已刷新');
+          }}
+        />
 
-      {/* 任务创建表单 */}
-      {showCreateForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
-            <CalendarEntryForm
-              initialData={{
-                hotelId: ownerHotels.length > 0 ? ownerHotels[0].id : '',
-                checkInDate: '',
-                checkOutDate: '',
-                guestCount: 1,
-                ownerNotes: '',
-                cleaningDates: []
-              }}
-              onSubmit={handleCreateEntry}
-              onCancel={() => setShowCreateForm(false)}
-              loading={creating}
-              title="新建入住任务"
-              hotels={ownerHotels}
-              showHotelSelection={true}
-            />
+        {/* 任务创建表单 */}
+        {showCreateForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+              <CalendarEntryForm
+                initialData={{
+                  hotelId: ownerHotels.length > 0 ? ownerHotels[0].id : '',
+                  checkInDate: '',
+                  checkOutDate: '',
+                  guestCount: 1,
+                  ownerNotes: '',
+                  cleaningDates: []
+                }}
+                onSubmit={handleCreateEntry}
+                onCancel={() => setShowCreateForm(false)}
+                loading={creating}
+                title="新建入住任务"
+                hotels={ownerHotels}
+                showHotelSelection={true}
+              />
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 } 

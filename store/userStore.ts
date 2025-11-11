@@ -31,7 +31,7 @@ export const useUserStore = create<UserState>()(
       setInitialized: (initialized) => set({ isInitialized: initialized }),
     }),
     {
-      name: 'hug-user-storage', // 存储键名
+      name: 'sojio-user-storage', // 存储键名
       partialize: (state) => ({ user: state.user }), // 只持久化用户信息
     }
   )

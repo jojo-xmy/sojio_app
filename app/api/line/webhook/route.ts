@@ -190,7 +190,7 @@ async function sendDefaultReply(userId: string) {
   await sendLineMessage(userId, {
     type: 'text',
     content: {
-      text: '👋 欢迎使用HUG清洁任务管理系统！\n\n可用指令：\n• 接受任务\n• 开始任务\n• 完成任务\n• 查看任务\n\n或点击下方按钮快速操作。'
+      text: '👋 欢迎使用SoJio清洁管理系统！\n\n可用指令：\n• 接受任务\n• 开始任务\n• 完成任务\n• 查看任务\n\n或点击下方按钮快速操作。'
     }
   });
 }
@@ -200,7 +200,7 @@ async function sendWelcomeMessage(userId: string) {
   await sendLineMessage(userId, {
     type: 'text',
     content: {
-      text: '🎉 欢迎关注HUG清洁任务管理系统！\n\n我是您的清洁任务助手，可以帮您：\n• 接收任务通知\n• 快速响应任务操作\n• 查看任务状态\n\n请等待任务分配通知！'
+      text: '🎉 欢迎关注SoJio清洁管理系统！\n\n我是您的清洁任务助手，可以帮您：\n• 接收任务通知\n• 快速响应任务操作\n• 查看任务状态\n\n请等待任务分配通知！'
     }
   });
 }

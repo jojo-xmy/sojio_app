@@ -321,13 +321,13 @@ export default function RegisterPage() {
             color: '#1f2937',
             marginBottom: '0.5rem'
           }}>
-            HUG Cleaning App
+            SoJio Clean Hub
           </h1>
           <p style={{ 
             color: '#6b7280', 
             fontSize: '1rem' 
           }}>
-            使用LINE账号注册清洁任务管理系统
+            使用LINE账号注册SoJio清洁系统
           </p>
         </div>
 

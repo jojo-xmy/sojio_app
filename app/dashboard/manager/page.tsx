@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/userStore';
 import { TaskCreateForm } from '@/components/TaskCreateForm';
-import { RoleSelector } from '@/components/RoleSelector';
+import { DashboardHeader } from '@/components/DashboardHeader';
+import { HeaderButton } from '@/components/HeaderButton';
 import { TaskCalendar } from '@/components/TaskCalendar';
 import { TaskCard } from '@/components/TaskCard';
 import { TaskDetailPanel } from '@/components/TaskDetailPanel';
@@ -61,74 +62,44 @@ export default function ManagerDashboard() {
 
 
   return (
-    <div style={{ maxWidth: 1200, margin: '2rem auto', padding: '0 1rem' }}>
-      <RoleSelector showLogout={true} compactMode={false} />
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 600 }}>任务管理</h2>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <button 
-            onClick={() => setViewMode(viewMode === 'list' ? 'calendar' : 'list')}
-            style={{ 
-              padding: '8px 20px', 
-              background: '#6b7280', 
-              color: '#fff', 
-              border: 'none', 
-              borderRadius: 6, 
-              fontWeight: 600, 
-              fontSize: 16, 
-              cursor: 'pointer' 
-            }}
-          >
-            {viewMode === 'list' ? '日历视图' : '列表视图'}
-          </button>
-          <button 
-            onClick={() => router.push('/dashboard/manager/hotels')}
-            style={{ 
-              padding: '8px 20px', 
-              background: '#3b82f6', 
-              color: '#fff', 
-              border: 'none', 
-              borderRadius: 6, 
-              fontWeight: 600, 
-              fontSize: 16, 
-              cursor: 'pointer' 
-            }}
-          >
-            酒店列表
-          </button>
-          <button 
-            onClick={() => router.push('/dashboard/manager/applications')}
-            style={{ 
-              padding: '8px 20px', 
-              background: '#059669', 
-              color: '#fff', 
-              border: 'none', 
-              borderRadius: 6, 
-              fontWeight: 600, 
-              fontSize: 16, 
-              cursor: 'pointer' 
-            }}
-          >
-            审核申请
-          </button>
-          <button 
-            onClick={() => setShowCreateForm(true)}
-            style={{ 
-              padding: '8px 20px', 
-              background: '#2563eb', 
-              color: '#fff', 
-              border: 'none', 
-              borderRadius: 6, 
-              fontWeight: 600, 
-              fontSize: 16, 
-              cursor: 'pointer' 
-            }}
-          >
-            新建任务
-          </button>
-        </div>
-      </div>
-      {viewMode === 'calendar' ? (
+    <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
+      <DashboardHeader 
+        title="任务管理"
+        actions={
+          <>
+            <HeaderButton 
+              onClick={() => setViewMode(viewMode === 'list' ? 'calendar' : 'list')}
+              variant="secondary"
+              icon={viewMode === 'list' ? '📅' : '📋'}
+            >
+              {viewMode === 'list' ? '日历视图' : '列表视图'}
+            </HeaderButton>
+            <HeaderButton 
+              onClick={() => router.push('/dashboard/manager/hotels')}
+              variant="primary"
+              icon="🏨"
+            >
+              酒店列表
+            </HeaderButton>
+            <HeaderButton 
+              onClick={() => router.push('/dashboard/manager/applications')}
+              variant="success"
+              icon="✓"
+            >
+              审核申请
+            </HeaderButton>
+            <HeaderButton 
+              onClick={() => setShowCreateForm(true)}
+              variant="primary"
+              icon="➕"
+            >
+              新建任务
+            </HeaderButton>
+          </>
+        }
+      />
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 1rem' }}>
+        {viewMode === 'calendar' ? (
         <TaskCalendar 
           ref={calendarRef}
           className="w-full" 
@@ -196,9 +167,9 @@ export default function ManagerDashboard() {
             </div>
           </div>
         </div>
-      )}
-      
-      <TaskCreateForm 
+        )}
+        
+        <TaskCreateForm 
         isOpen={showCreateForm} 
         onClose={() => setShowCreateForm(false)}
         onTaskCreated={() => {
@@ -211,8 +182,7 @@ export default function ManagerDashboard() {
           }
         }}
       />
-
-
+      </div>
     </div>
   );
 } 

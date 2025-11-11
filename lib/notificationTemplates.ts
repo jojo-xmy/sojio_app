@@ -155,7 +155,7 @@ function createTaskAssignedMessage(data: NotificationData): LineMessageTemplate 
 🔐 门锁密码：${data.additionalData?.lockPassword || '请查看任务详情'}
 
 点击下方链接查看任务详情：
-https://hug-app.com/task/${data.taskId}`
+https://sojio-app.com/task/${data.taskId}`
     }
   };
 }

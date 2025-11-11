@@ -141,3 +141,7 @@ WHERE role = 'manager';
 3. 测试时的操作步骤
 4. 用户角色和LINE绑定状态
 
+
+
+
+

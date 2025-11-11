@@ -264,7 +264,7 @@ ${statusSpecificMsg}`;
     const testMessage: LineMessageTemplate = {
       type: 'text',
       content: {
-        text: '🧪 这是一条测试消息\n\nHUG清洁任务管理系统通知功能测试成功！'
+        text: '🧪 这是一条测试消息\n\nSoJio清洁管理系统通知功能测试成功！'
       }
     };
 

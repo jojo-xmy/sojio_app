@@ -19,7 +19,7 @@ export const ClearAuthButton: React.FC = () => {
       document.cookie = 'line_refresh_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
       
       // 清除本地存储
-      localStorage.removeItem('hug-user-storage');
+      localStorage.removeItem('sojio-user-storage');
       sessionStorage.clear();
       
       // 清除用户状态

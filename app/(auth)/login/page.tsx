@@ -124,7 +124,7 @@ export default function LoginPage() {
               color: '#1f2937',
               marginBottom: '0.5rem'
             }}>
-              欢迎使用HUG清洁系统
+              欢迎使用SoJio清洁系统
             </h1>
             <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
               检测到您是新用户，请选择要注册的身份
@@ -231,13 +231,13 @@ export default function LoginPage() {
             color: '#1f2937',
             marginBottom: '0.5rem'
           }}>
-            HUG Cleaning App
+            SoJio Clean Hub
           </h1>
           <p style={{ 
             color: '#6b7280', 
             fontSize: '1rem' 
           }}>
-            使用LINE账号登录或注册清洁任务管理系统
+            使用LINE账号登录或注册SoJio清洁系统
           </p>
         </div>
 

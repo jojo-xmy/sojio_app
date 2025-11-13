@@ -331,16 +331,16 @@ export function getStatusDisplayName(status: TaskStatus): string {
   return statusNames[status] || status;
 }
 
-// 获取状态颜色
+// 获取状态颜色 - 优化配色
 export function getStatusColor(status: TaskStatus): string {
   const statusColors = {
-    draft: '#9ca3af',      // gray
-    open: '#f59e0b',       // amber
-    assigned: '#3b82f6',   // blue
-    accepted: '#10b981',   // emerald
-    in_progress: '#f59e0b', // amber
-    completed: '#22c55e',  // green
-    confirmed: '#059669'   // emerald-600
+    draft: '#9ca3af',      // gray - 草稿
+    open: '#0061ff',       // Dropbox blue - 待分配
+    assigned: '#7c3aed',   // purple - 已分配
+    accepted: '#2563eb',   // blue - 已接受
+    in_progress: '#f59e0b', // amber - 进行中
+    completed: '#059669',  // green - 已完成
+    confirmed: '#007a5a'   // dark green - 已确认
   };
   return statusColors[status] || '#6b7280';
 }
@@ -523,18 +523,18 @@ export function isTaskEditable(status: TaskStatus): boolean {
   return ['draft', 'open'].includes(status);
 }
 
-// 获取状态图标
+// 获取状态图标 - 返回图标名称而非emoji
 export function getStatusIcon(status: TaskStatus): string {
   const icons = {
-    draft: '📝',
-    open: '⏳',
-    assigned: '👥',
-    accepted: '✅',
-    in_progress: '🔄',
-    completed: '🎉',
-    confirmed: '🏆'
+    draft: 'FileEdit',
+    open: 'Clock',
+    assigned: 'Users',
+    accepted: 'CheckCircle',
+    in_progress: 'Loader',
+    completed: 'CheckCircle2',
+    confirmed: 'Award'
   };
-  return icons[status] || '❓';
+  return icons[status] || 'HelpCircle';
 }
 
 // 获取任务状态统计

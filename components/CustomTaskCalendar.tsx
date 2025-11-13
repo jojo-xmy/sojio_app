@@ -324,19 +324,24 @@ export const CustomTaskCalendar = forwardRef<{ refreshData: () => void }, Custom
             </div>
 
             {/* 日历网格 */}
-            <div className="grid grid-cols-7 gap-1">
+            <div className="grid grid-cols-7">
               {calendarGrid.map((week, weekIndex) =>
                 week.map((day, dayIndex) => (
                   <div
                     key={`${weekIndex}-${dayIndex}`}
                     className={`
-                      min-h-[120px] border border-gray-200 p-2
+                      transition-all duration-300 border-r border-b border-gray-200 p-2
+                      ${dayIndex === 0 ? 'border-l' : ''} 
+                      ${weekIndex === 0 ? 'border-t' : ''}
                       ${!day.isCurrentMonth ? 'bg-gray-50 text-gray-400' : 'bg-white'}
                       ${day.isToday ? 'bg-blue-50 border-blue-300' : ''}
                     `}
+                    style={{ 
+                      minHeight: isDetailExpanded ? '100px' : '120px'
+                    }}
                   >
                     {/* 日期 */}
-                    <div className="text-sm font-medium mb-2">
+                    <div className={`font-medium mb-2 transition-all duration-300 ${isDetailExpanded ? 'text-xs' : 'text-sm'}`}>
                       {day.date.getDate()}
                     </div>
 
@@ -350,7 +355,7 @@ export const CustomTaskCalendar = forwardRef<{ refreshData: () => void }, Custom
                           <div
                             key={event.id}
                             className={`
-                              p-1 text-xs rounded cursor-pointer border transition-colors
+                              p-1 text-xs rounded cursor-pointer border transition-all duration-300
                               ${isUnassigned 
                                 ? 'bg-red-50 text-red-800 border-red-300 hover:bg-red-100' 
                                 : isCompleted
@@ -364,14 +369,18 @@ export const CustomTaskCalendar = forwardRef<{ refreshData: () => void }, Custom
                             }}
                             title={`${event.title} - ${event.task.status} (点击${isUnassigned ? '分配任务' : '查看详情'})`}
                           >
-                            <div className="font-medium truncate text-[10px] leading-tight">
+                            <div className={`font-medium truncate leading-tight transition-all duration-300 ${isDetailExpanded ? 'text-[9px] mb-0.5' : 'text-[10px]'}`}>
                               {event.title}
                             </div>
-                            <div className="mb-1">
-                              <TaskStatusBadge status={event.task.status} size="small" />
+                            <div className={`flex items-center gap-1 ${isDetailExpanded ? 'mb-0' : 'mb-1'}`}>
+                              <TaskStatusBadge 
+                                status={event.task.status} 
+                                size="small" 
+                                iconOnly={isDetailExpanded}
+                              />
                             </div>
                             {event.assignedCleaners && event.assignedCleaners.length > 0 && (
-                              <div className="text-[9px] opacity-75 truncate leading-tight">
+                              <div className={`opacity-75 truncate leading-tight transition-all duration-300 ${isDetailExpanded ? 'text-[8px]' : 'text-[9px]'}`}>
                                 {event.assignedCleaners.map(c => c.name).join(', ')}
                               </div>
                             )}
@@ -413,9 +422,14 @@ export const CustomTaskCalendar = forwardRef<{ refreshData: () => void }, Custom
                       onClick={() => setIsDetailExpanded(!isDetailExpanded)}
                       className="text-xs px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-md transition-all duration-200 flex items-center gap-1.5 shadow-sm hover:shadow"
                       title={isDetailExpanded ? "收缩详情面板" : "展开详情面板"}
+                      style={{
+                        fontSize: 'clamp(10px, 2vw, 12px)',
+                        whiteSpace: 'nowrap',
+                        minWidth: '60px'
+                      }}
                     >
                       <span>{isDetailExpanded ? '◀' : '▶'}</span>
-                      <span>{isDetailExpanded ? '收缩' : '展开'}</span>
+                      <span style={{ fontSize: 'inherit' }}>{isDetailExpanded ? '收缩' : '展开'}</span>
                     </button>
                   </div>
                   <TaskDetailPanel 

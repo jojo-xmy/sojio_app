@@ -128,10 +128,12 @@ export function getTaskCapabilities(
       if (!caps.visibleBlocks.includes('taskEdit')) caps.visibleBlocks.push('taskEdit');
       if (!caps.visibleBlocks.includes('taskPublish')) caps.visibleBlocks.push('taskPublish');
     } else if (status === 'open') {
-      // open状态：经理可以分配清洁工
+      // open状态：经理可以分配清洁工，也可以编辑任务
       caps.canAssign = true;
       caps.canOpenAssignmentModal = true;
+      caps.canEditTaskDetails = true;
       if (!caps.visibleBlocks.includes('assignmentAction')) caps.visibleBlocks.push('assignmentAction');
+      if (!caps.visibleBlocks.includes('taskEdit')) caps.visibleBlocks.push('taskEdit');
     } else if (status === 'assigned' || status === 'accepted') {
       // 已分配状态：经理可以补/改分配，并且接受后仍可修改备注
       caps.canAssign = true; // 允许补/改分配

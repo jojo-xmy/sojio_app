@@ -2,6 +2,8 @@
 import React from 'react';
 import { Attendance, checkIn, checkOut } from '@/lib/attendance';
 import { updateCleanerNotes } from '@/lib/tasks';
+import { Button } from './Button';
+import { Clock, CheckCircle2, LogOut as LogOutIcon } from 'lucide-react';
 
 interface AttendanceActionsProps {
   taskId: string;
@@ -54,13 +56,35 @@ export const AttendanceActions: React.FC<AttendanceActionsProps> = ({
 
   if (currentStatus === 'none') {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={handleCheckIn} disabled={loading} style={{ padding: '6px 18px', background: '#22c55e', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 12,
+        padding: '12px 16px',
+        background: '#f9fafb',
+        borderRadius: '8px',
+        border: '1px solid #e5e7eb'
+      }}>
+        <Button onClick={handleCheckIn} disabled={loading} variant="success" size="sm" className="responsive-text">
           {loading ? '打卡中...' : '出勤打卡'}
-        </button>
-        {/* 清洁工可见：自己的打卡时间（无则不显示） */}
+        </Button>
         {selfCheckIn?.check_in_time && (
-          <span style={{ color: '#16a34a' }}>已出勤：{new Date(selfCheckIn.check_in_time).toLocaleString()}</span>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 6,
+            fontSize: '14px',
+            color: '#059669',
+            fontWeight: 500
+          }}>
+            <CheckCircle2 size={16} />
+            <span>已出勤：{new Date(selfCheckIn.check_in_time).toLocaleString('zh-CN', { 
+              month: '2-digit', 
+              day: '2-digit', 
+              hour: '2-digit', 
+              minute: '2-digit' 
+            })}</span>
+          </div>
         )}
       </div>
     );
@@ -68,25 +92,86 @@ export const AttendanceActions: React.FC<AttendanceActionsProps> = ({
 
   if (currentStatus === 'checked_in') {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column',
+        gap: 12,
+        padding: '12px 16px',
+        background: '#f0fdf4',
+        borderRadius: '8px',
+        border: '1px solid #bbf7d0'
+      }}>
         {selfCheckIn?.check_in_time && (
-          <span style={{ color: '#16a34a' }}>已出勤：{new Date(selfCheckIn.check_in_time).toLocaleString()}</span>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 6,
+            fontSize: '14px',
+            color: '#059669',
+            fontWeight: 500
+          }}>
+            <CheckCircle2 size={16} />
+            <span>已出勤：{new Date(selfCheckIn.check_in_time).toLocaleString('zh-CN', { 
+              month: '2-digit', 
+              day: '2-digit', 
+              hour: '2-digit', 
+              minute: '2-digit' 
+            })}</span>
+          </div>
         )}
-        <button onClick={handleCheckOut} disabled={loading} style={{ padding: '6px 18px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>
+        <Button onClick={handleCheckOut} disabled={loading} variant="primary" size="sm" className="responsive-text">
           {loading ? '打卡中...' : '退勤打卡'}
-        </button>
+        </Button>
       </div>
     );
   }
 
   // checked_out
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+    <div style={{ 
+      display: 'flex', 
+      flexDirection: 'column',
+      gap: 8,
+      padding: '12px 16px',
+      background: '#eff6ff',
+      borderRadius: '8px',
+      border: '1px solid #bfdbfe'
+    }}>
       {selfCheckIn?.check_in_time && (
-        <span style={{ color: '#16a34a' }}>已出勤：{new Date(selfCheckIn.check_in_time).toLocaleString()}</span>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 6,
+          fontSize: '14px',
+          color: '#059669',
+          fontWeight: 500
+        }}>
+          <CheckCircle2 size={16} />
+          <span>已出勤：{new Date(selfCheckIn.check_in_time).toLocaleString('zh-CN', { 
+            month: '2-digit', 
+            day: '2-digit', 
+            hour: '2-digit', 
+            minute: '2-digit' 
+          })}</span>
+        </div>
       )}
       {selfCheckOut?.check_out_time && (
-        <span style={{ color: '#2563eb' }}>已退勤：{new Date(selfCheckOut.check_out_time).toLocaleString()}</span>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 6,
+          fontSize: '14px',
+          color: '#2563eb',
+          fontWeight: 500
+        }}>
+          <LogOutIcon size={16} />
+          <span>已退勤：{new Date(selfCheckOut.check_out_time).toLocaleString('zh-CN', { 
+            month: '2-digit', 
+            day: '2-digit', 
+            hour: '2-digit', 
+            minute: '2-digit' 
+          })}</span>
+        </div>
       )}
     </div>
   );

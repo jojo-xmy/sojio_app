@@ -96,20 +96,18 @@ export default function OwnerDashboard() {
   return (
     <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
       <DashboardHeader 
-        title="我的任务日历"
+        title="入住日历"
         actions={
           <>
             <HeaderButton 
               onClick={() => setShowCreateForm(true)}
               variant="warning"
-              icon="➕"
             >
-              新建入住任务
+              添加入住登记
             </HeaderButton>
             <HeaderButton 
               onClick={() => router.push('/dashboard/owner/hotels')}
               variant="success"
-              icon="🏨"
             >
               管理酒店
             </HeaderButton>
@@ -142,7 +140,7 @@ export default function OwnerDashboard() {
                 onSubmit={handleCreateEntry}
                 onCancel={() => setShowCreateForm(false)}
                 loading={creating}
-                title="新建入住任务"
+                title="添加入住登记"
                 hotels={ownerHotels}
                 showHotelSelection={true}
               />

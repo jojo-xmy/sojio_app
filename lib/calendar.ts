@@ -745,6 +745,7 @@ export async function getOwnerCalendarTasks(
         guestCount: task.guest_count,
         ownerNotes: task.owner_notes || '',
         cleanerNotes: task.cleaner_notes || '',
+        managerReportNotes: task.manager_report_notes || '',
         status: task.status,
         description: task.description || '',
         note: task.note || '',

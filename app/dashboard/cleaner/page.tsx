@@ -23,14 +23,12 @@ export default function CleanerDashboard() {
             <HeaderButton 
               onClick={() => router.push('/dashboard/cleaner/availability')}
               variant="success"
-              icon="📅"
             >
               日程注册
             </HeaderButton>
             <HeaderButton 
               onClick={() => router.push('/dashboard/cleaner/tasks')}
               variant="primary"
-              icon="📋"
             >
               查看所有任务
             </HeaderButton>

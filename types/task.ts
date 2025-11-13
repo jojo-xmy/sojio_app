@@ -19,15 +19,15 @@ export const TASK_STATUS_DISPLAY: Record<TaskStatus, string> = {
   confirmed: '已确认'
 };
 
-// 任务状态颜色映射
+// 任务状态颜色映射 - 优化配色
 export const TASK_STATUS_COLOR: Record<TaskStatus, string> = {
-  draft: '#9ca3af',      // gray
-  open: '#f59e0b',       // amber
-  assigned: '#3b82f6',   // blue
-  accepted: '#10b981',   // emerald
-  in_progress: '#f59e0b', // amber
-  completed: '#22c55e',  // green
-  confirmed: '#059669'   // emerald-600
+  draft: '#9ca3af',      // gray - 草稿
+  open: '#0061ff',       // Dropbox blue - 待分配
+  assigned: '#7c3aed',   // purple - 已分配
+  accepted: '#2563eb',   // blue - 已接受
+  in_progress: '#f59e0b', // amber - 进行中
+  completed: '#059669',  // green - 已完成
+  confirmed: '#007a5a'   // dark green - 已确认
 };
 
 // 任务接口定义

@@ -3,6 +3,7 @@ import React from 'react';
 import { TaskStatusBadge } from './TaskStatusBadge';
 import { Task, TaskStatus } from '@/types/task';
 import { TaskCapabilities } from '@/lib/taskCapabilities';
+import { MapPin, Calendar, Clock, LogOut, Users, Lock, CheckCircle, PartyPopper, Trophy, FileText } from 'lucide-react';
 
 export interface TaskCardProps {
   id: string;
@@ -33,6 +34,7 @@ export interface TaskCardProps {
   completedAt?: string;
   confirmedAt?: string;
   guestCount?: number; // 添加入住人数字段
+  isEditing?: boolean; // 是否处于编辑模式
 }
 
 export const TaskCard: React.FC<TaskCardProps> = ({ 
@@ -46,7 +48,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   assignedCleaners, 
   status, 
   description, 
-  note, 
+  note,
+  isEditing = false, 
   images, 
   showDetail, 
   capabilities,
@@ -78,52 +81,74 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 4 }}>{hotelName}</div>
-          {guestCount !== undefined && (
-            <div style={{ fontSize: 14, color: '#666', marginBottom: 4 }}>
-              入住：{guestCount}人
-            </div>
-          )}
+          <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8 }}>{hotelName}</div>
           {hotelAddress && (
-            <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>
-              📍 {hotelAddress}
+            <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <MapPin size={16} color="#9ca3af" /> {hotelAddress}
             </div>
           )}
         </div>
         <TaskStatusBadge status={status} size="small" />
       </div>
 
-      <div style={{ color: '#888', fontSize: 14, marginBottom: 8 }}>任务ID：{id}</div>
-      <div style={{ fontSize: 14, marginBottom: 4 }}>📅 入住日期：{checkInDate || date}</div>
-      <div style={{ fontSize: 14, marginBottom: 4 }}>🕐 入住时间：{checkInTime}</div>
-      {checkOutDate && (
-        <div style={{ fontSize: 14, marginBottom: 4 }}>📤 退房日期：{checkOutDate}</div>
-      )}
-      <div style={{ fontSize: 14, marginBottom: 4 }}>🧹 清扫日期：{cleaningDate || checkOutDate || '未设置'}</div>
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: 6,
+        padding: '12px 0',
+        borderTop: '1px solid #f3f4f6'
+      }}>
+        <div style={{ fontSize: 14, color: '#374151', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Calendar size={16} color="#6b7280" /> 
+          <span style={{ fontWeight: 500 }}>入住日期：</span>
+          <span>{checkInDate || date}</span>
+        </div>
+        {checkOutDate && (
+          <div style={{ fontSize: 14, color: '#374151', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <LogOut size={16} color="#6b7280" /> 
+            <span style={{ fontWeight: 500 }}>退房日期：</span>
+            <span>{checkOutDate}</span>
+          </div>
+        )}
+        {guestCount !== undefined && (
+          <div style={{ fontSize: 14, color: '#374151', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Users size={16} color="#6b7280" /> 
+            <span style={{ fontWeight: 500 }}>入住人数：</span>
+            <span>{guestCount}人</span>
+          </div>
+        )}
+        <div style={{ fontSize: 14, color: '#374151', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Calendar size={16} color="#6b7280" /> 
+          <span style={{ fontWeight: 500 }}>清扫日期：</span>
+          <span>{cleaningDate || checkOutDate || '未设置'}</span>
+        </div>
+      </div>
       
       {/* 清扫人员信息 */}
-      <div style={{ fontSize: 14, marginBottom: 8 }}>
-        👥 清扫人员：
+      <div style={{ 
+        fontSize: 14, 
+        marginBottom: 8, 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 8,
+        paddingTop: 12,
+        color: '#374151'
+      }}>
+        <Users size={16} color="#6b7280" /> 
+        <span style={{ fontWeight: 500 }}>清扫人员：</span>
         {!assignedCleaners || assignedCleaners.length === 0 ? (
-          <span style={{ color: '#ef4444', fontWeight: 500 }}> 未分配</span>
+          <span style={{ color: '#ef4444', fontWeight: 500 }}>未分配</span>
         ) : (
           <>
-            <span style={{ color: '#059669', fontWeight: 500 }}> {assignedCleaners.join('，')}</span>
+            <span style={{ color: '#059669', fontWeight: 500 }}>{assignedCleaners.join('，')}</span>
             {status === 'assigned' && (
-              <span style={{ color: '#f59e0b', fontSize: 12, marginLeft: 8 }}>
+              <span style={{ color: '#f59e0b', fontSize: 12, marginLeft: 4 }}>
                 （已分配，待接收）
               </span>
             )}
           </>
         )}
       </div>
-
-      {/* 门锁密码 - 对owner隐藏 */}
-      {lockPassword && viewerRole !== 'owner' && (
-        <div style={{ fontSize: 14, marginBottom: 8, color: '#059669', fontWeight: 500 }}>
-          🔐 门锁密码：{lockPassword}
-        </div>
-      )}
 
       {/* 状态信息 */}
       <div style={{ marginBottom: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -144,7 +169,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         {/* 接受状态 */}
         {acceptedBy && acceptedBy.length > 0 && (
           <span style={{
-            display: 'inline-block',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4,
             padding: '2px 10px',
             borderRadius: 12,
             background: '#10b981',
@@ -152,14 +179,17 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             fontSize: 12,
             fontWeight: 500,
           }}>
-            ✅ 已接受 ({acceptedBy.length}/{assignedCleaners.length})
+            <CheckCircle size={12} />
+            已接受 ({acceptedBy.length}/{assignedCleaners.length})
           </span>
         )}
 
         {/* 完成时间 */}
         {completedAt && (
           <span style={{
-            display: 'inline-block',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4,
             padding: '2px 10px',
             borderRadius: 12,
             background: '#22c55e',
@@ -167,14 +197,17 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             fontSize: 12,
             fontWeight: 500,
           }}>
-            🎉 完成于 {new Date(completedAt).toLocaleString()}
+            <PartyPopper size={12} />
+            完成于 {new Date(completedAt).toLocaleString()}
           </span>
         )}
 
         {/* 确认时间 */}
         {confirmedAt && (
           <span style={{
-            display: 'inline-block',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4,
             padding: '2px 10px',
             borderRadius: 12,
             background: '#059669',
@@ -182,40 +215,76 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             fontSize: 12,
             fontWeight: 500,
           }}>
-            🏆 确认于 {new Date(confirmedAt).toLocaleString()}
+            <Trophy size={12} />
+            确认于 {new Date(confirmedAt).toLocaleString()}
           </span>
         )}
       </div>
 
-      {/* 能力矩阵驱动的可插拔区块（仅在传入时显示；不改变默认渲染） */}
+      {/* 能力矩阵驱动的可插拔区块 - 按照新的顺序显示 */}
       {capabilities && renderBlocks && (
-        <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* 1. 房东备注 */}
           {renderBlocks.ownerMessage}
+          
+          {/* 2. 任务描述（Manager编辑） */}
           {renderBlocks.taskDescription}
-          {capabilities.visibleBlocks.includes('cleanerNotes') && renderBlocks.cleanerNotes}
-          {capabilities.visibleBlocks.includes('managerReport') && renderBlocks.managerReport}
-          {capabilities.visibleBlocks.includes('taskAcceptance') && renderBlocks.taskAcceptance}
+          
+          {/* 3. 门锁密码 */}
+          {lockPassword && viewerRole !== 'owner' && !isEditing && (
+            <div style={{ 
+              padding: '12px 16px',
+              background: 'var(--success)',
+              color: 'var(--success-foreground)',
+              borderRadius: 'var(--radius)',
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 10,
+              fontSize: '14px',
+              fontWeight: 500,
+              boxShadow: '0 1px 3px rgba(0, 122, 90, 0.2)'
+            }}>
+              <Lock size={18} /> 
+              <span>门锁密码：</span>
+              <span style={{ fontWeight: 700, letterSpacing: '2px', fontSize: '16px' }}>{lockPassword}</span>
+            </div>
+          )}
+          
+          {/* 4. Manager操作按钮 */}
+          {renderBlocks.managerActions}
+          
+          {/* 5. 出勤状态 */}
           {capabilities.visibleBlocks.includes('attendanceSummary') && renderBlocks.attendanceSummary}
           {capabilities.visibleBlocks.includes('attendanceActions') && renderBlocks.attendanceActions}
+          
+          {/* 6. 清洁工备注和图片 */}
+          {capabilities.visibleBlocks.includes('cleanerNotes') && renderBlocks.cleanerNotes}
           {capabilities.visibleBlocks.includes('attachments') && renderBlocks.attachments}
+          
+          {/* 7. Manager确认报告 */}
+          {capabilities.visibleBlocks.includes('managerReport') && renderBlocks.managerReport}
+          
+          {/* 其他可选区块 */}
+          {capabilities.visibleBlocks.includes('taskAcceptance') && renderBlocks.taskAcceptance}
           {capabilities.visibleBlocks.includes('notes') && renderBlocks.notes}
           {capabilities.visibleBlocks.includes('acknowledgement') && renderBlocks.acknowledgement}
         </div>
       )}
 
-      {/* Manager操作区域 - 放在底部 */}
-      {capabilities && renderBlocks && renderBlocks.managerActions}
-
       {showDetail && (
         <div style={{ marginTop: 16, borderTop: '1px dashed #ddd', paddingTop: 12 }}>
           {note && (
-            <div style={{ marginBottom: 8 }}>
-              <strong>📝 备注：</strong>{note}
+            <div style={{ marginBottom: 8, display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+              <FileText size={14} style={{ marginTop: 2, flexShrink: 0 }} />
+              <div><strong>备注：</strong>{note}</div>
             </div>
           )}
           {images && images.length > 0 && (
             <div style={{ marginTop: 8 }}>
-              <strong>📸 任务图片：</strong>
+              <strong style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <Calendar size={14} />
+                任务图片：
+              </strong>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
                 {images.map((img, i) => (
                   <img 

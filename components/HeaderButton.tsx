@@ -8,30 +8,31 @@ interface HeaderButtonProps {
   icon?: ReactNode;
 }
 
+// 优化配色：无渐变、使用全局配色变量
 const variantStyles: Record<string, { background: string; hoverBackground: string; color: string }> = {
   primary: {
-    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-    hoverBackground: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+    background: '#0061ff',
+    hoverBackground: '#0051d5',
     color: '#ffffff'
   },
   secondary: {
-    background: 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
-    hoverBackground: 'linear-gradient(135deg, #4b5563 0%, #374151 100%)',
-    color: '#ffffff'
+    background: '#f7f6f3',
+    hoverBackground: '#e8e6e0',
+    color: '#1e1919'
   },
   success: {
-    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-    hoverBackground: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+    background: '#007a5a',
+    hoverBackground: '#006344',
     color: '#ffffff'
   },
   warning: {
-    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-    hoverBackground: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+    background: '#f59e0b',
+    hoverBackground: '#d97706',
     color: '#ffffff'
   },
   danger: {
-    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-    hoverBackground: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+    background: '#e01e5a',
+    hoverBackground: '#c01848',
     color: '#ffffff'
   }
 };
@@ -51,33 +52,34 @@ export const HeaderButton: React.FC<HeaderButtonProps> = ({
         padding: '10px 18px',
         background: styles.background,
         color: styles.color,
-        border: 'none',
+        border: variant === 'secondary' ? '1px solid #e3e2df' : 'none',
         borderRadius: '8px',
         fontSize: '14px',
         fontWeight: '600',
         cursor: 'pointer',
-        transition: 'all 0.2s ease',
-        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-        display: 'flex',
+        transition: 'all 0.15s ease',
+        boxShadow: variant === 'secondary' ? 'none' : '0 1px 2px rgba(0, 0, 0, 0.05)',
+        display: 'inline-flex',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: '8px',
         whiteSpace: 'nowrap'
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.background = styles.hoverBackground;
-        e.currentTarget.style.transform = 'translateY(-1px)';
-        e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
+        e.currentTarget.style.transform = 'scale(1.02)';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.background = styles.background;
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+        e.currentTarget.style.transform = 'scale(1)';
       }}
       onMouseDown={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)';
+        e.currentTarget.style.transform = 'scale(0.98)';
+      }}
+      onMouseUp={(e) => {
+        e.currentTarget.style.transform = 'scale(1.02)';
       }}
     >
-      {icon && <span style={{ fontSize: '16px' }}>{icon}</span>}
       <span>{children}</span>
     </button>
   );

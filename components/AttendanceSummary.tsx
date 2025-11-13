@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Attendance } from '@/lib/attendance';
 import { supabase } from '@/lib/supabase';
+import { Users, CheckCircle2, LogOut, Clock } from 'lucide-react';
 
 interface AttendanceSummaryProps {
   assignedCleaners?: string[];
@@ -54,37 +55,201 @@ export const AttendanceSummary: React.FC<AttendanceSummaryProps> = ({ assignedCl
   };
 
   return (
-    <div style={{ padding: '12px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
-      <div style={{ fontWeight: 600, marginBottom: 8, color: '#374151' }}>👥 出勤状态</div>
-      <div style={{ display: 'flex', gap: 16, marginBottom: 8 }}>
-        <div style={{ color: '#16a34a' }}>✅ 出勤：{checkedInRecords.length}/{totalAssigned} 人</div>
-        <div style={{ color: '#2563eb' }}>🏁 退勤：{checkedOutRecords.length}/{totalAssigned} 人</div>
+    <div style={{ 
+      padding: '16px', 
+      background: '#ffffff', 
+      borderRadius: '8px', 
+      border: '1px solid #e5e7eb',
+      boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+    }}>
+      {/* 标题 */}
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 8,
+        marginBottom: 16,
+        paddingBottom: 12,
+        borderBottom: '1px solid #f3f4f6'
+      }}>
+        <Users size={18} color="#6b7280" />
+        <span style={{ fontWeight: 600, fontSize: '15px', color: '#1f2937' }}>出勤状态</span>
       </div>
       
+      {/* 统计概览 */}
+      <div style={{ 
+        display: 'flex', 
+        gap: 12, 
+        marginBottom: 16,
+        flexWrap: 'wrap'
+      }}>
+        <div style={{ 
+          flex: 1,
+          minWidth: '120px',
+          padding: '10px 12px',
+          background: '#f0fdf4',
+          borderRadius: '6px',
+          border: '1px solid #bbf7d0'
+        }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 6,
+            marginBottom: 4
+          }}>
+            <CheckCircle2 size={16} color="#059669" />
+            <span style={{ fontSize: '13px', color: '#059669', fontWeight: 500 }}>出勤</span>
+          </div>
+          <div style={{ 
+            fontSize: '20px', 
+            fontWeight: 600, 
+            color: '#059669' 
+          }}>
+            {checkedInRecords.length}<span style={{ fontSize: '14px', fontWeight: 400 }}>/{totalAssigned}</span>
+          </div>
+        </div>
+        
+        <div style={{ 
+          flex: 1,
+          minWidth: '120px',
+          padding: '10px 12px',
+          background: '#eff6ff',
+          borderRadius: '6px',
+          border: '1px solid #bfdbfe'
+        }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 6,
+            marginBottom: 4
+          }}>
+            <LogOut size={16} color="#2563eb" />
+            <span style={{ fontSize: '13px', color: '#2563eb', fontWeight: 500 }}>退勤</span>
+          </div>
+          <div style={{ 
+            fontSize: '20px', 
+            fontWeight: 600, 
+            color: '#2563eb' 
+          }}>
+            {checkedOutRecords.length}<span style={{ fontSize: '14px', fontWeight: 400 }}>/{totalAssigned}</span>
+          </div>
+        </div>
+      </div>
+      
+      {/* 出勤记录详情 */}
       {checkedInRecords.length > 0 && (
-        <div style={{ marginTop: 12, padding: '8px 0' }}>
-          <div style={{ fontWeight: 600, fontSize: 13, color: '#16a34a', marginBottom: 4 }}>📅 出勤记录：</div>
+        <div style={{ 
+          marginBottom: 12,
+          padding: '12px',
+          background: '#f9fafb',
+          borderRadius: '6px'
+        }}>
+          <div style={{ 
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            fontWeight: 600, 
+            fontSize: '13px', 
+            color: '#374151', 
+            marginBottom: 8 
+          }}>
+            <Clock size={14} color="#6b7280" />
+            <span>出勤记录</span>
+          </div>
           {checkedInRecords.map(record => (
-            <div key={record.id} style={{ marginLeft: 8, fontSize: 12, color: '#065f46', marginBottom: 2 }}>
-              • {getUserName(record.user_id)}: {record.check_in_time ? new Date(record.check_in_time).toLocaleString('zh-CN') : '未记录'}
+            <div key={record.id} style={{ 
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              fontSize: '13px', 
+              color: '#059669',
+              marginBottom: 4,
+              paddingLeft: 20
+            }}>
+              <span style={{ 
+                width: 4, 
+                height: 4, 
+                borderRadius: '50%', 
+                background: '#059669',
+                flexShrink: 0
+              }} />
+              <span style={{ fontWeight: 500 }}>{getUserName(record.user_id)}</span>
+              <span style={{ color: '#6b7280' }}>
+                {record.check_in_time ? new Date(record.check_in_time).toLocaleString('zh-CN', {
+                  month: '2-digit',
+                  day: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                }) : '未记录'}
+              </span>
             </div>
           ))}
         </div>
       )}
       
+      {/* 退勤记录详情 */}
       {checkedOutRecords.length > 0 && (
-        <div style={{ marginTop: 12, padding: '8px 0' }}>
-          <div style={{ fontWeight: 600, fontSize: 13, color: '#2563eb', marginBottom: 4 }}>🏁 退勤记录：</div>
+        <div style={{ 
+          padding: '12px',
+          background: '#f9fafb',
+          borderRadius: '6px'
+        }}>
+          <div style={{ 
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            fontWeight: 600, 
+            fontSize: '13px', 
+            color: '#374151', 
+            marginBottom: 8 
+          }}>
+            <Clock size={14} color="#6b7280" />
+            <span>退勤记录</span>
+          </div>
           {checkedOutRecords.map(record => (
-            <div key={record.id} style={{ marginLeft: 8, fontSize: 12, color: '#1e40af', marginBottom: 2 }}>
-              • {getUserName(record.user_id)}: {record.check_out_time ? new Date(record.check_out_time).toLocaleString('zh-CN') : '未记录'}
+            <div key={record.id} style={{ 
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              fontSize: '13px', 
+              color: '#2563eb',
+              marginBottom: 4,
+              paddingLeft: 20
+            }}>
+              <span style={{ 
+                width: 4, 
+                height: 4, 
+                borderRadius: '50%', 
+                background: '#2563eb',
+                flexShrink: 0
+              }} />
+              <span style={{ fontWeight: 500 }}>{getUserName(record.user_id)}</span>
+              <span style={{ color: '#6b7280' }}>
+                {record.check_out_time ? new Date(record.check_out_time).toLocaleString('zh-CN', {
+                  month: '2-digit',
+                  day: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                }) : '未记录'}
+              </span>
             </div>
           ))}
         </div>
       )}
       
+      {/* 无记录状态 */}
       {attendances.length === 0 && (
-        <div style={{ color: '#6b7280', fontSize: 12, fontStyle: 'italic' }}>暂无打卡记录</div>
+        <div style={{ 
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '24px',
+          color: '#9ca3af', 
+          fontSize: '14px',
+          fontStyle: 'italic'
+        }}>
+          <Clock size={16} style={{ marginRight: 6, opacity: 0.5 }} />
+          暂无打卡记录
+        </div>
       )}
     </div>
   );

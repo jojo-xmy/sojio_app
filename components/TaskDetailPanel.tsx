@@ -1,5 +1,5 @@
 "use client";
-import { useState, ChangeEvent, FormEvent, useEffect, useMemo, useCallback } from 'react';
+import { useState, ChangeEvent, FormEvent, useEffect, useMemo, useCallback, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { Task } from '@/types/task';
 import { UserProfile } from '@/types/user';
@@ -19,6 +19,8 @@ import { updateCalendarEntry, deleteCalendarEntry } from '@/lib/services/calenda
 // import { getCalendarEntryByTaskId } from '@/lib/hotelManagement'; // 不再使用
 import { publishTask, acceptTask, rejectTask, updateTaskDetails, updateOwnerNotes, deleteTask, confirmTaskWithManagerReport } from '@/lib/tasks';
 import { CalendarEntryForm, CalendarEntryFormData } from './CalendarEntryForm';
+import { Button } from './Button';
+import { FileText, ClipboardList, MessageSquare, Send, CheckCircle, Lightbulb } from 'lucide-react';
 
 interface TaskDetailPanelProps {
   task: Task;
@@ -44,6 +46,17 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
     cleaningDate: task.cleaningDate || '',
     lockPassword: task.lockPassword || ''
   });
+
+  // 当进入编辑模式时，重新加载任务的最新数据到编辑表单
+  useEffect(() => {
+    if (editingTask) {
+      setEditFormData({
+        description: task.description || '',
+        cleaningDate: task.cleaningDate || '',
+        lockPassword: task.lockPassword || ''
+      });
+    }
+  }, [editingTask, task.description, task.cleaningDate, task.lockPassword]);
   const [ownerNotesDraft, setOwnerNotesDraft] = useState(task.ownerNotes || '');
   const [managerReportDraft, setManagerReportDraft] = useState(task.managerReportNotes || task.cleanerNotes || '');
   const [savingReport, setSavingReport] = useState(false);
@@ -58,6 +71,19 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
     ownerNotes?: string;
     cleaningDates?: string[];
   }>(null);
+  const assignPanelRef = useRef<HTMLDivElement>(null);
+
+  // 当分配面板打开时，滚动到视图中心
+  useEffect(() => {
+    if (showAssignPanel && assignPanelRef.current) {
+      setTimeout(() => {
+        assignPanelRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+      }, 100);
+    }
+  }, [showAssignPanel]);
 
  useEffect(() => {
    setManagerReportDraft(task.managerReportNotes ?? task.cleanerNotes ?? '');
@@ -419,73 +445,133 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
         guestCount={task.guestCount}
         viewerRole={user.role}
         viewMode={'detail'}
+        isEditing={editingTask}
         capabilities={caps}
         renderBlocks={{
           ownerMessage: (user.role === 'owner' || user.role === 'manager') && (
             <div style={{ 
-              border: '1px solid #e5e7eb', 
-              borderRadius: 8, 
-              padding: 12, 
-              backgroundColor: '#f9fafb',
-              marginBottom: 12
+              border: '1px solid var(--border)', 
+              borderRadius: 'var(--radius)', 
+              padding: '16px', 
+              background: 'var(--card)',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
             }}>
-              <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: '#6b7280' }}>
+              <h4 style={{ 
+                fontSize: '15px', 
+                fontWeight: 600, 
+                marginBottom: 12, 
+                color: 'var(--muted-foreground)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                paddingBottom: 10,
+                borderBottom: '1px solid var(--border)'
+              }}>
+                <FileText size={18} color="var(--muted-foreground)" />
                 房东备注
               </h4>
-              <div style={{ fontSize: 14, color: '#374151', lineHeight: 1.5 }}>
-                {task.ownerNotes || '—'}
+              <div style={{ 
+                fontSize: '14px', 
+                color: 'var(--foreground)', 
+                lineHeight: 1.6,
+                whiteSpace: 'pre-wrap'
+              }}>
+                {task.ownerNotes || <span style={{ color: 'var(--muted-foreground)', fontStyle: 'italic' }}>暂无备注</span>}
               </div>
               {user.role === 'owner' && (
-                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
-                  <button onClick={notifyManagers} style={{ padding: '6px 12px', background: '#10b981', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>📢 通知Manager</button>
-                  <button onClick={openOwnerEdit} style={{ padding: '6px 12px', background: '#6b7280', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>编辑入住登记</button>
-                  <button onClick={deleteOwnerEntry} style={{ padding: '6px 12px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>删除</button>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--border)', flexWrap: 'nowrap', overflow: 'hidden' }}>
+                  <Button onClick={notifyManagers} variant="success" size="sm" className="responsive-text flex-shrink-btn">通知Manager</Button>
+                  <Button onClick={openOwnerEdit} variant="warning" size="sm" className="responsive-text flex-shrink-btn">编辑入住登记</Button>
+                  <Button onClick={deleteOwnerEntry} variant="danger" size="sm" className="responsive-text flex-shrink-btn">删除</Button>
                 </div>
               )}
             </div>
           ),
-          taskDescription: task.description && user.role !== 'owner' && (
+          taskDescription: task.description && user.role !== 'owner' && !editingTask && (
             <div style={{ 
-              border: '1px solid #e5e7eb', 
-              borderRadius: 8, 
-              padding: 12, 
-              backgroundColor: '#f9fafb',
-              marginBottom: 12
+              border: '1px solid var(--border)', 
+              borderRadius: 'var(--radius)', 
+              padding: '16px', 
+              background: 'var(--card)',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
             }}>
-              <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: '#6b7280' }}>
+              <h4 style={{ 
+                fontSize: '15px', 
+                fontWeight: 600, 
+                marginBottom: 12, 
+                color: 'var(--muted-foreground)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                paddingBottom: 10,
+                borderBottom: '1px solid var(--border)'
+              }}>
+                <ClipboardList size={18} color="var(--muted-foreground)" />
                 任务描述
               </h4>
-              <div style={{ fontSize: 14, color: '#374151', lineHeight: 1.5 }}>
+              <div style={{ 
+                fontSize: '14px', 
+                color: 'var(--foreground)', 
+                lineHeight: 1.6,
+                whiteSpace: 'pre-wrap'
+              }}>
                 {task.description}
               </div>
             </div>
           ),
           cleanerNotes: user.role === 'manager' && (
             <div style={{
-              border: '1px solid #e5e7eb',
-              borderRadius: 8,
-              padding: 12,
-              backgroundColor: '#f1f5f9',
-              marginBottom: 12
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius)',
+              padding: '16px',
+              background: 'var(--card)',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
             }}>
-              <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: '#475569' }}>
+              <h4 style={{ 
+                fontSize: '15px', 
+                fontWeight: 600, 
+                marginBottom: 12, 
+                color: 'var(--muted-foreground)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                paddingBottom: 10,
+                borderBottom: '1px solid var(--border)'
+              }}>
+                <MessageSquare size={18} color="var(--muted-foreground)" />
                 清洁员备注
               </h4>
-              <div style={{ fontSize: 14, color: '#1f2937', lineHeight: 1.6 }}>
-                {task.cleanerNotes ? task.cleanerNotes : '清洁员尚未填写退勤备注。'}
+              <div style={{ 
+                fontSize: '14px', 
+                color: 'var(--foreground)', 
+                lineHeight: 1.6,
+                whiteSpace: 'pre-wrap'
+              }}>
+                {task.cleanerNotes ? task.cleanerNotes : <span style={{ color: 'var(--muted-foreground)', fontStyle: 'italic' }}>清洁员尚未填写退勤备注</span>}
               </div>
             </div>
           ),
           managerReport: user.role === 'manager'
             ? (
               <div style={{
-                border: '1px solid #dbeafe',
-                borderRadius: 8,
-                padding: 16,
-                backgroundColor: '#eff6ff',
-                marginBottom: 16
+                border: '1px solid #bfdbfe',
+                borderRadius: 'var(--radius)',
+                padding: '16px',
+                background: '#eff6ff',
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
               }}>
-                <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: '#1d4ed8' }}>
+                <h4 style={{ 
+                  fontSize: '15px', 
+                  fontWeight: 600, 
+                  marginBottom: 12, 
+                  color: '#1e40af',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  paddingBottom: 10,
+                  borderBottom: '1px solid #bfdbfe'
+                }}>
+                  <Send size={18} color="#1e40af" />
                   推送给房东的清扫报告
                 </h4>
                 <textarea
@@ -494,58 +580,71 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                   style={{
                     width: '100%',
                     minHeight: 120,
-                    padding: 10,
-                    borderRadius: 8,
+                    padding: '12px',
+                    borderRadius: 'var(--radius)',
                     border: '1px solid #bfdbfe',
-                    fontSize: 14,
+                    fontSize: '14px',
                     lineHeight: 1.6,
-                    color: '#1f2937'
+                    color: 'var(--foreground)',
+                    background: '#ffffff',
+                    fontFamily: 'inherit',
+                    resize: 'vertical'
                   }}
                   placeholder={task.cleanerNotes ? '基于清洁员备注整理后推送给房东' : '填写需推送给房东的清扫报告'}
                 />
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
-                  <span style={{ fontSize: 12, color: '#2563eb' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, gap: 12, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '13px', color: '#2563eb', flex: 1, minWidth: '200px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Lightbulb size={14} color="#2563eb" />
                     {task.status === 'confirmed'
                       ? '任务已确认，修改后再次推送会同步给房东'
-                      : '确认后任务状态将变为“已确认”，并通知房东'}
+                      : '确认后任务状态将变为"已确认"，并通知房东'}
                   </span>
-                  <button
+                  <Button
                     onClick={handleManagerReportConfirm}
                     disabled={savingReport || managerReportDraft.trim().length === 0}
-                    style={{
-                      padding: '8px 18px',
-                      background: savingReport || managerReportDraft.trim().length === 0 ? '#9ca3af' : '#2563eb',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: 6,
-                      fontWeight: 600,
-                      fontSize: 14,
-                      cursor: savingReport || managerReportDraft.trim().length === 0 ? 'not-allowed' : 'pointer'
-                    }}
+                    variant="primary"
+                    size="sm"
+                    className="responsive-text"
                   >
                     {savingReport
                       ? '处理中...'
                       : task.status === 'confirmed' ? '更新并通知房东' : '确认并通知房东'}
-                  </button>
+                  </Button>
                 </div>
               </div>
             )
             : user.role === 'owner'
               ? (
                 <div style={{
-                  border: '1px solid #bef264',
-                  borderRadius: 8,
-                  padding: 16,
-                  backgroundColor: '#ecfccb',
-                  marginBottom: 16
+                  border: '1px solid #bbf7d0',
+                  borderRadius: 'var(--radius)',
+                  padding: '16px',
+                  background: '#f0fdf4',
+                  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
                 }}>
-                  <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: '#3f6212' }}>
-                    管理员确认的清扫报告
+                  <h4 style={{ 
+                    fontSize: '15px', 
+                    fontWeight: 600, 
+                    marginBottom: 12, 
+                    color: '#15803d',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    paddingBottom: 10,
+                    borderBottom: '1px solid #bbf7d0'
+                  }}>
+                    <CheckCircle size={18} color="#15803d" />
+                    Manager确认报告
                   </h4>
-                  <div style={{ fontSize: 14, color: '#1f2937', lineHeight: 1.6 }}>
+                  <div style={{ 
+                    fontSize: '14px', 
+                    color: '#166534', 
+                    lineHeight: 1.6,
+                    whiteSpace: 'pre-wrap'
+                  }}>
                     {task.managerReportNotes && task.managerReportNotes.trim().length > 0
                       ? task.managerReportNotes
-                      : '经理尚未推送清扫报告。'}
+                      : <span style={{ color: '#4d7c0f', fontStyle: 'italic' }}>Manager尚未推送清扫报告</span>}
                   </div>
                 </div>
               )
@@ -737,6 +836,201 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                   发布后任务将变为"待分配"状态
                 </div>
               )}
+
+              {/* 分配清洁工面板 - 在Manager操作按钮下方展开 */}
+              {showAssignPanel && (
+                <div 
+                  ref={assignPanelRef}
+                  style={{
+                    marginTop: 16,
+                    border: '1px solid #e5e7eb',
+                    borderRadius: 8,
+                    padding: 16,
+                    backgroundColor: '#f9fafb'
+                  }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>
+                      更改清洁人员
+                    </h3>
+                    <button
+                      onClick={() => {
+                        setShowAssignPanel(false);
+                        setSelectedCleaners([]);
+                        setAssignmentNotes('');
+                        setSelectionDirty(false);
+                      }}
+                      style={{ 
+                        color: '#6b7280', 
+                        fontSize: 20, 
+                        background: 'none', 
+                        border: 'none', 
+                        cursor: 'pointer' 
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  {/* 当前已选择的清洁工显示 */}
+                  {selectedCleanerChips.length > 0 && (
+                    <div style={{ marginBottom: 16, padding: 12, backgroundColor: '#dbeafe', borderRadius: 6 }}>
+                      <div style={{ fontSize: 14, fontWeight: 500, color: '#1e40af', marginBottom: 8 }}>
+                        当前已选择清洁工：
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                        {selectedCleanerChips.map(({ id, name }) => (
+                          <div
+                            key={id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              padding: '4px 8px',
+                              backgroundColor: '#ffffff',
+                              border: '1px solid #3b82f6',
+                              borderRadius: 4,
+                              fontSize: 12
+                            }}
+                          >
+                            <span style={{ color: '#1e40af' }}>{name}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveSelectedCleaner(id)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#ef4444',
+                                cursor: 'pointer',
+                                fontSize: 14,
+                                padding: 0,
+                                width: 16,
+                                height: 16,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      {task.status === 'assigned' && (
+                        <div style={{ fontSize: 12, color: '#f59e0b', marginTop: 8 }}>
+                          状态：已分配，待接收
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 可用清洁员列表 */}
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ display: 'block', fontSize: 14, fontWeight: 500, color: '#374151', marginBottom: 8 }}>
+                      选择清洁员 *
+                    </label>
+                    {availableCleaners.length === 0 ? (
+                      <div style={{ fontSize: 14, color: '#6b7280', padding: 12, backgroundColor: '#f3f4f6', borderRadius: 6 }}>
+                        该日期暂无可用清洁员
+                      </div>
+                    ) : (
+                      <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+                        {availableCleaners.map((cleaner) => {
+                          const isSelected = selectedCleaners.includes(cleaner.id);
+                          return (
+                            <div
+                              key={cleaner.id}
+                              onClick={() => handleCleanerToggle(cleaner.id)}
+                              style={{ 
+                                padding: 12,
+                                border: `1px solid ${isSelected ? '#3b82f6' : '#d1d5db'}`,
+                                borderRadius: 6,
+                                cursor: 'pointer',
+                                marginBottom: 8,
+                                backgroundColor: isSelected ? '#dbeafe' : '#ffffff',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 12
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => handleCleanerToggle(cleaner.id)}
+                                style={{ width: 16, height: 16 }}
+                              />
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontWeight: 500, marginBottom: 2 }}>{cleaner.name || '未知姓名'}</div>
+                                <div style={{ fontSize: 12, color: '#6b7280' }}>
+                                  当前任务: {cleaner.currentTaskCount || 0}/{cleaner.maxTaskCapacity || 0}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 备注输入 */}
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ display: 'block', fontSize: 14, fontWeight: 500, color: '#374151', marginBottom: 8 }}>
+                      备注（可选）
+                    </label>
+                    <textarea
+                      value={assignmentNotes}
+                      onChange={(e) => setAssignmentNotes(e.target.value)}
+                      style={{ 
+                        width: '100%', 
+                        padding: 8, 
+                        border: '1px solid #d1d5db', 
+                        borderRadius: 6, 
+                        fontSize: 14,
+                        resize: 'vertical',
+                        minHeight: 60
+                      }}
+                      placeholder="输入备注信息"
+                    />
+                  </div>
+
+                  {/* 操作按钮 */}
+                  <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                    <button
+                      onClick={() => {
+                        setShowAssignPanel(false);
+                        setSelectedCleaners([]);
+                        setAssignmentNotes('');
+                        setSelectionDirty(false);
+                      }}
+                      style={{ 
+                        padding: '8px 16px', 
+                        background: '#f3f4f6', 
+                        color: '#374151', 
+                        border: 'none', 
+                        borderRadius: 6, 
+                        fontWeight: 500, 
+                        cursor: 'pointer' 
+                      }}
+                    >
+                      取消
+                    </button>
+                    <button
+                      onClick={handleAssignSubmit}
+                      disabled={assigning || selectedCleaners.length === 0}
+                      style={{ 
+                        padding: '8px 16px', 
+                        background: assigning || selectedCleaners.length === 0 ? '#9ca3af' : '#2563eb', 
+                        color: '#fff', 
+                        border: 'none', 
+                        borderRadius: 6, 
+                        fontWeight: 500, 
+                        cursor: assigning || selectedCleaners.length === 0 ? 'not-allowed' : 'pointer' 
+                      }}
+                    >
+                      {assigning ? '分配中...' : '确认分配'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ) : null,
           taskAcceptance: caps.showTaskAcceptance ? (
@@ -808,7 +1102,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
               <form onSubmit={handleInventorySubmit} style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 8 }}>
                 <label>毛巾数：<input name="towel" type="number" min={0} value={inventory.towel} onChange={handleInventoryChange} style={{ width: 60, marginLeft: 4 }} /></label>
                 <label>香皂数：<input name="soap" type="number" min={0} value={inventory.soap} onChange={handleInventoryChange} style={{ width: 60, marginLeft: 4 }} /></label>
-                <button type="submit" style={{ padding: '6px 18px', background: '#f59e42', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>提交</button>
+                <Button type="submit" variant="warning" size="sm" className="responsive-text">提交</Button>
               </form>
               {inventorySubmitted && <div style={{ color: '#16a34a', marginTop: 8 }}>已提交：毛巾 {inventory.towel}，香皂 {inventory.soap}</div>}
             </div>
@@ -837,198 +1131,6 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
         document.body
       )}
 
-      {/* 分配清洁工面板 - 在任务卡片下方展开 */}
-      {showAssignPanel && (
-        <div style={{
-          marginTop: 16,
-          border: '1px solid #e5e7eb',
-          borderRadius: 8,
-          padding: 16,
-          backgroundColor: '#f9fafb'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>
-              更改清洁人员
-            </h3>
-            <button
-              onClick={() => {
-                setShowAssignPanel(false);
-                setSelectedCleaners([]);
-                setAssignmentNotes('');
-                setSelectionDirty(false);
-              }}
-              style={{ 
-                color: '#6b7280', 
-                fontSize: 20, 
-                background: 'none', 
-                border: 'none', 
-                cursor: 'pointer' 
-              }}
-            >
-              ×
-            </button>
-          </div>
-
-          {/* 当前已选择的清洁工显示 */}
-          {selectedCleanerChips.length > 0 && (
-            <div style={{ marginBottom: 16, padding: 12, backgroundColor: '#dbeafe', borderRadius: 6 }}>
-              <div style={{ fontSize: 14, fontWeight: 500, color: '#1e40af', marginBottom: 8 }}>
-                当前已选择清洁工：
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {selectedCleanerChips.map(({ id, name }) => (
-                  <div
-                    key={id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      padding: '4px 8px',
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #3b82f6',
-                      borderRadius: 4,
-                      fontSize: 12
-                    }}
-                  >
-                    <span style={{ color: '#1e40af' }}>{name}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveSelectedCleaner(id)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#ef4444',
-                        cursor: 'pointer',
-                        fontSize: 14,
-                        padding: 0,
-                        width: 16,
-                        height: 16,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-              {task.status === 'assigned' && (
-                <div style={{ fontSize: 12, color: '#f59e0b', marginTop: 8 }}>
-                  状态：已分配，待接收
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 可用清洁员列表 */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 14, fontWeight: 500, color: '#374151', marginBottom: 8 }}>
-              选择清洁员 *
-            </label>
-            {availableCleaners.length === 0 ? (
-              <div style={{ fontSize: 14, color: '#6b7280', padding: 12, backgroundColor: '#f3f4f6', borderRadius: 6 }}>
-                该日期暂无可用清洁员
-              </div>
-            ) : (
-              <div style={{ maxHeight: 200, overflowY: 'auto' }}>
-                {availableCleaners.map((cleaner) => {
-                  const isSelected = selectedCleaners.includes(cleaner.id);
-                  return (
-                    <div
-                      key={cleaner.id}
-                      onClick={() => handleCleanerToggle(cleaner.id)}
-                      style={{ 
-                        padding: 12,
-                        border: `1px solid ${isSelected ? '#3b82f6' : '#d1d5db'}`,
-                        borderRadius: 6,
-                        cursor: 'pointer',
-                        marginBottom: 8,
-                        backgroundColor: isSelected ? '#dbeafe' : '#ffffff',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 12
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => handleCleanerToggle(cleaner.id)}
-                        style={{ width: 16, height: 16 }}
-                      />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 500, marginBottom: 2 }}>{cleaner.name || '未知姓名'}</div>
-                        <div style={{ fontSize: 12, color: '#6b7280' }}>
-                          当前任务: {cleaner.currentTaskCount || 0}/{cleaner.maxTaskCapacity || 0}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* 备注输入 */}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 14, fontWeight: 500, color: '#374151', marginBottom: 8 }}>
-              备注（可选）
-            </label>
-            <textarea
-              value={assignmentNotes}
-              onChange={(e) => setAssignmentNotes(e.target.value)}
-              style={{ 
-                width: '100%', 
-                padding: 8, 
-                border: '1px solid #d1d5db', 
-                borderRadius: 6, 
-                fontSize: 14,
-                resize: 'vertical',
-                minHeight: 60
-              }}
-              placeholder="输入备注信息"
-            />
-          </div>
-
-          {/* 操作按钮 */}
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-            <button
-              onClick={() => {
-                setShowAssignPanel(false);
-                setSelectedCleaners([]);
-                setAssignmentNotes('');
-                setSelectionDirty(false);
-              }}
-              style={{ 
-                padding: '8px 16px', 
-                background: '#f3f4f6', 
-                color: '#374151', 
-                border: 'none', 
-                borderRadius: 6, 
-                fontWeight: 500, 
-                cursor: 'pointer' 
-              }}
-            >
-              取消
-            </button>
-            <button
-              onClick={handleAssignSubmit}
-              disabled={assigning || selectedCleaners.length === 0}
-              style={{ 
-                padding: '8px 16px', 
-                background: assigning || selectedCleaners.length === 0 ? '#9ca3af' : '#2563eb', 
-                color: '#fff', 
-                border: 'none', 
-                borderRadius: 6, 
-                fontWeight: 500, 
-                cursor: assigning || selectedCleaners.length === 0 ? 'not-allowed' : 'pointer' 
-              }}
-            >
-              {assigning ? '分配中...' : '确认分配'}
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 } 

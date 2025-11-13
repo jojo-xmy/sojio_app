@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useUserStore } from '@/store/userStore';
 import { LoginRoleSelector } from '@/components/LoginRoleSelector';
-import { ClearAuthButton } from '@/components/ClearAuthButton';
+import { MessageCircle, UserPlus, Loader2, Sparkles, ArrowLeft, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -110,50 +110,78 @@ export default function LoginPage() {
       }}>
         <div style={{
           background: 'white',
-          padding: '2rem',
-          borderRadius: '12px',
-          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+          padding: '2.5rem',
+          borderRadius: '18px',
+          boxShadow: '0 18px 45px rgba(31, 41, 55, 0.18)',
           width: '100%',
-          maxWidth: '400px',
-          textAlign: 'center'
+          maxWidth: '428px',
+          textAlign: 'center',
+          border: '1px solid rgba(148, 163, 184, 0.18)'
         }}>
-          <div style={{ marginBottom: '2rem' }}>
-            <h1 style={{ 
-              fontSize: '1.5rem', 
-              fontWeight: '700', 
-              color: '#1f2937',
-              marginBottom: '0.5rem'
+          <div style={{ 
+            marginBottom: '1.85rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.65rem'
+          }}>
+            <div style={{
+              width: '64px',
+              height: '64px',
+              margin: '0 auto',
+              borderRadius: '20px',
+              background: 'linear-gradient(135deg, rgba(253, 224, 71, 0.32), rgba(251, 191, 36, 0.18))',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 12px 24px rgba(250, 204, 21, 0.22)'
             }}>
-              欢迎使用SoJio清洁系统
-            </h1>
-            <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-              检测到您是新用户，请选择要注册的身份
-            </p>
+              <Sparkles size={30} color="#CA8A04" strokeWidth={1.8} />
+            </div>
+            <div>
+              <h1 style={{ 
+                fontSize: '1.6rem', 
+                fontWeight: 700, 
+                color: '#111827',
+                marginBottom: '0.4rem'
+              }}>
+                欢迎加入 SoJio
+              </h1>
+              <p style={{ color: '#475569', fontSize: '0.95rem', margin: 0 }}>
+                检测到您是新用户，请完善身份信息以完成注册。
+              </p>
+            </div>
           </div>
 
           <button
             onClick={() => router.push(`/register?lineUserId=${detectedLineUserId}`)}
             style={{
               width: '100%',
-              padding: '1rem',
-              background: '#10b981',
+              padding: '1.05rem 1.25rem',
+              background: 'linear-gradient(135deg, #22C55E, #16A34A)',
               color: 'white',
               border: 'none',
-              borderRadius: '8px',
+              borderRadius: '12px',
               fontSize: '1rem',
-              fontWeight: '600',
+              fontWeight: 600,
               cursor: 'pointer',
-              marginBottom: '0.75rem',
-              transition: 'background-color 0.2s'
+              marginBottom: '0.85rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.65rem',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+              boxShadow: '0 18px 30px rgba(34, 197, 94, 0.28)'
             }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = '#059669';
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 22px 36px rgba(34, 197, 94, 0.32)';
             }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = '#10b981';
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 18px 30px rgba(34, 197, 94, 0.28)';
             }}
           >
-            <span style={{ fontSize: '1.25rem', marginRight: '0.5rem' }}>✨</span>
+            <UserPlus size={20} />
             立即注册账号
           </button>
 
@@ -164,36 +192,46 @@ export default function LoginPage() {
             }}
             style={{
               width: '100%',
-              padding: '0.75rem',
-              background: '#6b7280',
-              color: 'white',
+              padding: '0.95rem 1.2rem',
+              background: 'linear-gradient(135deg, #E2E8F0, #CBD5F5)',
+              color: '#1E293B',
               border: 'none',
-              borderRadius: '8px',
-              fontSize: '0.875rem',
-              fontWeight: '500',
+              borderRadius: '12px',
+              fontSize: '0.95rem',
+              fontWeight: 600,
               cursor: 'pointer',
-              transition: 'background-color 0.2s'
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.55rem',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+              boxShadow: '0 12px 22px rgba(148, 163, 184, 0.25)'
             }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = '#4b5563';
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.boxShadow = '0 16px 28px rgba(148, 163, 184, 0.28)';
             }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = '#6b7280';
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 12px 22px rgba(148, 163, 184, 0.25)';
             }}
           >
+            <ArrowLeft size={18} />
             返回登录页面
           </button>
 
           <div style={{ 
-            marginTop: '1.5rem', 
-            padding: '1rem', 
-            background: '#f9fafb', 
-            borderRadius: '8px',
-            fontSize: '0.75rem',
-            color: '#6b7280'
+            marginTop: '1.65rem', 
+            padding: '1.1rem', 
+            background: 'linear-gradient(135deg, rgba(239, 246, 255, 0.85), rgba(221, 214, 254, 0.45))', 
+            borderRadius: '14px',
+            fontSize: '0.82rem',
+            color: '#1F2937',
+            border: '1px solid rgba(191, 219, 254, 0.6)',
+            textAlign: 'left'
           }}>
-            <p style={{ margin: 0 }}>
-              注册后您可以使用同一LINE账号注册多个身份（清洁员、管理者、房东），并随时切换。
+            <p style={{ margin: 0, lineHeight: 1.55 }}>
+              注册完成后，您可以在一个LINE账号下管理多个角色身份，系统会为您保留所有任务与通知。
             </p>
           </div>
         </div>
@@ -217,122 +255,148 @@ export default function LoginPage() {
     }}>
       <div style={{
         background: 'white',
-        padding: '2rem',
-        borderRadius: '12px',
-        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+        padding: '2.5rem',
+        borderRadius: '18px',
+        boxShadow: '0 18px 45px rgba(31, 41, 55, 0.18)',
         width: '100%',
-        maxWidth: '400px',
-        textAlign: 'center'
+        maxWidth: '428px',
+        textAlign: 'center',
+        border: '1px solid rgba(148, 163, 184, 0.18)'
       }}>
-        <div style={{ marginBottom: '2rem' }}>
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          gap: '0.9rem',
+          marginBottom: '1.75rem'
+        }}>
+          <div style={{
+            width: '52px',
+            height: '52px',
+            borderRadius: '16px',
+            background: 'linear-gradient(135deg, rgba(59,130,246,0.12), rgba(56,189,248,0.28))',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 12px 24px rgba(59,130,246,0.16)'
+          }}>
+            <Sparkles size={26} color="#2563EB" strokeWidth={1.8} />
+          </div>
           <h1 style={{ 
-            fontSize: '2rem', 
-            fontWeight: '700', 
-            color: '#1f2937',
-            marginBottom: '0.5rem'
+            fontSize: '2.05rem', 
+            fontWeight: 700, 
+            color: '#111827',
+            margin: 0,
+            letterSpacing: '0.02em'
           }}>
             SoJio Clean Hub
           </h1>
-          <p style={{ 
-            color: '#6b7280', 
-            fontSize: '1rem' 
-          }}>
-            使用LINE账号登录或注册SoJio清洁系统
-          </p>
         </div>
 
         {error && (
           <div style={{
-            background: '#fef2f2',
-            border: '1px solid #fecaca',
-            color: '#dc2626',
-            padding: '1rem',
-            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '0.75rem',
+            background: 'linear-gradient(135deg, rgba(254, 226, 226, 0.85), rgba(254, 202, 202, 0.65))',
+            border: '1px solid rgba(248, 113, 113, 0.45)',
+            color: '#B91C1C',
+            padding: '0.95rem 1.15rem',
+            borderRadius: '12px',
             marginBottom: '1.5rem',
-            fontSize: '0.875rem'
+            fontSize: '0.85rem',
+            boxShadow: '0 6px 18px rgba(248, 113, 113, 0.18)'
           }}>
-            {error}
+            <AlertCircle size={20} style={{ marginTop: '1px' }} />
+            <span>{error}</span>
           </div>
         )}
 
-        {/* 登录按钮 */}
         <button
           onClick={handleLineLogin}
           disabled={loadingLogin}
           style={{
             width: '100%',
-            padding: '1rem',
-            background: loadingLogin ? '#9ca3af' : '#00B900',
+            padding: '1.05rem 1.25rem',
+            background: loadingLogin ? 'linear-gradient(135deg, #94A3B8, #CBD5F5)' : 'linear-gradient(135deg, #0EA5E9, #1D4ED8)',
             color: 'white',
             border: 'none',
-            borderRadius: '8px',
+            borderRadius: '12px',
             fontSize: '1rem',
-            fontWeight: '600',
+            fontWeight: 600,
             cursor: loadingLogin ? 'not-allowed' : 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '0.5rem',
-            transition: 'background-color 0.2s',
-            marginBottom: '0.75rem'
+            gap: '0.65rem',
+            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+            boxShadow: loadingLogin ? 'none' : '0 18px 30px rgba(14, 165, 233, 0.3)',
+            marginBottom: '0.85rem'
+          }}
+          onMouseEnter={(e) => {
+            if (!loadingLogin) {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 22px 40px rgba(14, 165, 233, 0.35)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = loadingLogin ? 'none' : '0 18px 30px rgba(14, 165, 233, 0.3)';
           }}
         >
           {loadingLogin ? (
             <>
-              <div style={{
-                width: '20px',
-                height: '20px',
-                border: '2px solid transparent',
-                borderTop: '2px solid white',
-                borderRadius: '50%',
-                animation: 'spin 1s linear infinite'
-              }} />
+              <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
               登录中...
             </>
           ) : (
             <>
-              <span style={{ fontSize: '1.25rem' }}>📱</span>
+              <MessageCircle size={20} />
               使用LINE登录
             </>
           )}
         </button>
 
-        {/* 注册按钮 */}
         <button
           onClick={handleLineRegister}
           disabled={loadingRegister}
           style={{
             width: '100%',
-            padding: '1rem',
-            background: loadingRegister ? '#9ca3af' : '#10b981',
+            padding: '1.05rem 1.25rem',
+            background: loadingRegister ? 'linear-gradient(135deg, #94A3B8, #CBD5F5)' : 'linear-gradient(135deg, #22C55E, #16A34A)',
             color: 'white',
             border: 'none',
-            borderRadius: '8px',
+            borderRadius: '12px',
             fontSize: '1rem',
-            fontWeight: '600',
+            fontWeight: 600,
             cursor: loadingRegister ? 'not-allowed' : 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '0.5rem',
-            transition: 'background-color 0.2s'
+            gap: '0.65rem',
+            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+            boxShadow: loadingRegister ? 'none' : '0 18px 30px rgba(34, 197, 94, 0.28)'
+          }}
+          onMouseEnter={(e) => {
+            if (!loadingRegister) {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 22px 36px rgba(34, 197, 94, 0.32)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = loadingRegister ? 'none' : '0 18px 30px rgba(34, 197, 94, 0.28)';
           }}
         >
           {loadingRegister ? (
             <>
-              <div style={{
-                width: '20px',
-                height: '20px',
-                border: '2px solid transparent',
-                borderTop: '2px solid white',
-                borderRadius: '50%',
-                animation: 'spin 1s linear infinite'
-              }} />
+              <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
               注册中...
             </>
           ) : (
             <>
-              <span style={{ fontSize: '1.25rem' }}>✨</span>
+              <UserPlus size={20} />
               没有账号？使用LINE注册
             </>
           )}
@@ -340,29 +404,49 @@ export default function LoginPage() {
 
         <div style={{ 
           marginTop: '2rem', 
-          padding: '1rem', 
-          background: '#f9fafb', 
-          borderRadius: '8px',
-          fontSize: '0.875rem',
-          color: '#6b7280'
+          padding: '1.15rem', 
+          background: 'linear-gradient(135deg, rgba(239, 246, 255, 0.85), rgba(209, 250, 229, 0.55))', 
+          borderRadius: '14px',
+          fontSize: '0.88rem',
+          color: '#1F2937',
+          textAlign: 'left',
+          border: '1px solid rgba(191, 219, 254, 0.6)'
         }}>
-          <h3 style={{ marginBottom: '0.5rem', fontWeight: '600' }}>说明</h3>
-          <ul style={{ textAlign: 'left', margin: 0, paddingLeft: '1rem' }}>
-            <li>如果您已有账号，系统会检测您的所有身份</li>
-            <li>同一LINE账号可注册多个角色（清洁员、管理者、房东）</li>
-            <li>可以随时在系统中切换身份</li>
-            <li>首次注册默认角色为清洁员</li>
+          <h3 style={{ 
+            margin: 0, 
+            marginBottom: '0.75rem', 
+            fontWeight: 600, 
+            color: '#1E3A8A',
+            fontSize: '0.95rem'
+          }}>
+            说明
+          </h3>
+          <ul style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '0.65rem', 
+            margin: 0, 
+            padding: 0, 
+            listStyle: 'none' 
+          }}>
+            {[
+              '已有账号的用户将自动检测并载入全部身份。',
+              '同一LINE账号可注册清洁员、管理者、房东等多个角色。',
+              '完成认证后可在仪表板中自由切换身份。'
+            ].map((item) => (
+              <li key={item} style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', color: '#0F172A' }}>
+                <span style={{
+                  marginTop: '2px',
+                  minWidth: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #38BDF8, #22C55E)',
+                  boxShadow: '0 4px 10px rgba(56, 189, 248, 0.35)'
+                }} />
+                <span style={{ lineHeight: 1.5 }}>{item}</span>
+              </li>
+            ))}
           </ul>
-        </div>
-
-        {/* 清除认证状态按钮 */}
-        <div style={{ 
-          marginTop: '1.5rem', 
-          textAlign: 'center',
-          paddingTop: '1rem',
-          borderTop: '1px solid #e5e7eb'
-        }}>
-          <ClearAuthButton />
         </div>
 
         <style jsx>{`

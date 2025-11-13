@@ -1,23 +1,89 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+
 export default function Home() {
+  const [showLogin, setShowLogin] = useState(false);
+
+  useEffect(() => {
+    const handleMouseMove = () => {
+      setShowLogin(true);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
   return (
-    <main style={{ maxWidth: 800, margin: '2rem auto', padding: 24 }}>
-      <h1 style={{ fontSize: 28, fontWeight: 600, marginBottom: 24 }}>SoJio Clean Hub</h1>
-      <p style={{ fontSize: 16, color: '#666', marginBottom: 32 }}>
-        欢迎使用SoJio清洁任务管理系统
-      </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <a href="/login" style={{ 
-          display: 'block', 
-          padding: '16px 24px', 
-          background: '#3b82f6', 
-          color: '#fff', 
-          textDecoration: 'none', 
-          borderRadius: 8, 
-          fontWeight: 600,
-          textAlign: 'center',
-          transition: 'background-color 0.2s'
-        }}>🔐 登录系统</a>
+    <main style={{ 
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '2rem',
+      background: '#ffffff'
+    }}>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '2.5rem'
+      }}>
+        {/* Logo */}
+        <img 
+          src="/SOJIO_LOGO.png"
+          alt="SOJIO"
+          className="fade-in-down"
+          style={{
+            width: '280px',
+            height: 'auto',
+            marginBottom: '1rem',
+            animation: 'fadeInDown 1s ease-out'
+          }}
+        />
+
+        {/* Slogan */}
+        <h1 
+          className="fade-in-down"
+          style={{
+            fontSize: '1.125rem',
+            fontWeight: '500',
+            color: '#498AC6',
+            letterSpacing: '0.1em',
+            margin: 0,
+            marginTop: '-30px',
+            marginLeft: '40px',
+            textAlign: 'center',
+            fontFamily: 'Arial, sans-serif',
+            animation: 'fadeInDown 1s ease-out 0.2s',
+            animationFillMode: 'both'
+          }}
+        >
+          MANAGE CLEANING EASIER
+        </h1>
+
+        {/* Login Link */}
+        <a 
+          href="/login" 
+          className="login-link"
+          style={{ 
+            fontSize: '1.125rem',
+            fontWeight: '500',
+            color: '#498AC6',
+            fontFamily: 'Arial, sans-serif',
+            letterSpacing: '0.05em',
+            padding: '0.5rem 0',
+            marginTop: '-30px',
+            marginLeft: '10px',
+            opacity: showLogin ? 1 : 0,
+            transition: 'opacity 0.5s ease',
+            pointerEvents: showLogin ? 'auto' : 'none'
+          }}
+        >
+          LOG IN
+        </a>
       </div>
     </main>
   );
-} 
+}

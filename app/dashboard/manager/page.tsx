@@ -71,28 +71,24 @@ export default function ManagerDashboard() {
             <HeaderButton 
               onClick={() => setViewMode(viewMode === 'list' ? 'calendar' : 'list')}
               variant="secondary"
-              icon={viewMode === 'list' ? '📅' : '📋'}
             >
               {viewMode === 'list' ? '日历视图' : '列表视图'}
             </HeaderButton>
             <HeaderButton 
               onClick={() => router.push('/dashboard/manager/hotels')}
               variant="primary"
-              icon="🏨"
             >
               酒店列表
             </HeaderButton>
             <HeaderButton 
               onClick={() => router.push('/dashboard/manager/applications')}
               variant="success"
-              icon="✓"
             >
               审核申请
             </HeaderButton>
             <HeaderButton 
               onClick={() => setShowCreateForm(true)}
               variant="primary"
-              icon="➕"
             >
               新建任务
             </HeaderButton>

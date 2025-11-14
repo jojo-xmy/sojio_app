@@ -13,6 +13,7 @@ import { getTaskCapabilities } from '@/lib/taskCapabilities';
 import { useManagerDashboard } from '@/hooks/usePageRefresh';
 import { Task } from '@/types/task';
 import { supabase } from '@/lib/supabase';
+import { useTranslation } from '@/hooks/useTranslation';
 
 
 export default function ManagerDashboard() {
@@ -26,6 +27,7 @@ export default function ManagerDashboard() {
   
   // 使用新的全局 refresh 管理器
   const { tasksWithAttendance, loading, refresh: loadAllAttendanceStatus } = useManagerDashboard();
+  const { t } = useTranslation('dashboard.manager');
 
 
 
@@ -65,32 +67,32 @@ export default function ManagerDashboard() {
   return (
     <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
       <DashboardHeader 
-        title="任务管理"
+        title={t('title')}
         actions={
           <>
             <HeaderButton 
               onClick={() => setViewMode(viewMode === 'list' ? 'calendar' : 'list')}
               variant="secondary"
             >
-              {viewMode === 'list' ? '日历视图' : '列表视图'}
+              {viewMode === 'list' ? t('actions.toggleViewToCalendar') : t('actions.toggleViewToList')}
             </HeaderButton>
             <HeaderButton 
               onClick={() => router.push('/dashboard/manager/hotels')}
               variant="primary"
             >
-              酒店列表
+              {t('actions.hotels')}
             </HeaderButton>
             <HeaderButton 
               onClick={() => router.push('/dashboard/manager/applications')}
               variant="success"
             >
-              审核申请
+              {t('actions.applications')}
             </HeaderButton>
             <HeaderButton 
               onClick={() => setShowCreateForm(true)}
               variant="primary"
             >
-              新建任务
+              {t('actions.createTask')}
             </HeaderButton>
           </>
         }
@@ -120,7 +122,7 @@ export default function ManagerDashboard() {
             onClick={() => isDetailExpanded && setIsDetailExpanded(false)}
           >
             {loading ? (
-              <div style={{ color: '#888', textAlign: 'center', padding: '2rem' }}>加载中...</div>
+              <div style={{ color: '#888', textAlign: 'center', padding: '2rem' }}>{t('list.loading')}</div>
             ) : (
               <>
                 {tasksWithAttendance.map(task => {
@@ -156,7 +158,7 @@ export default function ManagerDashboard() {
                     />
                   );
                 })}
-                {tasksWithAttendance.length === 0 && <div style={{ color: '#888' }}>暂无任务</div>}
+                {tasksWithAttendance.length === 0 && <div style={{ color: '#888' }}>{t('list.empty')}</div>}
               </>
             )}
           </div>
@@ -177,7 +179,7 @@ export default function ManagerDashboard() {
                 >
                   <div className="text-center px-4">
                     <div className="text-lg font-medium mb-2">📋</div>
-                    <div className="text-sm">点击任务卡片以查看详情</div>
+                    <div className="text-sm">{t('list.detailHint')}</div>
                   </div>
                 </div>
               ) : (
@@ -186,10 +188,10 @@ export default function ManagerDashboard() {
                     <button
                       onClick={() => setIsDetailExpanded(!isDetailExpanded)}
                       className="text-xs px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-md transition-all duration-200 flex items-center gap-1.5 shadow-sm hover:shadow"
-                      title={isDetailExpanded ? "收缩详情面板" : "展开详情面板"}
+                      title={isDetailExpanded ? t('list.collapseTooltip') : t('list.expandTooltip')}
                     >
                       <span>{isDetailExpanded ? '◀' : '▶'}</span>
-                      <span>{isDetailExpanded ? '收缩' : '展开'}</span>
+                      <span>{isDetailExpanded ? t('list.collapse') : t('list.expand')}</span>
                     </button>
                   </div>
                   <TaskDetailPanel 

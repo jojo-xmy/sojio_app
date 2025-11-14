@@ -3,15 +3,19 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useUserStore } from '@/store/userStore';
 import { LoginRoleSelector } from '@/components/LoginRoleSelector';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { useTranslation } from '@/hooks/useTranslation';
 import { MessageCircle, UserPlus, Loader2, Sparkles, ArrowLeft, AlertCircle } from 'lucide-react';
 
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t: tLogin } = useTranslation('login');
+  const { t: tCommon } = useTranslation();
   const { user, isInitialized } = useUserStore();
   const [loadingLogin, setLoadingLogin] = useState(false);
   const [loadingRegister, setLoadingRegister] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
   const [showRoleSelector, setShowRoleSelector] = useState(false);
   const [detectedLineUserId, setDetectedLineUserId] = useState<string | null>(null);
 
@@ -21,14 +25,14 @@ function LoginContent() {
     if (errorParam) {
       switch (errorParam) {
         case 'oauth_failed':
-          setError('LINE登录失败，请重试');
-          break;
         case 'login_failed':
-          setError('登录处理失败，请重试');
+          setErrorCode(errorParam);
           break;
         default:
-          setError('登录过程中发生错误');
+          setErrorCode('generic');
       }
+    } else {
+      setErrorCode(null);
     }
   }, [searchParams]);
 
@@ -41,7 +45,7 @@ function LoginContent() {
 
   const handleLineLogin = () => {
     setLoadingLogin(true);
-    setError(null);
+    setErrorCode(null);
     
     // 重定向到LINE OAuth授权页面进行登录检测
     window.location.href = '/api/auth/line?mode=check_roles';
@@ -49,7 +53,7 @@ function LoginContent() {
 
   const handleLineRegister = () => {
     setLoadingRegister(true);
-    setError(null);
+    setErrorCode(null);
     
     // 重定向到LINE OAuth授权页面进行注册
     window.location.href = '/api/auth/line?mode=register';
@@ -71,6 +75,19 @@ function LoginContent() {
   }, [searchParams, router]);
 
   // 注：登录页不再提供退出登录按钮
+
+  const errorMessage = errorCode
+    ? (() => {
+        switch (errorCode) {
+          case 'oauth_failed':
+            return tLogin('errors.oauthFailed');
+          case 'login_failed':
+            return tLogin('errors.loginFailed');
+          default:
+            return tLogin('errors.generic');
+        }
+      })()
+    : null;
 
   // 显示角色选择器
   if (showRoleSelector && detectedLineUserId) {
@@ -138,16 +155,19 @@ function LoginContent() {
               <Sparkles size={30} color="#CA8A04" strokeWidth={1.8} />
             </div>
             <div>
-              <h1 style={{ 
+              <h1
+                style={{ 
                 fontSize: '1.6rem', 
                 fontWeight: 700, 
                 color: '#111827',
                 marginBottom: '0.4rem'
-              }}>
-                欢迎加入 SoJio
+              }}
+                data-translatable
+              >
+                {tLogin('welcomeTitle')}
               </h1>
-              <p style={{ color: '#475569', fontSize: '0.95rem', margin: 0 }}>
-                检测到您是新用户，请完善身份信息以完成注册。
+              <p style={{ color: '#475569', fontSize: '0.95rem', margin: 0 }} data-translatable>
+                {tLogin('newUserDetected')}
               </p>
             </div>
           </div>
@@ -182,7 +202,7 @@ function LoginContent() {
             }}
           >
             <UserPlus size={20} />
-            立即注册账号
+            {tLogin('registerNow')}
           </button>
 
           <button
@@ -217,7 +237,7 @@ function LoginContent() {
             }}
           >
             <ArrowLeft size={18} />
-            返回登录页面
+            {tLogin('backToLogin')}
           </button>
 
           <div style={{ 
@@ -230,8 +250,8 @@ function LoginContent() {
             border: '1px solid rgba(191, 219, 254, 0.6)',
             textAlign: 'left'
           }}>
-            <p style={{ margin: 0, lineHeight: 1.55 }}>
-              注册完成后，您可以在一个LINE账号下管理多个角色身份，系统会为您保留所有任务与通知。
+            <p style={{ margin: 0, lineHeight: 1.55 }} data-translatable>
+              {tLogin('registerSuccessNote')}
             </p>
           </div>
         </div>
@@ -263,6 +283,9 @@ function LoginContent() {
         textAlign: 'center',
         border: '1px solid rgba(148, 163, 184, 0.18)'
       }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+          <LanguageSwitcher />
+        </div>
         <div style={{ 
           display: 'flex', 
           flexDirection: 'column',
@@ -290,11 +313,11 @@ function LoginContent() {
             margin: 0,
             letterSpacing: '0.02em'
           }}>
-            SoJio Clean Hub
+            {tCommon('common.appName')}
           </h1>
         </div>
 
-        {error && (
+        {errorMessage && (
           <div style={{
             display: 'flex',
             alignItems: 'flex-start',
@@ -309,7 +332,7 @@ function LoginContent() {
             boxShadow: '0 6px 18px rgba(248, 113, 113, 0.18)'
           }}>
             <AlertCircle size={20} style={{ marginTop: '1px' }} />
-            <span>{error}</span>
+            <span>{errorMessage}</span>
           </div>
         )}
 
@@ -348,12 +371,12 @@ function LoginContent() {
           {loadingLogin ? (
             <>
               <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
-              登录中...
+              {tLogin('states.loggingIn')}
             </>
           ) : (
             <>
               <MessageCircle size={20} />
-              使用LINE登录
+              {tLogin('lineLogin')}
             </>
           )}
         </button>
@@ -392,12 +415,12 @@ function LoginContent() {
           {loadingRegister ? (
             <>
               <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
-              注册中...
+              {tLogin('states.registering')}
             </>
           ) : (
             <>
               <UserPlus size={20} />
-              没有账号？使用LINE注册
+              {tLogin('lineRegister')}
             </>
           )}
         </button>
@@ -412,14 +435,17 @@ function LoginContent() {
           textAlign: 'left',
           border: '1px solid rgba(191, 219, 254, 0.6)'
         }}>
-          <h3 style={{ 
+          <h3
+            style={{ 
             margin: 0, 
             marginBottom: '0.75rem', 
             fontWeight: 600, 
             color: '#1E3A8A',
             fontSize: '0.95rem'
-          }}>
-            说明
+          }}
+            data-translatable
+          >
+            {tLogin('loginDescriptionTitle')}
           </h3>
           <ul style={{ 
             display: 'flex', 
@@ -429,12 +455,8 @@ function LoginContent() {
             padding: 0, 
             listStyle: 'none' 
           }}>
-            {[
-              '已有账号的用户将自动检测并载入全部身份。',
-              '同一LINE账号可注册清洁员、管理者、房东等多个角色。',
-              '完成认证后可在仪表板中自由切换身份。'
-            ].map((item) => (
-              <li key={item} style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', color: '#0F172A' }}>
+            {[tLogin('descriptionOne'), tLogin('descriptionTwo'), tLogin('descriptionThree')].map((item) => (
+              <li key={item} style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', color: '#0F172A' }} data-translatable>
                 <span style={{
                   marginTop: '2px',
                   minWidth: '8px',
@@ -462,13 +484,20 @@ function LoginContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
-      <div className="text-center">
-        <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
-        <p>加载中...</p>
-      </div>
-    </div>}>
+    <Suspense fallback={<SuspenseFallback />}>
       <LoginContent />
     </Suspense>
+  );
+}
+
+function SuspenseFallback() {
+  const { t: tCommon } = useTranslation();
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
+        <p>{tCommon('common.loading')}</p>
+      </div>
+    </div>
   );
 }

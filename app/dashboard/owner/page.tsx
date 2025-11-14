@@ -8,6 +8,7 @@ import { OwnerTaskCalendar } from '@/components/OwnerTaskCalendar';
 import { CalendarEntryForm, CalendarEntryFormData } from '@/components/CalendarEntryForm';
 import { createCalendarEntry } from '@/lib/services/calendarEntryService';
 import { supabase } from '@/lib/supabase';
+import { useTranslation } from '@/hooks/useTranslation';
 
 
 export default function OwnerDashboard() {
@@ -18,6 +19,7 @@ export default function OwnerDashboard() {
   const [ownerHotels, setOwnerHotels] = useState<Array<{id: string; name: string; address: string}>>([]);
   const [existingEntries, setExistingEntries] = useState<Array<{id: string; checkInDate: string; checkOutDate: string; hotelId: string}>>([]);
   const calendarRef = useRef<{ refreshData: () => void }>(null);
+  const { t } = useTranslation('dashboard.owner');
 
   useEffect(() => {
     if (!isInitialized) return;
@@ -81,7 +83,7 @@ export default function OwnerDashboard() {
       
       // 使用表单中选择的酒店ID
       if (!formData.hotelId) {
-        alert('请选择酒店');
+        alert(t('alerts.selectHotel'));
         return;
       }
       
@@ -105,7 +107,7 @@ export default function OwnerDashboard() {
       }
     } catch (err) {
       console.error('创建入住登记失败:', err);
-      alert('创建入住登记失败');
+      alert(t('alerts.createFailed'));
     } finally {
       setCreating(false);
     }
@@ -117,20 +119,20 @@ export default function OwnerDashboard() {
   return (
     <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
       <DashboardHeader 
-        title="入住日历"
+        title={t('title')}
         actions={
           <>
             <HeaderButton 
               onClick={() => setShowCreateForm(true)}
               variant="warning"
             >
-              添加入住登记
+              {t('actions.addEntry')}
             </HeaderButton>
             <HeaderButton 
               onClick={() => router.push('/dashboard/owner/hotels')}
               variant="success"
             >
-              管理酒店
+              {t('actions.manageHotels')}
             </HeaderButton>
           </>
         }
@@ -161,7 +163,7 @@ export default function OwnerDashboard() {
                 onSubmit={handleCreateEntry}
                 onCancel={() => setShowCreateForm(false)}
                 loading={creating}
-                title="添加入住登记"
+                title={t('modals.entryTitle')}
                 hotels={ownerHotels}
                 showHotelSelection={true}
                 existingEntries={existingEntries}

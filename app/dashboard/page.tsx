@@ -2,10 +2,12 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/userStore';
+import { useTranslation } from '@/hooks/useTranslation';
 
 export default function DashboardPage() {
   const router = useRouter();
   const { user, isInitialized } = useUserStore();
+  const { t } = useTranslation('dashboard');
 
   useEffect(() => {
     // 等待用户状态初始化
@@ -60,7 +62,7 @@ export default function DashboardPage() {
           margin: '0 auto 1rem'
         }} />
         <p style={{ color: '#6b7280', fontSize: '1rem' }}>
-          正在加载您的仪表板...
+          {t('loadingMessage')}
         </p>
         
         <style jsx>{`

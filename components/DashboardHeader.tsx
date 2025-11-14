@@ -1,6 +1,7 @@
 "use client";
 import { UserProfileMenu } from './UserProfileMenu';
 import { ReactNode } from 'react';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
 interface DashboardHeaderProps {
   title?: string;
@@ -53,17 +54,20 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
           )}
         </div>
 
-        {/* 右侧：操作按钮 */}
-        {actions && (
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center',
-            gap: '12px',
-            flexShrink: 0
-          }}>
-            {actions}
-          </div>
-        )}
+        {/* 右侧：语言切换 + 操作按钮 */}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center',
+          gap: '12px',
+          flexShrink: 0
+        }}>
+          <LanguageSwitcher />
+          {actions && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {actions}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

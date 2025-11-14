@@ -13,6 +13,7 @@ export interface CalendarEntryFormData {
 
 export interface ExistingCalendarEntry {
   id: string;
+  hotelId: string;
   checkInDate: string;
   checkOutDate: string;
   roomNumber?: string;
@@ -29,6 +30,7 @@ interface CalendarEntryFormProps {
   showHotelSelection?: boolean;
   existingEntries?: ExistingCalendarEntry[];
   currentEntryId?: string;
+  hotelId?: string;
 }
 
 export const CalendarEntryForm: React.FC<CalendarEntryFormProps> = ({
@@ -41,7 +43,8 @@ export const CalendarEntryForm: React.FC<CalendarEntryFormProps> = ({
   hotels = [],
   showHotelSelection = false,
   existingEntries = [],
-  currentEntryId
+  currentEntryId,
+  hotelId
 }) => {
   const buildInitialCleaningDates = (data: Partial<CalendarEntryFormData>) => {
     if (data.cleaningDates && data.cleaningDates.length > 0) {
@@ -75,13 +78,27 @@ export const CalendarEntryForm: React.FC<CalendarEntryFormProps> = ({
    * 计算已占用日期集合（Airbnb 逻辑）
    * 已占用区间：[check_in_date, check_out_date)（左闭右开）
    * 退房日可作为新入住日
+   * 仅计算当前酒店的已占用日期
    */
   const getOccupiedDates = useMemo(() => {
     const occupied = new Set<string>();
     
+    // 确定目标酒店ID：优先使用 hotelId prop，其次使用表单中的 hotelId
+    const targetHotelId = hotelId || formData.hotelId;
+    
+    // 如果没有指定酒店ID，则不计算占用日期
+    if (!targetHotelId) {
+      return occupied;
+    }
+    
     existingEntries.forEach(entry => {
       // 跳过当前正在编辑的登记
       if (currentEntryId && entry.id === currentEntryId) {
+        return;
+      }
+      
+      // 仅计算同一酒店的占用日期
+      if (entry.hotelId !== targetHotelId) {
         return;
       }
       
@@ -97,7 +114,7 @@ export const CalendarEntryForm: React.FC<CalendarEntryFormProps> = ({
     });
     
     return occupied;
-  }, [existingEntries, currentEntryId]);
+  }, [existingEntries, currentEntryId, hotelId, formData.hotelId]);
 
   /**
    * 检查日期是否被占用

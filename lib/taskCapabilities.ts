@@ -149,12 +149,18 @@ export function getTaskCapabilities(
       if (!caps.visibleBlocks.includes('cleanerNotes')) caps.visibleBlocks.push('cleanerNotes');
       if (!caps.visibleBlocks.includes('managerReport')) caps.visibleBlocks.push('managerReport');
     }
-    // 出勤汇总与附件只读（经理）
-    if (status !== 'draft') {
+    
+    // 出勤状态：分配清洁工后显示
+    if (status === 'assigned' || status === 'accepted' || status === 'in_progress' || status === 'completed' || status === 'confirmed') {
       caps.showAttendanceSummary = true;
       if (!caps.visibleBlocks.includes('attendanceSummary')) caps.visibleBlocks.push('attendanceSummary');
+    }
+    
+    // 图片附件：清扫完成后显示
+    if (status === 'completed' || status === 'confirmed') {
       if (!caps.visibleBlocks.includes('attachments')) caps.visibleBlocks.push('attachments');
     }
+    
     caps.showLockPassword = true;
 
     // 接受后关键字段修改需清洁工确认（由外层在保存时计算 pendingCleanerAck）
@@ -185,11 +191,12 @@ export function getTaskCapabilities(
         caps.showOwnAttendanceTimes = hasCheckIn || hasCheckOut;
         if (!caps.visibleBlocks.includes('attendanceTimes')) caps.visibleBlocks.push('attendanceTimes');
       }
-      if (status === 'in_progress' || status === 'completed') {
-        caps.canUploadImages = true;
-        caps.canPostCleanNotes = true;
+      // 已出勤后可以上传图片和填写备注
+      if (status === 'in_progress' || status === 'completed' || status === 'confirmed') {
+        caps.canUploadImages = hasCheckIn; // 只有出勤后才能上传
+        caps.canPostCleanNotes = hasCheckIn; // 只有出勤后才能填写备注
         if (!caps.visibleBlocks.includes('attachments')) caps.visibleBlocks.push('attachments');
-        if (!caps.visibleBlocks.includes('notes')) caps.visibleBlocks.push('notes');
+        if (!caps.visibleBlocks.includes('cleanerNotes')) caps.visibleBlocks.push('cleanerNotes');
       }
     }
     // 待确认横幅（LINE 预留）

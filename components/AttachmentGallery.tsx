@@ -1,14 +1,44 @@
 "use client";
 import React, { useState } from 'react';
-import { TaskImage } from '@/lib/upload';
-import { Image as ImageIcon, Clock, ZoomIn } from 'lucide-react';
+import { TaskImage, deleteImage } from '@/lib/upload';
+import { Image as ImageIcon, Clock, ZoomIn, X } from 'lucide-react';
+import { useUserStore } from '@/store/userStore';
 
 interface AttachmentGalleryProps {
   images: TaskImage[];
+  onImageDeleted?: () => void;
+  canDelete?: boolean; // 是否可以删除图片
 }
 
-export const AttachmentGallery: React.FC<AttachmentGalleryProps> = ({ images }) => {
+export const AttachmentGallery: React.FC<AttachmentGalleryProps> = ({ 
+  images, 
+  onImageDeleted,
+  canDelete = true 
+}) => {
+  const user = useUserStore(s => s.user);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDeleteImage = async (e: React.MouseEvent, imageId: string) => {
+    e.stopPropagation();
+    
+    if (!confirm('确定要删除这张图片吗？')) return;
+
+    setDeletingId(imageId);
+    try {
+      const success = await deleteImage(imageId);
+      if (success) {
+        onImageDeleted?.();
+      } else {
+        alert('删除失败，请重试');
+      }
+    } catch (error) {
+      console.error('删除图片失败:', error);
+      alert('删除失败，请重试');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   if (!images || images.length === 0) {
     return (
@@ -32,6 +62,12 @@ export const AttachmentGallery: React.FC<AttachmentGalleryProps> = ({ images }) 
 
   return (
     <>
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
       <div style={{ 
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
@@ -73,7 +109,7 @@ export const AttachmentGallery: React.FC<AttachmentGalleryProps> = ({ images }) 
                   objectFit: 'cover'
                 }}
               />
-              {/* 悬停放大图标 */}
+              {/* 右上角放大图标 */}
               <div style={{
                 position: 'absolute',
                 top: 4,
@@ -87,6 +123,48 @@ export const AttachmentGallery: React.FC<AttachmentGalleryProps> = ({ images }) 
               }}>
                 <ZoomIn size={14} color="#ffffff" />
               </div>
+              {/* 右下角删除图标（仅清洁员工作中可见） */}
+              {user?.role === 'cleaner' && canDelete && (
+                <div 
+                  style={{
+                    position: 'absolute',
+                    bottom: 4,
+                    right: 4,
+                    background: deletingId === image.id ? 'rgba(156, 163, 175, 0.8)' : 'rgba(239, 68, 68, 0.8)',
+                    borderRadius: '4px',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: deletingId === image.id ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onClick={(e) => !deletingId && handleDeleteImage(e, image.id)}
+                  onMouseEnter={(e) => {
+                    if (!deletingId) {
+                      e.currentTarget.style.background = 'rgba(239, 68, 68, 1)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!deletingId) {
+                      e.currentTarget.style.background = 'rgba(239, 68, 68, 0.8)';
+                    }
+                  }}
+                >
+                  {deletingId === image.id ? (
+                    <div style={{
+                      width: 14,
+                      height: 14,
+                      border: '2px solid #ffffff',
+                      borderTopColor: 'transparent',
+                      borderRadius: '50%',
+                      animation: 'spin 0.6s linear infinite'
+                    }} />
+                  ) : (
+                    <X size={14} color="#ffffff" />
+                  )}
+                </div>
+              )}
             </div>
             <div style={{ 
               padding: '6px 8px',

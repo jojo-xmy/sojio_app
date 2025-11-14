@@ -10,6 +10,7 @@ import { AttendanceSummary } from '@/components/AttendanceSummary';
 import { AttendanceActions } from '@/components/AttendanceActions';
 import { ImageUpload } from '@/components/ImageUpload';
 import { AttachmentGallery } from '@/components/AttachmentGallery';
+import { CleaningCompletionForm } from '@/components/CleaningCompletionForm';
 import { getTaskCapabilities } from '@/lib/taskCapabilities';
 import { TaskCard } from '@/components/TaskCard';
 import { useGlobalRefresh } from '@/hooks/useRefresh';
@@ -71,7 +72,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
     ownerNotes?: string;
     cleaningDates?: string[];
   }>(null);
-  const [existingEntriesForHotel, setExistingEntriesForHotel] = useState<Array<{id: string; checkInDate: string; checkOutDate: string}>>([]);
+  const [existingEntriesForHotel, setExistingEntriesForHotel] = useState<Array<{id: string; hotelId: string; checkInDate: string; checkOutDate: string}>>([]);
   const assignPanelRef = useRef<HTMLDivElement>(null);
 
   // 当分配面板打开时，滚动到视图中心
@@ -182,12 +183,13 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
       try {
         const { data, error } = await supabase
           .from('calendar_entries')
-          .select('id, check_in_date, check_out_date')
+          .select('id, hotel_id, check_in_date, check_out_date')
           .eq('hotel_id', task.hotelId);
 
         if (!error && data) {
           setExistingEntriesForHotel(data.map(e => ({
             id: e.id,
+            hotelId: e.hotel_id,
             checkInDate: e.check_in_date,
             checkOutDate: e.check_out_date
           })));
@@ -541,7 +543,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
               </div>
             </div>
           ),
-          cleanerNotes: user.role === 'manager' && (
+          cleanerNotes: user.role === 'manager' ? (
             <div style={{
               border: '1px solid var(--border)',
               borderRadius: 'var(--radius)',
@@ -572,7 +574,16 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                 {task.cleanerNotes ? task.cleanerNotes : <span style={{ color: 'var(--muted-foreground)', fontStyle: 'italic' }}>清洁员尚未填写退勤备注</span>}
               </div>
             </div>
-          ),
+          ) : user.role === 'cleaner' && (currentStatus === 'checked_in' || currentStatus === 'checked_out') ? (
+            <CleaningCompletionForm 
+              task={taskDetails || task}
+              isCheckedOut={currentStatus === 'checked_out'}
+              onSubmitSuccess={async () => { 
+                await refresh(); 
+                onTaskUpdate?.(); 
+              }}
+            />
+          ) : null,
           managerReport: user.role === 'manager'
             ? (
               <div style={{
@@ -1107,7 +1118,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
           ) : null,
           attachments: (
             <>
-              {user.role === 'cleaner' && (
+              {user.role === 'cleaner' && currentStatus === 'checked_in' && (
                 <ImageUpload
                   taskId={task.id}
                   userId={user.id.toString()}
@@ -1115,19 +1126,12 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                   onUploaded={async (count) => { if (count > 0) { await refresh(); } }}
                 />
               )}
-              <AttachmentGallery images={taskImages} />
+              <AttachmentGallery 
+                images={taskImages} 
+                onImageDeleted={async () => { await refresh(); }}
+                canDelete={user.role === 'cleaner' && currentStatus === 'checked_in'}
+              />
             </>
-          ),
-          notes: (
-            <div>
-              <b>备品统计：</b>
-              <form onSubmit={handleInventorySubmit} style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 8 }}>
-                <label>毛巾数：<input name="towel" type="number" min={0} value={inventory.towel} onChange={handleInventoryChange} style={{ width: 60, marginLeft: 4 }} /></label>
-                <label>香皂数：<input name="soap" type="number" min={0} value={inventory.soap} onChange={handleInventoryChange} style={{ width: 60, marginLeft: 4 }} /></label>
-                <Button type="submit" variant="warning" size="sm" className="responsive-text">提交</Button>
-              </form>
-              {inventorySubmitted && <div style={{ color: '#16a34a', marginTop: 8 }}>已提交：毛巾 {inventory.towel}，香皂 {inventory.soap}</div>}
-            </div>
           )
         }}
       />
@@ -1150,6 +1154,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
               title="编辑入住登记"
               existingEntries={existingEntriesForHotel}
               currentEntryId={ownerEditingEntry.id}
+              hotelId={task.hotelId}
             />
           </div>
         </div>,

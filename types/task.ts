@@ -68,7 +68,21 @@ export interface Task {
   cleanerNotes?: string;        // 清洁员退勤填写
   managerReportNotes?: string;  // 经理确认后给房东的清扫报告
   
-  // 备品信息
+  // 清扫完成信息
+  completion_photos?: string[]; // 清扫完成照片URL数组
+  supplies_used?: {             // 使用的备品统计
+    towel?: number;
+    soap?: number;
+    shampoo?: number;
+    conditioner?: number;
+    toiletPaper?: number;
+    toothbrush?: number;
+    toothpaste?: number;
+    slippers?: number;
+    [key: string]: number | undefined;
+  };
+  
+  // 备品信息（保留兼容）
   inventory?: {
     towel: number;
     soap: number;

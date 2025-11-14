@@ -34,6 +34,7 @@ export default function HotelCalendarPage() {
 
   // 表单状态
   const [formData, setFormData] = useState<CalendarEntryFormData>({
+    hotelId: '',
     checkInDate: '',
     checkOutDate: '',
     guestCount: 1,
@@ -153,6 +154,7 @@ export default function HotelCalendarPage() {
   const handleEditEntry = (entry: CalendarEntry) => {
     setEditingEntry(entry);
     setFormData({
+      hotelId: entry.hotelId,
       checkInDate: entry.checkInDate,
       checkOutDate: entry.checkOutDate,
       guestCount: entry.guestCount,
@@ -164,6 +166,7 @@ export default function HotelCalendarPage() {
   const handleCancelEdit = () => {
     setEditingEntry(null);
     setFormData({
+      hotelId: '',
       checkInDate: '',
       checkOutDate: '',
       guestCount: 1,
@@ -176,6 +179,7 @@ export default function HotelCalendarPage() {
     if (!showCreateForm && !editingEntry) {
       // 如果不在编辑模式，点击日期可以快速创建新记录
       setFormData({
+        hotelId: hotelId || '',
         checkInDate: date,
         checkOutDate: date,
         guestCount: 1,
@@ -254,7 +258,7 @@ export default function HotelCalendarPage() {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">
-                    {entry.hotelName}
+                    {hotel?.name || '酒店'}
                   </h3>
                   <p className="text-gray-600">
                     👥 {entry.guestCount} 位客人
@@ -324,7 +328,7 @@ export default function HotelCalendarPage() {
           <div className="flex justify-between items-start mb-4">
             <div>
               <h3 className="text-lg font-semibold text-gray-900">
-                {selectedEntry.hotelName}
+                {hotel?.name || '酒店'}
               </h3>
               <p className="text-gray-600">
                 👥 {selectedEntry.guestCount} 位客人

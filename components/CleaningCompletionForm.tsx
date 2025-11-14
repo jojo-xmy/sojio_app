@@ -14,7 +14,7 @@ export const CleaningCompletionForm: React.FC<CleaningCompletionFormProps> = ({
   onSubmitSuccess,
   isCheckedOut = false
 }) => {
-  const [notes, setNotes] = useState(task.cleaner_notes || '');
+  const [notes, setNotes] = useState(task.cleanerNotes || '');
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
@@ -41,7 +41,7 @@ export const CleaningCompletionForm: React.FC<CleaningCompletionFormProps> = ({
     }
   };
 
-  const hasChanges = notes !== (task.cleaner_notes || '');
+  const hasChanges = notes !== (task.cleanerNotes || '');
 
   // 已退勤：只读模式
   if (isCheckedOut) {
@@ -54,9 +54,9 @@ export const CleaningCompletionForm: React.FC<CleaningCompletionFormProps> = ({
           <h3 className="text-sm font-semibold text-blue-900">清扫备注</h3>
           <span className="ml-auto text-xs bg-blue-200 text-blue-800 px-2 py-0.5 rounded-full">已提交</span>
         </div>
-        {task.cleaner_notes ? (
+        {task.cleanerNotes ? (
           <div className="text-sm text-blue-800 whitespace-pre-wrap pl-7">
-            {task.cleaner_notes}
+            {task.cleanerNotes}
           </div>
         ) : (
           <div className="text-sm text-blue-600 italic pl-7">
@@ -94,7 +94,7 @@ export const CleaningCompletionForm: React.FC<CleaningCompletionFormProps> = ({
             : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg'
         }`}
       >
-        {submitting ? '保存中...' : hasChanges ? '保存备注' : task.cleaner_notes ? '已保存' : '暂不填写'}
+        {submitting ? '保存中...' : hasChanges ? '保存备注' : task.cleanerNotes ? '已保存' : '暂不填写'}
       </button>
     </div>
   );

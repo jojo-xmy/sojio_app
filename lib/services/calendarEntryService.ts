@@ -250,7 +250,7 @@ export async function updateCalendarEntry(
           : (currentEntry.cleaning_dates || []);
 
       const currentDates = new Set<string>((currentEntry.cleaning_dates || []).map((d: string) => d));
-      const nextDates = new Set<string>(desiredCleaningDates.map(d => d));
+      const nextDates = new Set<string>(desiredCleaningDates!.map(d => d));
 
       addedDates = [...nextDates].filter(date => !currentDates.has(date));
       removedDates = [...currentDates].filter(date => !nextDates.has(date));

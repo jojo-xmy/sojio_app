@@ -409,7 +409,6 @@ export async function assignTaskToCleaners(
             console.log(`[分配任务] 发送通知给: ${cleanerData.name}`);
 
             // 创建通知数据
-            const { NotificationData } = await import('./notifications');
             const notificationData: any = {
               taskId,
               taskName: taskData.hotel_name,
@@ -762,7 +761,6 @@ export async function getOwnerCalendarTasks(
         checkInDate: task.check_in_date,
         checkOutDate: task.check_out_date,
         checkInTime: task.check_in_time,
-        roomNumber: task.room_number,
         cleaningDate: task.cleaning_date || task.check_out_date || task.check_in_date,
         lockPassword: task.lock_password,
         specialInstructions: task.special_instructions,

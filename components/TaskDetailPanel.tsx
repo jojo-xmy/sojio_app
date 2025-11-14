@@ -8,6 +8,7 @@ import { getUserAttendanceByTaskId, checkIn, checkOut, Attendance, getAttendance
 import { uploadImagesToExistingTask, getTaskImages, TaskImage } from '@/lib/upload';
 import { AttendanceSummary } from '@/components/AttendanceSummary';
 import { AttendanceActions } from '@/components/AttendanceActions';
+import { supabase } from '@/lib/supabase';
 import { ImageUpload } from '@/components/ImageUpload';
 import { AttachmentGallery } from '@/components/AttachmentGallery';
 import { CleaningCompletionForm } from '@/components/CleaningCompletionForm';
@@ -254,6 +255,8 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
   // 通知Manager
   const notifyManagers = async () => {
     if (!confirm('确定要通知该酒店的Manager吗？')) return;
+    
+    if (!user) return;
     
     try {
       setLoading(true);

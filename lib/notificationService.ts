@@ -94,9 +94,9 @@ export async function notifyTaskCreated(taskId: string, hotelName: string, clean
   try {
     await createNotification({
       taskId,
-      type: 'task_created',
+      type: 'task_created' as const,
       recipientId: managerId,
-      recipientRole: 'manager',
+      recipientRole: 'manager' as const,
       message: NotificationTemplates.taskCreated(hotelName, cleaningDate),
       data: { hotelName, cleaningDate }
     });
@@ -110,7 +110,7 @@ export async function notifyTaskAssigned(taskId: string, hotelName: string, clea
   try {
     const notifications = cleanerIds.map(cleanerId => ({
       taskId,
-      type: 'task_assigned',
+      type: 'task_assigned' as const,
       recipientId: cleanerId,
       recipientRole: 'cleaner' as const,
       message: NotificationTemplates.taskAssigned(hotelName, cleaningDate),
@@ -130,7 +130,7 @@ export async function notifyTaskDateChanged(taskId: string, hotelName: string, o
   try {
     const notifications = affectedUserIds.map(userId => ({
       taskId,
-      type: 'task_date_changed',
+      type: 'task_date_changed' as const,
       recipientId: userId,
       recipientRole: 'cleaner' as const, // 这里需要根据实际用户角色调整
       message: NotificationTemplates.taskDateChanged(hotelName, oldDate, newDate),

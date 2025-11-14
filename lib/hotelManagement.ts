@@ -289,7 +289,7 @@ export async function batchSetCleanerAvailability(
   }));
 
   try {
-    const operations: Array<Promise<unknown>> = [];
+    const operations: any[] = [];
 
     if (availabilityData.length > 0) {
       operations.push(

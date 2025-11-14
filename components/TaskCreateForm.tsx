@@ -84,7 +84,7 @@ export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({ isOpen, onClose,
         checkInDate: formData.checkInDate,
         checkOutDate: formData.checkOutDate,
         guestCount: formData.guestCount,
-        ownerNotes: formData.details || null,
+        ownerNotes: formData.details || undefined,
         cleaningDates: formData.checkOutDate
           ? [formData.checkOutDate]
           : formData.checkInDate

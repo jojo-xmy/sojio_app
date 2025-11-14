@@ -164,8 +164,8 @@ export const MultiDateSelector: React.FC<MultiDateSelectorProps> = ({
                   const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
                   const isSelected = selectedDates.includes(dateStr);
                   const isToday = isSameDay(date, new Date());
-                  const isDisabled = (minDate && isBefore(date, new Date(minDate))) || 
-                                   (maxDate && isAfter(date, new Date(maxDate)));
+                  const isDisabled = Boolean((minDate && isBefore(date, new Date(minDate))) || 
+                                   (maxDate && isAfter(date, new Date(maxDate))));
 
                   return (
                     <button

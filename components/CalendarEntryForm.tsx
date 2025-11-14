@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 export interface CalendarEntryFormData {
   hotelId: string;
@@ -8,6 +8,14 @@ export interface CalendarEntryFormData {
   guestCount: number;
   ownerNotes: string;
   cleaningDates: string[];
+  roomNumber?: string;
+}
+
+export interface ExistingCalendarEntry {
+  id: string;
+  checkInDate: string;
+  checkOutDate: string;
+  roomNumber?: string;
 }
 
 interface CalendarEntryFormProps {
@@ -19,6 +27,8 @@ interface CalendarEntryFormProps {
   className?: string;
   hotels?: Array<{id: string; name: string; address: string}>;
   showHotelSelection?: boolean;
+  existingEntries?: ExistingCalendarEntry[];
+  currentEntryId?: string;
 }
 
 export const CalendarEntryForm: React.FC<CalendarEntryFormProps> = ({
@@ -29,7 +39,9 @@ export const CalendarEntryForm: React.FC<CalendarEntryFormProps> = ({
   title = "入住登记",
   className = "",
   hotels = [],
-  showHotelSelection = false
+  showHotelSelection = false,
+  existingEntries = [],
+  currentEntryId
 }) => {
   const buildInitialCleaningDates = (data: Partial<CalendarEntryFormData>) => {
     if (data.cleaningDates && data.cleaningDates.length > 0) {
@@ -57,6 +69,84 @@ export const CalendarEntryForm: React.FC<CalendarEntryFormProps> = ({
   );
 
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [dateConflictMessage, setDateConflictMessage] = useState<string>('');
+
+  /**
+   * 计算已占用日期集合（Airbnb 逻辑）
+   * 已占用区间：[check_in_date, check_out_date)（左闭右开）
+   * 退房日可作为新入住日
+   */
+  const getOccupiedDates = useMemo(() => {
+    const occupied = new Set<string>();
+    
+    existingEntries.forEach(entry => {
+      // 跳过当前正在编辑的登记
+      if (currentEntryId && entry.id === currentEntryId) {
+        return;
+      }
+      
+      const checkIn = new Date(entry.checkInDate);
+      const checkOut = new Date(entry.checkOutDate);
+      
+      // 遍历 [checkInDate, checkOutDate) 区间（不包含退房日）
+      const current = new Date(checkIn);
+      while (current < checkOut) {
+        occupied.add(current.toISOString().split('T')[0]);
+        current.setDate(current.getDate() + 1);
+      }
+    });
+    
+    return occupied;
+  }, [existingEntries, currentEntryId]);
+
+  /**
+   * 检查日期是否被占用
+   */
+  const isDateOccupied = (dateStr: string): boolean => {
+    return getOccupiedDates.has(dateStr);
+  };
+
+  /**
+   * 获取可选的最小入住日期（今天）
+   */
+  const getMinCheckInDate = (): string => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  };
+
+  /**
+   * 获取可选的最小退房日期（基于入住日期）
+   */
+  const getMinCheckOutDate = (checkInDate: string): string => {
+    if (!checkInDate) return '';
+    const minDate = new Date(checkInDate);
+    minDate.setDate(minDate.getDate() + 1);
+    return minDate.toISOString().split('T')[0];
+  };
+
+  /**
+   * 获取可选的最大退房日期（基于入住日期后的第一个占用日）
+   */
+  const getMaxCheckOutDate = (checkInDate: string): string | undefined => {
+    if (!checkInDate) return undefined;
+    
+    const current = new Date(checkInDate);
+    current.setDate(current.getDate() + 1); // 从入住日的下一天开始检查
+    
+    // 找到第一个被占用的日期
+    while (true) {
+      const dateStr = current.toISOString().split('T')[0];
+      if (isDateOccupied(dateStr)) {
+        // 返回该占用日（可以作为退房日）
+        return dateStr;
+      }
+      current.setDate(current.getDate() + 1);
+      // 设置一个合理的上限（如1年后）
+      if (current.getTime() > Date.now() + 365 * 24 * 60 * 60 * 1000) {
+        return undefined;
+      }
+    }
+  };
 
   // 当初始数据变化时更新表单数据
   useEffect(() => {
@@ -84,6 +174,27 @@ export const CalendarEntryForm: React.FC<CalendarEntryFormProps> = ({
     if (new Date(formData.checkInDate) >= new Date(formData.checkOutDate)) {
       setValidationError('退房日期必须晚于入住日期');
       return false;
+    }
+
+    // 检查入住日期是否被占用
+    if (isDateOccupied(formData.checkInDate)) {
+      setValidationError('所选入住日期已被占用，请选择其他日期');
+      return false;
+    }
+
+    // 检查入住到退房期间是否有占用日期（不包括退房日本身）
+    const checkIn = new Date(formData.checkInDate);
+    const checkOut = new Date(formData.checkOutDate);
+    const current = new Date(checkIn);
+    current.setDate(current.getDate() + 1); // 从入住日的下一天开始检查
+    
+    while (current < checkOut) {
+      const dateStr = current.toISOString().split('T')[0];
+      if (isDateOccupied(dateStr)) {
+        setValidationError(`入住期间存在已被占用的日期（${dateStr}），请调整日期范围`);
+        return false;
+      }
+      current.setDate(current.getDate() + 1);
     }
 
     const cleaningDate = formData.cleaningDates[0] || formData.checkOutDate;
@@ -170,12 +281,28 @@ export const CalendarEntryForm: React.FC<CalendarEntryFormProps> = ({
             type="date"
             required
             value={formData.checkInDate}
+            min={getMinCheckInDate()}
             onChange={(e) => {
-              setFormData({ ...formData, checkInDate: e.target.value });
+              const selectedDate = e.target.value;
+              setFormData({ ...formData, checkInDate: selectedDate, checkOutDate: '' });
               setValidationError(null);
+              
+              // 实时检查日期冲突
+              if (selectedDate && isDateOccupied(selectedDate)) {
+                setDateConflictMessage('⚠️ 该日期已有客人入住');
+              } else {
+                setDateConflictMessage('');
+              }
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              formData.checkInDate && isDateOccupied(formData.checkInDate)
+                ? 'border-red-300 bg-red-50'
+                : 'border-gray-300'
+            }`}
           />
+          {dateConflictMessage && (
+            <p className="text-xs text-red-600 mt-1">{dateConflictMessage}</p>
+          )}
         </div>
 
         <div className="mb-4">
@@ -186,6 +313,8 @@ export const CalendarEntryForm: React.FC<CalendarEntryFormProps> = ({
             type="date"
             required
             value={formData.checkOutDate}
+            min={formData.checkInDate ? getMinCheckOutDate(formData.checkInDate) : undefined}
+            max={formData.checkInDate ? getMaxCheckOutDate(formData.checkInDate) : undefined}
             onChange={(e) => {
               const newValue = e.target.value;
               setFormData(prev => {
@@ -201,7 +330,16 @@ export const CalendarEntryForm: React.FC<CalendarEntryFormProps> = ({
               setValidationError(null);
             }}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={!formData.checkInDate}
           />
+          {!formData.checkInDate && (
+            <p className="text-xs text-gray-500 mt-1">请先选择入住日期</p>
+          )}
+          {formData.checkInDate && getMaxCheckOutDate(formData.checkInDate) && (
+            <p className="text-xs text-amber-600 mt-1">
+              ⚠️ 受已有入住影响，最晚可选退房日期为 {getMaxCheckOutDate(formData.checkInDate)}
+            </p>
+          )}
         </div>
 
         <div className="mb-4">

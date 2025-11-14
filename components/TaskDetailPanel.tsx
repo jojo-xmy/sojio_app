@@ -71,6 +71,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
     ownerNotes?: string;
     cleaningDates?: string[];
   }>(null);
+  const [existingEntriesForHotel, setExistingEntriesForHotel] = useState<Array<{id: string; checkInDate: string; checkOutDate: string}>>([]);
   const assignPanelRef = useRef<HTMLDivElement>(null);
 
   // 当分配面板打开时，滚动到视图中心
@@ -170,11 +171,32 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
   useEffect(() => { /* useTask 内部已处理加载 */ }, [task.id, user?.id]);
 
   // Owner 打开入住登记编辑
-  const openOwnerEdit = () => {
+  const openOwnerEdit = async () => {
     if (!calendarEntry) {
       alert('未找到对应的入住登记');
       return;
     }
+
+    // 加载同一酒店的其他入住登记
+    if (task.hotelId) {
+      try {
+        const { data, error } = await supabase
+          .from('calendar_entries')
+          .select('id, check_in_date, check_out_date')
+          .eq('hotel_id', task.hotelId);
+
+        if (!error && data) {
+          setExistingEntriesForHotel(data.map(e => ({
+            id: e.id,
+            checkInDate: e.check_in_date,
+            checkOutDate: e.check_out_date
+          })));
+        }
+      } catch (error) {
+        console.error('加载酒店入住登记失败:', error);
+      }
+    }
+
     setOwnerEditingEntry({
       id: calendarEntry.id,
       checkInDate: calendarEntry.checkInDate,
@@ -1116,6 +1138,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
           <div style={{ width: '90%', maxWidth: 480, maxHeight: '90vh', overflow: 'auto' }}>
             <CalendarEntryForm
               initialData={{
+                hotelId: task.hotelId || '',
                 checkInDate: ownerEditingEntry.checkInDate,
                 checkOutDate: ownerEditingEntry.checkOutDate,
                 guestCount: ownerEditingEntry.guestCount,
@@ -1125,6 +1148,8 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
               onSubmit={saveOwnerEntry}
               onCancel={() => setOwnerEditingEntry(null)}
               title="编辑入住登记"
+              existingEntries={existingEntriesForHotel}
+              currentEntryId={ownerEditingEntry.id}
             />
           </div>
         </div>,

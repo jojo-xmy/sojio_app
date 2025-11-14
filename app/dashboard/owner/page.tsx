@@ -16,6 +16,7 @@ export default function OwnerDashboard() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [creating, setCreating] = useState(false);
   const [ownerHotels, setOwnerHotels] = useState<Array<{id: string; name: string; address: string}>>([]);
+  const [existingEntries, setExistingEntries] = useState<Array<{id: string; checkInDate: string; checkOutDate: string; hotelId: string}>>([]);
   const calendarRef = useRef<{ refreshData: () => void }>(null);
 
   useEffect(() => {
@@ -47,6 +48,26 @@ export default function OwnerDashboard() {
       }
 
       setOwnerHotels(data || []);
+
+      // 同时加载所有酒店的现有入住登记
+      if (data && data.length > 0) {
+        const hotelIds = data.map(h => h.id);
+        const { data: entries, error: entriesError } = await supabase
+          .from('calendar_entries')
+          .select('id, check_in_date, check_out_date, hotel_id')
+          .in('hotel_id', hotelIds);
+
+        if (entriesError) {
+          console.error('加载入住登记失败:', entriesError);
+        } else {
+          setExistingEntries((entries || []).map(e => ({
+            id: e.id,
+            checkInDate: e.check_in_date,
+            checkOutDate: e.check_out_date,
+            hotelId: e.hotel_id
+          })));
+        }
+      }
     } catch (error) {
       console.error('加载酒店列表失败:', error);
     }
@@ -143,6 +164,7 @@ export default function OwnerDashboard() {
                 title="添加入住登记"
                 hotels={ownerHotels}
                 showHotelSelection={true}
+                existingEntries={existingEntries}
               />
             </div>
           </div>

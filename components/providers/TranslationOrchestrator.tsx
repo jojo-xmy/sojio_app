@@ -10,7 +10,7 @@ const LOCALE_ATTR = 'translationLocale';
 export function TranslationOrchestrator() {
   const { locale, translateTexts, t } = useTranslation();
   const observerRef = useRef<MutationObserver | null>(null);
-  const rafRef = useRef<number>();
+  const rafRef = useRef<number | null>(null);
   const applyingRef = useRef(false);
 
   useEffect(() => {
@@ -86,9 +86,9 @@ export function TranslationOrchestrator() {
     };
 
     const scheduleApply = () => {
-      if (rafRef.current) return;
+      if (rafRef.current !== null) return;
       rafRef.current = window.requestAnimationFrame(() => {
-        rafRef.current = undefined;
+        rafRef.current = null;
         applyTranslations();
       });
     };
@@ -108,9 +108,9 @@ export function TranslationOrchestrator() {
         observerRef.current.disconnect();
         observerRef.current = null;
       }
-      if (rafRef.current) {
+      if (rafRef.current !== null) {
         cancelAnimationFrame(rafRef.current);
-        rafRef.current = undefined;
+        rafRef.current = null;
       }
       applyingRef.current = false;
     };

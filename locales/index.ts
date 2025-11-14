@@ -6,7 +6,9 @@ export const SUPPORTED_LOCALES = ['zh', 'en', 'ja'] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
 
 type TranslationRecord = Record<string, string>;
-type TranslationTree = Record<string, string | TranslationTree>;
+interface TranslationTree {
+  [key: string]: string | TranslationTree;
+}
 
 const resources = {
   zh,

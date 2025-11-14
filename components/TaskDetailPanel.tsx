@@ -587,55 +587,66 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
           managerReport: user.role === 'manager'
             ? (
               <div style={{
-                border: '1px solid #bfdbfe',
+                border: task.status === 'confirmed' ? '1px solid #bbf7d0' : '1px solid #bfdbfe',
                 borderRadius: 'var(--radius)',
                 padding: '16px',
-                background: '#eff6ff',
+                background: task.status === 'confirmed' ? '#f0fdf4' : '#eff6ff',
                 boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
               }}>
                 <h4 style={{ 
                   fontSize: '15px', 
                   fontWeight: 600, 
                   marginBottom: 12, 
-                  color: '#1e40af',
+                  color: task.status === 'confirmed' ? '#15803d' : '#1e40af',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 8,
                   paddingBottom: 10,
-                  borderBottom: '1px solid #bfdbfe'
+                  borderBottom: task.status === 'confirmed' ? '1px solid #bbf7d0' : '1px solid #bfdbfe'
                 }}>
-                  <Send size={18} color="#1e40af" />
-                  推送给房东的清扫报告
+                  {task.status === 'confirmed' 
+                    ? <CheckCircle size={18} color="#15803d" />
+                    : <Send size={18} color="#1e40af" />
+                  }
+                  {task.status === 'confirmed' ? '已推送给房东' : '推送给房东的清扫报告'}
                 </h4>
                 <textarea
                   value={managerReportDraft}
                   onChange={(e) => setManagerReportDraft(e.target.value)}
                   style={{
                     width: '100%',
-                    minHeight: 120,
+                    minHeight: task.status === 'confirmed' ? 60 : 80,
                     padding: '12px',
                     borderRadius: 'var(--radius)',
-                    border: '1px solid #bfdbfe',
+                    border: task.status === 'confirmed' ? '1px solid #bbf7d0' : '1px solid #bfdbfe',
                     fontSize: '14px',
                     lineHeight: 1.6,
                     color: 'var(--foreground)',
-                    background: '#ffffff',
+                    background: task.status === 'confirmed' ? '#f0fdf4' : '#ffffff',
                     fontFamily: 'inherit',
                     resize: 'vertical'
                   }}
                   placeholder={task.cleanerNotes ? '基于清洁员备注整理后推送给房东' : '填写需推送给房东的清扫报告'}
                 />
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, gap: 12, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '13px', color: '#2563eb', flex: 1, minWidth: '200px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Lightbulb size={14} color="#2563eb" />
+                  <span style={{ 
+                    fontSize: '13px', 
+                    color: task.status === 'confirmed' ? '#15803d' : '#2563eb', 
+                    flex: 1, 
+                    minWidth: '200px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 6 
+                  }}>
+                    <Lightbulb size={14} color={task.status === 'confirmed' ? '#15803d' : '#2563eb'} />
                     {task.status === 'confirmed'
-                      ? '任务已确认，修改后再次推送会同步给房东'
+                      ? '如需修改内容，可重新编辑并推送给房东'
                       : '确认后任务状态将变为"已确认"，并通知房东'}
                   </span>
                   <Button
                     onClick={handleManagerReportConfirm}
                     disabled={savingReport || managerReportDraft.trim().length === 0}
-                    variant="primary"
+                    variant={task.status === 'confirmed' ? 'success' : 'primary'}
                     size="sm"
                     className="responsive-text"
                   >

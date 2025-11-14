@@ -3,8 +3,8 @@ import { sendPendingLineNotifications } from '@/lib/notificationService';
 
 // LINE Bot配置（从环境变量获取）
 const LINE_BOT_CONFIG = {
-  channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN || '',
-  channelSecret: process.env.LINE_CHANNEL_SECRET || ''
+  channelAccessToken: process.env.LINE_MESSAGING_CHANNEL_ACCESS_TOKEN || '',
+  channelSecret: process.env.LINE_MESSAGING_CHANNEL_SECRET || ''
 };
 
 export async function POST(request: NextRequest) {

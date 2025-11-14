@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/userStore';
-import { RoleSelector } from '@/components/RoleSelector';
 import {
   getManagerHotels,
   getAllHotels,
@@ -93,7 +92,6 @@ export default function ManagerHotelsPage() {
   if (loading) {
     return (
       <div style={{ maxWidth: 1200, margin: '2rem auto', padding: '0 1rem' }}>
-        <RoleSelector showLogout={true} compactMode={false} />
         <div style={{ textAlign: 'center', marginTop: 40 }}>加载中...</div>
       </div>
     );
@@ -101,9 +99,7 @@ export default function ManagerHotelsPage() {
 
   return (
     <div style={{ maxWidth: 1200, margin: '2rem auto', padding: '0 1rem' }}>
-      <RoleSelector showLogout={true} compactMode={false} />
-      
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, marginTop: 24 }}>
         <h2 style={{ fontSize: 20, fontWeight: 600 }}>管理的酒店列表</h2>
         <div style={{ display: 'flex', gap: 12 }}>
           <button

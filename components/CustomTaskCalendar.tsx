@@ -35,7 +35,13 @@ export const CustomTaskCalendar = forwardRef<{ refreshData: () => void }, Custom
         // 根据用户角色调用不同的数据加载函数，强制刷新
         const calendarEvents = user.role === 'owner' 
           ? await getOwnerCalendarTasks(startDate, endDate, user.id.toString())
-          : await getCalendarTasks(startDate, endDate, undefined, true); // 强制刷新
+          : await getCalendarTasks(
+              startDate, 
+              endDate, 
+              undefined, 
+              true, 
+              user.role === 'manager' ? user.id.toString() : undefined
+            ); // manager 传入 ID 以限制酒店范围
         
         // 对任务进行优先级排序
         const sortedEvents = calendarEvents.sort((a, b) => {

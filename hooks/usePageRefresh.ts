@@ -25,7 +25,13 @@ export function useManagerDashboard() {
       const endDate = new Date();
       endDate.setMonth(endDate.getMonth() + 1);
       
-      const calendarEvents = await getCalendarTasks(startDate, endDate, undefined, true);
+      const calendarEvents = await getCalendarTasks(
+        startDate, 
+        endDate, 
+        undefined, 
+        true,
+        user.role === 'manager' ? user.id.toString() : undefined
+      );
       
       // 加载打卡状态
       const tasksWithStatus = await Promise.all(

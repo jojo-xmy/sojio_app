@@ -14,10 +14,33 @@ export async function getCalendarTasks(
   startDate: Date,
   endDate: Date,
   config?: Partial<CalendarViewConfig>,
-  forceRefresh: boolean = false
+  forceRefresh: boolean = false,
+  managerId?: string
 ): Promise<TaskCalendarEvent[]> {
   const startDateStr = startDate.toISOString().split('T')[0];
   const endDateStr = endDate.toISOString().split('T')[0];
+
+  // 如果提供了 managerId，先获取该 manager 管理的酒店列表
+  let hotelIds: string[] | null = null;
+  if (managerId) {
+    const { data: managerHotels, error: hotelError } = await supabase
+      .from('manager_hotels')
+      .select('hotel_id')
+      .eq('manager_id', managerId);
+
+    if (hotelError) {
+      console.error('获取经理管理的酒店失败:', hotelError);
+      throw new Error('获取经理管理的酒店失败');
+    }
+
+    hotelIds = (managerHotels || []).map(mh => mh.hotel_id);
+    
+    // 如果 manager 没有管理任何酒店，返回空数组
+    if (hotelIds.length === 0) {
+      console.log('该经理尚未管理任何酒店');
+      return [];
+    }
+  }
 
   // 构建基础 query，强制刷新时添加时间戳避免缓存
   let query = supabase
@@ -42,6 +65,11 @@ export async function getCalendarTasks(
     .order('cleaning_date', { ascending: true, nullsFirst: false })
     .order('check_out_date', { ascending: true, nullsFirst: false })
     .order('check_in_date', { ascending: true });
+
+  // 如果有酒店ID限制，添加过滤条件
+  if (hotelIds !== null) {
+    query = query.in('hotel_id', hotelIds);
+  }
 
   // 强制刷新时添加随机查询参数避免缓存
   if (forceRefresh) {

@@ -167,19 +167,50 @@ export interface LineBotConfig {
   channelSecret: string;
 }
 
-// 发送LINE消息（预留接口）
-export async function sendLineMessage(userId: string, message: string, config: LineBotConfig): Promise<{ success: boolean; error?: string }> {
-  // 这里是预留的LINE Bot API接口
-  // 实际实现需要根据LINE Bot的API文档进行开发
-  
-  console.log('LINE Bot 消息发送（预留接口）:', {
-    userId,
-    message,
-    timestamp: new Date().toISOString()
-  });
+// 推断基础 URL（支持 Vercel/本地）
+function getBaseUrl(): string {
+  const publicUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.SITE_URL;
+  if (publicUrl) return publicUrl.replace(/\/$/, '');
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  return 'http://localhost:3000';
+}
 
-  // 模拟发送成功
-  return { success: true };
+// 查询用户的 LINE User ID
+async function getUserLineId(userId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .select('line_user_id')
+    .eq('id', userId)
+    .single();
+
+  if (error) {
+    console.error('查询用户LINE ID失败:', error);
+    return null;
+  }
+  return data?.line_user_id || null;
+}
+
+// 发送LINE消息（调用已实现的 /api/line/send-message）
+export async function sendLineMessage(lineUserId: string, message: string, _config: LineBotConfig): Promise<{ success: boolean; error?: string }> {
+  try {
+    const baseUrl = getBaseUrl();
+    const res = await fetch(`${baseUrl}/api/line/send-message`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: lineUserId,
+        message: { type: 'text', text: message }
+      })
+    });
+
+    if (!res.ok) {
+      const details = await res.text().catch(() => '');
+      return { success: false, error: `HTTP ${res.status}: ${details}` };
+    }
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : '未知错误' };
+  }
 }
 
 // 批量发送LINE通知
@@ -191,11 +222,15 @@ export async function sendPendingLineNotifications(config: LineBotConfig): Promi
 
     for (const notification of pendingNotifications) {
       try {
-        // 这里需要根据用户ID获取LINE用户ID
-        // 实际实现需要查询用户表获取line_user_id
-        
-        // 模拟发送
-        const result = await sendLineMessage(notification.recipientId, notification.message, config);
+        // 根据内部用户ID获取 LINE 用户ID
+        const lineUserId = await getUserLineId(notification.recipientId);
+        if (!lineUserId) {
+          errors.push(`通知 ${notification.id} 跳过：用户 ${notification.recipientId} 未绑定 LINE`);
+          continue;
+        }
+
+        // 调用已实现的 API 真正发送消息
+        const result = await sendLineMessage(lineUserId, notification.message, config);
         
         if (result.success) {
           await markNotificationAsSent(notification.id);

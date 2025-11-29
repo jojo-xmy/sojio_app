@@ -4,6 +4,7 @@ import { TaskStatusBadge } from './TaskStatusBadge';
 import { Task, TaskStatus } from '@/types/task';
 import { TaskCapabilities } from '@/lib/taskCapabilities';
 import { MapPin, Calendar, Clock, LogOut, Users, Lock, CheckCircle, PartyPopper, Trophy, FileText } from 'lucide-react';
+import { useTranslation } from '@/hooks/useTranslation';
 
 export interface TaskCardProps {
   id: string;
@@ -65,6 +66,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   viewMode,
   guestCount
 }) => {
+  const { t, locale } = useTranslation('taskCard');
   return (
     <div
       onClick={onClick}
@@ -100,27 +102,27 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       }}>
         <div style={{ fontSize: 14, color: '#374151', display: 'flex', alignItems: 'center', gap: 8 }}>
           <Calendar size={16} color="#6b7280" /> 
-          <span style={{ fontWeight: 500 }}>入住日期：</span>
+          <span style={{ fontWeight: 500 }}>{t('fields.checkInDate')}</span>
           <span>{checkInDate || date}</span>
         </div>
         {checkOutDate && (
           <div style={{ fontSize: 14, color: '#374151', display: 'flex', alignItems: 'center', gap: 8 }}>
             <LogOut size={16} color="#6b7280" /> 
-            <span style={{ fontWeight: 500 }}>退房日期：</span>
+            <span style={{ fontWeight: 500 }}>{t('fields.checkOutDate')}</span>
             <span>{checkOutDate}</span>
           </div>
         )}
         {guestCount !== undefined && (
           <div style={{ fontSize: 14, color: '#374151', display: 'flex', alignItems: 'center', gap: 8 }}>
             <Users size={16} color="#6b7280" /> 
-            <span style={{ fontWeight: 500 }}>入住人数：</span>
-            <span>{guestCount}人</span>
+            <span style={{ fontWeight: 500 }}>{t('fields.guestCount')}</span>
+            <span>{guestCount}</span>
           </div>
         )}
         <div style={{ fontSize: 14, color: '#374151', display: 'flex', alignItems: 'center', gap: 8 }}>
           <Calendar size={16} color="#6b7280" /> 
-          <span style={{ fontWeight: 500 }}>清扫日期：</span>
-          <span>{cleaningDate || checkOutDate || '未设置'}</span>
+          <span style={{ fontWeight: 500 }}>{t('fields.cleaningDate')}</span>
+          <span>{cleaningDate || checkOutDate || t('fields.cleaningDateUnset')}</span>
         </div>
       </div>
       
@@ -135,15 +137,15 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         color: '#374151'
       }}>
         <Users size={16} color="#6b7280" /> 
-        <span style={{ fontWeight: 500 }}>清扫人员：</span>
+        <span style={{ fontWeight: 500 }}>{t('crew.label')}</span>
         {!assignedCleaners || assignedCleaners.length === 0 ? (
-          <span style={{ color: '#ef4444', fontWeight: 500 }}>未分配</span>
+          <span style={{ color: '#ef4444', fontWeight: 500 }}>{t('crew.unassigned')}</span>
         ) : (
           <>
-            <span style={{ color: '#059669', fontWeight: 500 }}>{assignedCleaners.join('，')}</span>
+            <span style={{ color: '#059669', fontWeight: 500 }}>{assignedCleaners.join(', ')}</span>
             {status === 'assigned' && (
               <span style={{ color: '#f59e0b', fontSize: 12, marginLeft: 4 }}>
-                （已分配，待接收）
+                {t('crew.assignedPending')}
               </span>
             )}
           </>
@@ -162,7 +164,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             fontSize: 12,
             fontWeight: 500,
           }}>
-            {attendanceStatus === 'checked_out' ? '已退勤' : attendanceStatus === 'checked_in' ? '已出勤' : '未打卡'}
+            {attendanceStatus === 'checked_out'
+              ? t('attendance.checkedOut')
+              : attendanceStatus === 'checked_in'
+              ? t('attendance.checkedIn')
+              : t('attendance.none')}
           </span>
         )}
 
@@ -180,7 +186,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             fontWeight: 500,
           }}>
             <CheckCircle size={12} />
-            已接受 ({acceptedBy.length}/{assignedCleaners.length})
+            {t('badges.accepted')} ({acceptedBy.length}/{assignedCleaners.length})
           </span>
         )}
 
@@ -198,7 +204,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             fontWeight: 500,
           }}>
             <PartyPopper size={12} />
-            完成于 {new Date(completedAt).toLocaleString()}
+            {t('badges.completedAt')} {new Date(completedAt).toLocaleString(locale === 'zh' ? 'zh-CN' : locale === 'ja' ? 'ja-JP' : 'en-US')}
           </span>
         )}
 
@@ -216,7 +222,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             fontWeight: 500,
           }}>
             <Trophy size={12} />
-            确认于 {new Date(confirmedAt).toLocaleString()}
+            {t('badges.confirmedAt')} {new Date(confirmedAt).toLocaleString(locale === 'zh' ? 'zh-CN' : locale === 'ja' ? 'ja-JP' : 'en-US')}
           </span>
         )}
       </div>
@@ -245,7 +251,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               boxShadow: '0 1px 3px rgba(0, 122, 90, 0.2)'
             }}>
               <Lock size={18} /> 
-              <span>门锁密码：</span>
+              <span>{t('extras.lockPassword')}</span>
               <span style={{ fontWeight: 700, letterSpacing: '2px', fontSize: '16px' }}>{lockPassword}</span>
             </div>
           )}
@@ -276,21 +282,21 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           {note && (
             <div style={{ marginBottom: 8, display: 'flex', alignItems: 'flex-start', gap: 6 }}>
               <FileText size={14} style={{ marginTop: 2, flexShrink: 0 }} />
-              <div><strong>备注：</strong>{note}</div>
+              <div><strong>{t('extras.note')}</strong>{note}</div>
             </div>
           )}
           {images && images.length > 0 && (
             <div style={{ marginTop: 8 }}>
               <strong style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                 <Calendar size={14} />
-                任务图片：
+                {t('extras.images')}
               </strong>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
                 {images.map((img, i) => (
                   <img 
                     key={i} 
                     src={img} 
-                    alt={`任务图片${i+1}`} 
+                    alt={`${t('extras.imageAlt')} ${i+1}`} 
                     style={{ 
                       width: 80, 
                       height: 80, 

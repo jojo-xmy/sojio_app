@@ -23,6 +23,7 @@ import { publishTask, acceptTask, rejectTask, updateTaskDetails, updateOwnerNote
 import { CalendarEntryForm, CalendarEntryFormData } from './CalendarEntryForm';
 import { Button } from './Button';
 import { FileText, ClipboardList, MessageSquare, Send, CheckCircle, Lightbulb } from 'lucide-react';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface TaskDetailPanelProps {
   task: Task;
@@ -32,6 +33,8 @@ interface TaskDetailPanelProps {
 
 export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttendanceUpdate, onTaskUpdate }) => {
   const user = useUserStore(s => s.user);
+  const { t, locale } = useTranslation('taskDetail');
+  const { t: tManager } = useTranslation('taskDetail.managerActions');
   const { allAttendances, currentStatus, images: taskImages, taskDetails, calendarEntry, refresh } = useGlobalRefresh(task);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -321,7 +324,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
       setSavingReport(true);
       const trimmed = managerReportDraft.trim();
       if (!trimmed) {
-        alert('请填写清扫报告内容');
+        alert(t('managerReport.fillContent'));
         setSavingReport(false);
         return;
       }
@@ -335,10 +338,10 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
       await refresh();
       onAttendanceUpdate?.();
       onTaskUpdate?.();
-      alert('清扫报告已确认并推送给房东');
+      alert(t('managerReport.sentSuccess'));
     } catch (error) {
       console.error('确认清扫报告失败:', error);
-      alert('确认清扫报告失败');
+      alert(t('managerReport.sendFailed'));
     } finally {
       setSavingReport(false);
     }
@@ -358,13 +361,13 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
         onAttendanceUpdate?.();
         onTaskUpdate?.();
         setEditingTask(false);
-        alert('任务详情更新成功！');
+        alert(t('edit.updateSuccess'));
       } else {
         alert(result.error || '更新失败');
       }
     } catch (error) {
       console.error('更新任务详情失败:', error);
-      alert('更新任务详情失败');
+      alert(t('edit.updateFailed'));
     }
   };
 
@@ -433,7 +436,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
   }
 
   if (!user) {
-    return <div style={{ border: '1px solid #eee', borderRadius: 8, padding: 20, background: '#f9fafb' }}>请先登录查看任务详情</div>;
+    return <div style={{ border: '1px solid #eee', borderRadius: 8, padding: 20, background: '#f9fafb' }}>{t('loginRequired')}</div>;
   }
 
   const caps = getTaskCapabilities(user.role, task.status, {
@@ -495,7 +498,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                 borderBottom: '1px solid var(--border)'
               }}>
                 <FileText size={18} color="var(--muted-foreground)" />
-                房东备注
+                {t('ownerNotes')}
               </h4>
               <div style={{ 
                 fontSize: '14px', 
@@ -503,13 +506,13 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                 lineHeight: 1.6,
                 whiteSpace: 'pre-wrap'
               }}>
-                {task.ownerNotes || <span style={{ color: 'var(--muted-foreground)', fontStyle: 'italic' }}>暂无备注</span>}
+                {task.ownerNotes || <span style={{ color: 'var(--muted-foreground)', fontStyle: 'italic' }}>{t('noNotes')}</span>}
               </div>
               {user.role === 'owner' && (
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--border)', flexWrap: 'nowrap', overflow: 'hidden' }}>
-                  <Button onClick={notifyManagers} variant="success" size="sm" className="responsive-text flex-shrink-btn">通知Manager</Button>
-                  <Button onClick={openOwnerEdit} variant="warning" size="sm" className="responsive-text flex-shrink-btn">编辑入住登记</Button>
-                  <Button onClick={deleteOwnerEntry} variant="danger" size="sm" className="responsive-text flex-shrink-btn">删除</Button>
+                  <Button onClick={notifyManagers} variant="success" size="sm" className="responsive-text flex-shrink-btn">{t('actions.notifyManager')}</Button>
+                  <Button onClick={openOwnerEdit} variant="warning" size="sm" className="responsive-text flex-shrink-btn">{t('actions.editEntry')}</Button>
+                  <Button onClick={deleteOwnerEntry} variant="danger" size="sm" className="responsive-text flex-shrink-btn">{t('actions.delete')}</Button>
                 </div>
               )}
             </div>
@@ -534,7 +537,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                 borderBottom: '1px solid var(--border)'
               }}>
                 <ClipboardList size={18} color="var(--muted-foreground)" />
-                任务描述
+                {t('taskDescription')}
               </h4>
               <div style={{ 
                 fontSize: '14px', 
@@ -566,7 +569,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                 borderBottom: '1px solid var(--border)'
               }}>
                 <MessageSquare size={18} color="var(--muted-foreground)" />
-                清洁员备注
+                {t('cleanerNotes')}
               </h4>
               <div style={{ 
                 fontSize: '14px', 
@@ -574,7 +577,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                 lineHeight: 1.6,
                 whiteSpace: 'pre-wrap'
               }}>
-                {task.cleanerNotes ? task.cleanerNotes : <span style={{ color: 'var(--muted-foreground)', fontStyle: 'italic' }}>清洁员尚未填写退勤备注</span>}
+                {task.cleanerNotes ? task.cleanerNotes : <span style={{ color: 'var(--muted-foreground)', fontStyle: 'italic' }}>{t('cleanerNotesEmpty')}</span>}
               </div>
             </div>
           ) : user.role === 'cleaner' && (currentStatus === 'checked_in' || currentStatus === 'checked_out') ? (
@@ -611,7 +614,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                     ? <CheckCircle size={18} color="#15803d" />
                     : <Send size={18} color="#1e40af" />
                   }
-                  {task.status === 'confirmed' ? '已推送给房东' : '推送给房东的清扫报告'}
+                  {task.status === 'confirmed' ? t('managerReport.sent') : t('managerReport.title')}
                 </h4>
                 <textarea
                   value={managerReportDraft}
@@ -629,7 +632,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                     fontFamily: 'inherit',
                     resize: 'vertical'
                   }}
-                  placeholder={task.cleanerNotes ? '基于清洁员备注整理后推送给房东' : '填写需推送给房东的清扫报告'}
+                  placeholder={task.cleanerNotes ? t('managerReport.placeholderWithNotes') : t('managerReport.placeholder')}
                 />
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, gap: 12, flexWrap: 'wrap' }}>
                   <span style={{ 
@@ -643,8 +646,8 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                   }}>
                     <Lightbulb size={14} color={task.status === 'confirmed' ? '#15803d' : '#2563eb'} />
                     {task.status === 'confirmed'
-                      ? '如需修改内容，可重新编辑并推送给房东'
-                      : '确认后任务状态将变为"已确认"，并通知房东'}
+                      ? t('managerReport.editHint')
+                      : t('managerReport.confirmHint')}
                   </span>
                   <Button
                     onClick={handleManagerReportConfirm}
@@ -654,8 +657,8 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                     className="responsive-text"
                   >
                     {savingReport
-                      ? '处理中...'
-                      : task.status === 'confirmed' ? '更新并通知房东' : '确认并通知房东'}
+                      ? t('managerReport.processing')
+                      : task.status === 'confirmed' ? t('managerReport.updateAndNotify') : t('managerReport.confirmAndNotify')}
                   </Button>
                 </div>
               </div>
@@ -681,7 +684,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                     borderBottom: '1px solid #bbf7d0'
                   }}>
                     <CheckCircle size={18} color="#15803d" />
-                    Manager确认报告
+                    {t('managerReport.confirmedReport')}
                   </h4>
                   <div style={{ 
                     fontSize: '14px', 
@@ -691,7 +694,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                   }}>
                     {task.managerReportNotes && task.managerReportNotes.trim().length > 0
                       ? task.managerReportNotes
-                      : <span style={{ color: '#4d7c0f', fontStyle: 'italic' }}>Manager尚未推送清扫报告</span>}
+                      : <span style={{ color: '#4d7c0f', fontStyle: 'italic' }}>{t('managerReport.notSent')}</span>}
                   </div>
                 </div>
               )
@@ -708,12 +711,12 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                   marginBottom: 16
                 }}>
                   <h4 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: '#6b7280' }}>
-                    编辑任务详情
+                    {t('edit.title')}
                   </h4>
                   
                   <div style={{ marginBottom: 12 }}>
                     <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 4 }}>
-                      任务描述
+                      {t('edit.description')}
                     </label>
                     <textarea
                       value={editFormData.description}
@@ -726,13 +729,13 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                         fontSize: 14,
                         minHeight: 60
                       }}
-                      placeholder="输入任务描述"
+                      placeholder={t('edit.descriptionPlaceholder')}
                     />
                   </div>
 
                   <div style={{ marginBottom: 12 }}>
                     <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 4 }}>
-                      清扫日期
+                      {tManager('cleaningDate')}
                     </label>
                     <input
                       type="date"
@@ -750,7 +753,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
 
                   <div style={{ marginBottom: 12 }}>
                     <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 4 }}>
-                      门锁密码
+                      {t('edit.lockPassword')}
                     </label>
                     <input
                       type="text"
@@ -763,7 +766,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                         borderRadius: 6, 
                         fontSize: 14
                       }}
-                      placeholder="输入门锁密码"
+                      placeholder={t('edit.lockPasswordPlaceholder')}
                     />
                   </div>
 
@@ -780,7 +783,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                         cursor: 'pointer' 
                       }}
                     >
-                      取消
+                      {tManager('cancel')}
                     </button>
                     <button
                       onClick={handleEditSave}
@@ -794,7 +797,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                         cursor: 'pointer' 
                       }}
                     >
-                      保存
+                      {tManager('save')}
                     </button>
                   </div>
                 </div>
@@ -816,7 +819,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                       cursor: 'pointer' 
                     }}
                   >
-                    编辑任务
+                    {tManager('editTask')}
                   </button>
                 )}
                 
@@ -834,7 +837,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                       cursor: 'pointer' 
                     }}
                   >
-                    发布任务
+                    {tManager('publishTask')}
                   </button>
                 )}
                 
@@ -873,14 +876,14 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                       cursor: 'pointer' 
                     }}
                   >
-                    {hasAssignedCleaners ? '更改人员分配' : '分配清洁人员'}
+                    {hasAssignedCleaners ? tManager('changeAssignment') : tManager('assignCleaners')}
                   </button>
                 )}
               </div>
               
               {caps.showTaskPublish && (
                 <div style={{ fontSize: 12, color: '#6b7280', marginTop: 8 }}>
-                  发布后任务将变为"待分配"状态
+                  {tManager('publishHint')}
                 </div>
               )}
 
@@ -897,7 +900,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                   }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                     <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>
-                      更改清洁人员
+                      {tManager('changeCleaners')}
                     </h3>
                     <button
                       onClick={() => {
@@ -922,7 +925,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                   {selectedCleanerChips.length > 0 && (
                     <div style={{ marginBottom: 16, padding: 12, backgroundColor: '#dbeafe', borderRadius: 6 }}>
                       <div style={{ fontSize: 14, fontWeight: 500, color: '#1e40af', marginBottom: 8 }}>
-                        当前已选择清洁工：
+                        {tManager('selectedCleaners')}
                       </div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                         {selectedCleanerChips.map(({ id, name }) => (
@@ -964,7 +967,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                       </div>
                       {task.status === 'assigned' && (
                         <div style={{ fontSize: 12, color: '#f59e0b', marginTop: 8 }}>
-                          状态：已分配，待接收
+                          {tManager('assignedPending')}
                         </div>
                       )}
                     </div>
@@ -973,11 +976,11 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                   {/* 可用清洁员列表 */}
                   <div style={{ marginBottom: 16 }}>
                     <label style={{ display: 'block', fontSize: 14, fontWeight: 500, color: '#374151', marginBottom: 8 }}>
-                      选择清洁员 *
+                      {tManager('selectCleaner')}
                     </label>
                     {availableCleaners.length === 0 ? (
                       <div style={{ fontSize: 14, color: '#6b7280', padding: 12, backgroundColor: '#f3f4f6', borderRadius: 6 }}>
-                        该日期暂无可用清洁员
+                        {tManager('noAvailableCleaners')}
                       </div>
                     ) : (
                       <div style={{ maxHeight: 200, overflowY: 'auto' }}>
@@ -1006,9 +1009,9 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                                 style={{ width: 16, height: 16 }}
                               />
                               <div style={{ flex: 1 }}>
-                                <div style={{ fontWeight: 500, marginBottom: 2 }}>{cleaner.name || '未知姓名'}</div>
+                                <div style={{ fontWeight: 500, marginBottom: 2 }}>{cleaner.name || tManager('unknownName')}</div>
                                 <div style={{ fontSize: 12, color: '#6b7280' }}>
-                                  当前任务: {cleaner.currentTaskCount || 0}/{cleaner.maxTaskCapacity || 0}
+                                  {tManager('currentTaskCount')}: {cleaner.currentTaskCount || 0}/{cleaner.maxTaskCapacity || 0}
                                 </div>
                               </div>
                             </div>
@@ -1021,7 +1024,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                   {/* 备注输入 */}
                   <div style={{ marginBottom: 16 }}>
                     <label style={{ display: 'block', fontSize: 14, fontWeight: 500, color: '#374151', marginBottom: 8 }}>
-                      备注（可选）
+                      {tManager('notes')}
                     </label>
                     <textarea
                       value={assignmentNotes}
@@ -1035,7 +1038,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                         resize: 'vertical',
                         minHeight: 60
                       }}
-                      placeholder="输入备注信息"
+                      placeholder={tManager('notesPlaceholder')}
                     />
                   </div>
 
@@ -1058,7 +1061,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                         cursor: 'pointer' 
                       }}
                     >
-                      取消
+                      {tManager('cancel')}
                     </button>
                     <button
                       onClick={handleAssignSubmit}
@@ -1073,7 +1076,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                         cursor: assigning || selectedCleaners.length === 0 ? 'not-allowed' : 'pointer' 
                       }}
                     >
-                      {assigning ? '分配中...' : '确认分配'}
+                      {assigning ? tManager('assigning') : tManager('confirmAssignment')}
                     </button>
                   </div>
                 </div>
@@ -1165,7 +1168,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
               }}
               onSubmit={saveOwnerEntry}
               onCancel={() => setOwnerEditingEntry(null)}
-              title="编辑入住登记"
+              title={t('actions.editEntry')}
               existingEntries={existingEntriesForHotel}
               currentEntryId={ownerEditingEntry.id}
               hotelId={task.hotelId}

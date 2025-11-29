@@ -5,10 +5,12 @@ import { useUserStore } from '@/store/userStore';
 import { getUserHotels, createHotel, updateHotel } from '@/lib/hotelManagement';
 import { Hotel, CreateHotelData } from '@/types/hotel';
 import { supabase } from '@/lib/supabase';
+import { useTranslation } from '@/hooks/useTranslation';
 
 export default function HotelsPage() {
   const router = useRouter();
   const user = useUserStore(s => s.user);
+  const { t } = useTranslation('ownerHotels');
   const [hotels, setHotels] = useState<Hotel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +57,7 @@ export default function HotelsPage() {
       const hotelList = await getUserHotels(user.id.toString());
       setHotels(hotelList);
     } catch (err) {
-      setError('加载酒店列表失败');
+      setError(t('loadFailed'));
       console.error('加载酒店列表失败:', err);
     } finally {
       setLoading(false);
@@ -73,7 +75,7 @@ export default function HotelsPage() {
       setShowCreateForm(false);
       await loadHotels(); // 重新加载列表
     } catch (err) {
-      setError('创建酒店失败');
+      setError(t('createFailed'));
       console.error('创建酒店失败:', err);
     } finally {
       setCreating(false);
@@ -85,19 +87,19 @@ export default function HotelsPage() {
   };
 
   if (!user || user.role !== 'owner') {
-    return <div className="p-6">无权访问此页面</div>;
+    return <div className="p-6">{t('noAccess')}</div>;
   }
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">我的酒店</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
         <div className="flex gap-2">
           <button
             onClick={() => setShowCreateForm(true)}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
           >
-            添加酒店
+            {t('addHotel')}
           </button>
           <button
             onClick={() => {
@@ -109,7 +111,7 @@ export default function HotelsPage() {
             className="bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
             disabled={hotels.length === 0}
           >
-            编辑酒店信息
+            {t('editHotel')}
           </button>
         </div>
       </div>
@@ -122,16 +124,16 @@ export default function HotelsPage() {
 
       {loading ? (
         <div className="flex justify-center items-center h-64">
-          <div className="text-gray-500">加载中...</div>
+          <div className="text-gray-500">{t('loading')}</div>
         </div>
       ) : hotels.length === 0 ? (
         <div className="text-center py-12">
-          <div className="text-gray-500 mb-4">暂无酒店</div>
+          <div className="text-gray-500 mb-4">{t('noHotels')}</div>
           <button
             onClick={() => setShowCreateForm(true)}
             className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
           >
-            添加第一个酒店
+            {t('addFirstHotel')}
           </button>
         </div>
       ) : (
@@ -158,7 +160,7 @@ export default function HotelsPage() {
                 📍 {hotel.address}
               </p>
               <div className="text-xs text-gray-500">
-                创建时间: {new Date(hotel.createdAt).toLocaleDateString()}
+                {t('createdAt')}: {new Date(hotel.createdAt).toLocaleDateString()}
               </div>
             </div>
           ))}
@@ -169,11 +171,11 @@ export default function HotelsPage() {
       {showCreateForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <h2 className="text-xl font-bold mb-4">添加新酒店</h2>
+            <h2 className="text-xl font-bold mb-4">{t('addNewHotel')}</h2>
             <form onSubmit={handleCreateHotel}>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  酒店名称 *
+                  {t('hotelName')} *
                 </label>
                 <input
                   type="text"
@@ -181,12 +183,12 @@ export default function HotelsPage() {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="输入酒店名称"
+                  placeholder={t('hotelNamePlaceholder')}
                 />
               </div>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  地址 *
+                  {t('address')} *
                 </label>
                 <input
                   type="text"
@@ -194,19 +196,19 @@ export default function HotelsPage() {
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="输入酒店地址"
+                  placeholder={t('addressPlaceholder')}
                 />
               </div>
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  图片URL（可选）
+                  {t('imageUrl')}
                 </label>
                 <input
                   type="url"
                   value={formData.imageUrl}
                   onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="输入图片URL"
+                  placeholder={t('imageUrlPlaceholder')}
                 />
               </div>
               <div className="flex gap-3">
@@ -215,14 +217,14 @@ export default function HotelsPage() {
                   onClick={() => setShowCreateForm(false)}
                   className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                 >
-                  取消
+                  {t('cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={creating}
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                 >
-                  {creating ? '创建中...' : '创建'}
+                  {creating ? t('creating') : t('create')}
                 </button>
               </div>
             </form>
@@ -234,9 +236,9 @@ export default function HotelsPage() {
       {showEditForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <h2 className="text-xl font-bold mb-4">编辑酒店信息</h2>
+            <h2 className="text-xl font-bold mb-4">{t('editHotel')}</h2>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">选择酒店 *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t('selectHotel')} *</label>
               <select
                 value={editForm.hotelId}
                 onChange={(e) => {
@@ -251,7 +253,7 @@ export default function HotelsPage() {
               </select>
             </div>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">酒店名称 *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t('hotelName')} *</label>
               <input
                 type="text"
                 value={editForm.name}
@@ -260,7 +262,7 @@ export default function HotelsPage() {
               />
             </div>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">地址 *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t('address')} *</label>
               <input
                 type="text"
                 value={editForm.address}
@@ -269,7 +271,7 @@ export default function HotelsPage() {
               />
             </div>
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">图片URL（可选）</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">{t('imageUrl')}</label>
               <input
                 type="url"
                 value={editForm.imageUrl}
@@ -283,7 +285,7 @@ export default function HotelsPage() {
                 onClick={() => setShowEditForm(false)}
                 className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                取消
+                {t('cancel')}
               </button>
               <button
                 onClick={async () => {
@@ -294,7 +296,7 @@ export default function HotelsPage() {
                     await loadHotels();
                     setShowEditForm(false);
                   } catch (err) {
-                    alert('更新失败');
+                    alert(t('updateFailed'));
                     console.error(err);
                   } finally {
                     setEditing(false);
@@ -303,7 +305,7 @@ export default function HotelsPage() {
                 disabled={editing}
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
               >
-                {editing ? '保存中...' : '保存'}
+                {editing ? t('saving') : t('save')}
               </button>
             </div>
           </div>

@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
 
       if (existingUser) {
         console.log('User already exists with this role:', existingUser);
-        const roleName = role === 'cleaner' ? '清洁员' : role === 'manager' ? '管理者' : '房东';
+        const roleName = role === 'cleaner' ? '清洁员' : role === 'manager' ? '管理员' : '房东';
         return NextResponse.json(
           { error: `该LINE账号已注册为${roleName}` },
           { status: 400 }

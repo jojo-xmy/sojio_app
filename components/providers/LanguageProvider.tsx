@@ -16,18 +16,27 @@ const LanguageContext = createContext<LanguageContextValue | null>(null);
 const STORAGE_KEY = 'sojio:preferred-locale';
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
+  // 初始化时立即从 localStorage 读取，避免首次渲染使用默认语言
+  const getInitialLocale = (): Locale => {
+    if (typeof window === 'undefined') return DEFAULT_LOCALE;
+    const stored = window.localStorage.getItem(STORAGE_KEY) as Locale | null;
+    if (stored && SUPPORTED_LOCALES.includes(stored)) {
+      return stored;
+    }
+    const browserLocale = (navigator.language || 'zh').slice(0, 2) as Locale;
+    if (SUPPORTED_LOCALES.includes(browserLocale)) {
+      return browserLocale;
+    }
+    return DEFAULT_LOCALE;
+  };
+
+  const [locale, setLocaleState] = useState<Locale>(getInitialLocale);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const stored = window.localStorage.getItem(STORAGE_KEY) as Locale | null;
-    const browserLocale = (navigator.language || 'zh').slice(0, 2) as Locale;
-    if (stored && SUPPORTED_LOCALES.includes(stored)) {
+    if (stored && SUPPORTED_LOCALES.includes(stored) && stored !== locale) {
       setLocaleState(stored);
-      return;
-    }
-    if (SUPPORTED_LOCALES.includes(browserLocale)) {
-      setLocaleState(browserLocale);
     }
   }, []);
 

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/userStore';
+import { useTranslation } from '@/hooks/useTranslation';
 import { 
   getHotelById, 
   getHotelCalendarEntries, 
@@ -21,6 +22,7 @@ export default function HotelCalendarPage() {
   const params = useParams();
   const router = useRouter();
   const user = useUserStore(s => s.user);
+  const { t, locale } = useTranslation('hotelCalendar');
   const hotelId = params.hotelId as string;
 
   const [hotel, setHotel] = useState<Hotel | null>(null);
@@ -72,7 +74,7 @@ export default function HotelCalendarPage() {
       const hotelData = await getHotelById(hotelId);
       
       if (!hotelData) {
-        setError('酒店不存在');
+        setError(t('hotelNotFound'));
         return;
       }
       
@@ -82,7 +84,7 @@ export default function HotelCalendarPage() {
       const entries = await getHotelCalendarEntriesService(hotelId);
       setCalendarEntries(entries);
     } catch (err) {
-      setError('加载酒店数据失败');
+      setError(t('loadFailed'));
       console.error('加载酒店数据失败:', err);
     } finally {
       setLoading(false);
@@ -108,7 +110,7 @@ export default function HotelCalendarPage() {
       setShowCreateForm(false);
       await loadHotelData(); // 重新加载数据
     } catch (err) {
-      setError('创建日历条目失败');
+      setError(t('createFailed'));
       console.error('创建日历条目失败:', err);
     } finally {
       setCreating(false);
@@ -132,7 +134,7 @@ export default function HotelCalendarPage() {
       setEditingEntry(null);
       await loadHotelData(); // 重新加载数据
     } catch (err) {
-      setError('更新日历条目失败');
+      setError(t('updateFailed'));
       console.error('更新日历条目失败:', err);
     } finally {
       setCreating(false);
@@ -140,13 +142,13 @@ export default function HotelCalendarPage() {
   };
 
   const handleDeleteEntry = async (entryId: string) => {
-    if (!confirm('确定要删除这个日历条目吗？')) return;
+    if (!confirm(t('deleteConfirm'))) return;
 
     try {
       await deleteCalendarEntry(entryId);
       await loadHotelData(); // 重新加载数据
     } catch (err) {
-      setError('删除日历条目失败');
+      setError(t('deleteFailed'));
       console.error('删除日历条目失败:', err);
     }
   };
@@ -195,14 +197,14 @@ export default function HotelCalendarPage() {
   };
 
   if (!user || user.role !== 'owner') {
-    return <div className="p-6">无权访问此页面</div>;
+    return <div className="p-6">{t('noAccess')}</div>;
   }
 
   if (loading) {
     return (
       <div className="p-6">
         <div className="flex justify-center items-center h-64">
-          <div className="text-gray-500">加载中...</div>
+          <div className="text-gray-500">{t('loading')}</div>
         </div>
       </div>
     );
@@ -211,23 +213,27 @@ export default function HotelCalendarPage() {
   if (!hotel) {
     return (
       <div className="p-6">
-        <div className="text-center text-red-600">酒店不存在</div>
+        <div className="text-center text-red-600">{t('hotelNotFound')}</div>
       </div>
     );
   }
+
+  // 根据当前语言格式化日期
+  const localeMap: Record<string, string> = { zh: 'zh-CN', en: 'en-US', ja: 'ja-JP' };
+  const dateLocale = localeMap[locale] || 'zh-CN';
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{hotel.name} - 入住日历</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{hotel.name} - {t('title')}</h1>
           <p className="text-gray-600 mt-1">📍 {hotel.address}</p>
         </div>
         <button
           onClick={() => setShowCreateForm(true)}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
         >
-          添加入住登记
+          {t('addEntry')}
         </button>
       </div>
 
@@ -240,12 +246,12 @@ export default function HotelCalendarPage() {
        {/* 入住登记列表视图 */}
        {calendarEntries.length === 0 ? (
         <div className="text-center py-12">
-          <div className="text-gray-500 mb-4">暂无入住登记</div>
+          <div className="text-gray-500 mb-4">{t('noEntries')}</div>
           <button
             onClick={() => setShowCreateForm(true)}
             className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
           >
-            添加第一个入住登记
+            {t('addFirstEntry')}
           </button>
         </div>
       ) : (
@@ -261,7 +267,7 @@ export default function HotelCalendarPage() {
                     {hotel?.name || '酒店'}
                   </h3>
                   <p className="text-gray-600">
-                    👥 {entry.guestCount} 位客人
+                    👥 {entry.guestCount} {t('guests')}
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -269,38 +275,38 @@ export default function HotelCalendarPage() {
                     onClick={() => handleEditEntry(entry)}
                     className="text-blue-600 hover:text-blue-800 text-sm"
                   >
-                    编辑
+                    {t('edit')}
                   </button>
                   <button
                     onClick={() => handleDeleteEntry(entry.id)}
                     className="text-red-600 hover:text-red-800 text-sm"
                   >
-                    删除
+                    {t('delete')}
                   </button>
                 </div>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                  <span className="text-sm font-medium text-gray-700">入住日期:</span>
-                  <p className="text-gray-900">{new Date(entry.checkInDate).toLocaleDateString()}</p>
+                  <span className="text-sm font-medium text-gray-700">{t('checkInDate')}:</span>
+                  <p className="text-gray-900">{new Date(entry.checkInDate).toLocaleDateString(dateLocale)}</p>
                 </div>
                 <div>
-                  <span className="text-sm font-medium text-gray-700">退房日期:</span>
-                  <p className="text-gray-900">{new Date(entry.checkOutDate).toLocaleDateString()}</p>
+                  <span className="text-sm font-medium text-gray-700">{t('checkOutDate')}:</span>
+                  <p className="text-gray-900">{new Date(entry.checkOutDate).toLocaleDateString(dateLocale)}</p>
                 </div>
               </div>
               
               {entry.cleaningDates && entry.cleaningDates.length > 0 && (
                 <div className="mb-4">
-                  <span className="text-sm font-medium text-gray-700">清扫日期:</span>
+                  <span className="text-sm font-medium text-gray-700">{t('cleaningDate')}:</span>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {entry.cleaningDates.map(date => (
                       <span
                         key={date}
                         className="inline-flex items-center px-2 py-1 bg-green-100 text-green-800 text-sm rounded-md"
                       >
-                        {new Date(date).toLocaleDateString()}
+                        {new Date(date).toLocaleDateString(dateLocale)}
                       </span>
                     ))}
                   </div>
@@ -309,13 +315,13 @@ export default function HotelCalendarPage() {
               
               {entry.ownerNotes && (
                 <div>
-                  <span className="text-sm font-medium text-gray-700">房东备注:</span>
+                  <span className="text-sm font-medium text-gray-700">{t('ownerNotes')}:</span>
                   <p className="text-gray-900 mt-1">{entry.ownerNotes}</p>
                 </div>
               )}
               
               <div className="text-xs text-gray-500 mt-4">
-                创建时间: {new Date(entry.createdAt).toLocaleString()}
+                {t('createdAt')}: {new Date(entry.createdAt).toLocaleString(dateLocale)}
               </div>
             </div>
           ))}
@@ -331,7 +337,7 @@ export default function HotelCalendarPage() {
                 {hotel?.name || '酒店'}
               </h3>
               <p className="text-gray-600">
-                👥 {selectedEntry.guestCount} 位客人
+                👥 {selectedEntry.guestCount} {t('guests')}
               </p>
             </div>
             <div className="flex gap-2">
@@ -339,44 +345,44 @@ export default function HotelCalendarPage() {
                 onClick={() => handleEditEntry(selectedEntry)}
                 className="text-blue-600 hover:text-blue-800 text-sm"
               >
-                编辑
+                {t('edit')}
               </button>
               <button
                 onClick={() => handleDeleteEntry(selectedEntry.id)}
                 className="text-red-600 hover:text-red-800 text-sm"
               >
-                删除
+                {t('delete')}
               </button>
               <button
                 onClick={() => setSelectedEntry(null)}
                 className="text-gray-600 hover:text-gray-800 text-sm"
               >
-                关闭
+                {t('close')}
               </button>
             </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
-              <span className="text-sm font-medium text-gray-700">入住日期:</span>
-              <p className="text-gray-900">{new Date(selectedEntry.checkInDate).toLocaleDateString()}</p>
+              <span className="text-sm font-medium text-gray-700">{t('checkInDate')}:</span>
+              <p className="text-gray-900">{new Date(selectedEntry.checkInDate).toLocaleDateString(dateLocale)}</p>
             </div>
             <div>
-              <span className="text-sm font-medium text-gray-700">退房日期:</span>
-              <p className="text-gray-900">{new Date(selectedEntry.checkOutDate).toLocaleDateString()}</p>
+              <span className="text-sm font-medium text-gray-700">{t('checkOutDate')}:</span>
+              <p className="text-gray-900">{new Date(selectedEntry.checkOutDate).toLocaleDateString(dateLocale)}</p>
             </div>
           </div>
           
           {selectedEntry.cleaningDates && selectedEntry.cleaningDates.length > 0 && (
             <div className="mb-4">
-              <span className="text-sm font-medium text-gray-700">清扫日期:</span>
+              <span className="text-sm font-medium text-gray-700">{t('cleaningDate')}:</span>
               <div className="flex flex-wrap gap-1 mt-1">
                 {selectedEntry.cleaningDates.map(date => (
                   <span
                     key={date}
                     className="inline-flex items-center px-2 py-1 bg-green-100 text-green-800 text-sm rounded-md"
                   >
-                    {new Date(date).toLocaleDateString()}
+                    {new Date(date).toLocaleDateString(dateLocale)}
                   </span>
                 ))}
               </div>
@@ -385,13 +391,13 @@ export default function HotelCalendarPage() {
           
           {selectedEntry.ownerNotes && (
             <div>
-              <span className="text-sm font-medium text-gray-700">房东备注:</span>
+              <span className="text-sm font-medium text-gray-700">{t('ownerNotes')}:</span>
               <p className="text-gray-900 mt-1">{selectedEntry.ownerNotes}</p>
             </div>
           )}
           
           <div className="text-xs text-gray-500 mt-4">
-            创建时间: {new Date(selectedEntry.createdAt).toLocaleString()}
+            {t('createdAt')}: {new Date(selectedEntry.createdAt).toLocaleString(dateLocale)}
           </div>
         </div>
       )}
@@ -411,7 +417,7 @@ export default function HotelCalendarPage() {
               onSubmit={editingEntry ? handleUpdateEntry : handleCreateEntry}
               onCancel={editingEntry ? handleCancelEdit : () => setShowCreateForm(false)}
               loading={creating}
-              title={editingEntry ? '编辑入住登记' : '添加入住登记'}
+              title={editingEntry ? t('editTitle') : t('addTitle')}
             />
           </div>
         </div>

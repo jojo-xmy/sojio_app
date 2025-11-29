@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from '@/hooks/useTranslation';
 
 export interface CalendarEntryFormData {
   hotelId: string;
@@ -38,7 +39,7 @@ export const CalendarEntryForm: React.FC<CalendarEntryFormProps> = ({
   onSubmit,
   onCancel,
   loading = false,
-  title = "入住登记",
+  title,
   className = "",
   hotels = [],
   showHotelSelection = false,
@@ -46,6 +47,8 @@ export const CalendarEntryForm: React.FC<CalendarEntryFormProps> = ({
   currentEntryId,
   hotelId
 }) => {
+  const { t } = useTranslation('calendarEntry');
+  const displayTitle = title || t('title');
   const buildInitialCleaningDates = (data: Partial<CalendarEntryFormData>) => {
     if (data.cleaningDates && data.cleaningDates.length > 0) {
       return data.cleaningDates.slice(0, 1);
@@ -179,23 +182,23 @@ export const CalendarEntryForm: React.FC<CalendarEntryFormProps> = ({
   // 验证表单数据
   const validateFormData = () => {
     if (showHotelSelection && !formData.hotelId) {
-      setValidationError('请选择酒店');
+      setValidationError(t('validation.selectHotel'));
       return false;
     }
 
     if (!formData.checkInDate || !formData.checkOutDate) {
-      setValidationError('请选择入住和退房日期');
+      setValidationError(t('validation.selectDates'));
       return false;
     }
 
     if (new Date(formData.checkInDate) >= new Date(formData.checkOutDate)) {
-      setValidationError('退房日期必须晚于入住日期');
+      setValidationError(t('validation.checkOutAfterCheckIn'));
       return false;
     }
 
     // 检查入住日期是否被占用
     if (isDateOccupied(formData.checkInDate)) {
-      setValidationError('所选入住日期已被占用，请选择其他日期');
+      setValidationError(t('validation.dateOccupied'));
       return false;
     }
 
@@ -208,7 +211,8 @@ export const CalendarEntryForm: React.FC<CalendarEntryFormProps> = ({
     while (current < checkOut) {
       const dateStr = current.toISOString().split('T')[0];
       if (isDateOccupied(dateStr)) {
-        setValidationError(`入住期间存在已被占用的日期（${dateStr}），请调整日期范围`);
+        const errorMsg = t('validation.dateRangeOccupied').replace('{date}', dateStr);
+        setValidationError(errorMsg);
         return false;
       }
       current.setDate(current.getDate() + 1);
@@ -217,12 +221,12 @@ export const CalendarEntryForm: React.FC<CalendarEntryFormProps> = ({
     const cleaningDate = formData.cleaningDates[0] || formData.checkOutDate;
 
     if (!cleaningDate) {
-      setValidationError('请选择清扫日期');
+      setValidationError(t('validation.selectCleaningDate'));
       return false;
     }
 
     if (cleaningDate < formData.checkInDate || cleaningDate > formData.checkOutDate) {
-      setValidationError('清扫日期必须在入住与退房日期之间');
+      setValidationError(t('validation.cleaningDateRange'));
       return false;
     }
 
@@ -252,7 +256,7 @@ export const CalendarEntryForm: React.FC<CalendarEntryFormProps> = ({
 
   return (
     <div className={`bg-white rounded-lg p-6 ${className}`}>
-      <h2 className="text-xl font-bold mb-4">{title}</h2>
+      <h2 className="text-xl font-bold mb-4">{displayTitle}</h2>
       
       {validationError && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
@@ -264,7 +268,7 @@ export const CalendarEntryForm: React.FC<CalendarEntryFormProps> = ({
         {showHotelSelection && (
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              选择酒店 *
+              {t('selectHotel')} *
             </label>
             <select
               required={showHotelSelection}
@@ -275,7 +279,7 @@ export const CalendarEntryForm: React.FC<CalendarEntryFormProps> = ({
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">请选择酒店</option>
+              <option value="">{t('selectHotelPlaceholder')}</option>
               {hotels.map(hotel => (
                 <option key={hotel.id} value={hotel.id}>
                   {hotel.name} - {hotel.address}
@@ -284,7 +288,7 @@ export const CalendarEntryForm: React.FC<CalendarEntryFormProps> = ({
             </select>
             {hotels.length === 0 && (
               <p className="text-sm text-red-500 mt-1">
-                您暂无管理的酒店，请联系管理员
+                {t('noHotelsMessage')}
               </p>
             )}
           </div>
@@ -292,7 +296,7 @@ export const CalendarEntryForm: React.FC<CalendarEntryFormProps> = ({
 
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            入住日期 *
+            {t('checkInDate')} *
           </label>
           <input
             type="date"
@@ -306,7 +310,7 @@ export const CalendarEntryForm: React.FC<CalendarEntryFormProps> = ({
               
               // 实时检查日期冲突
               if (selectedDate && isDateOccupied(selectedDate)) {
-                setDateConflictMessage('⚠️ 该日期已有客人入住');
+                setDateConflictMessage(t('dateOccupied'));
               } else {
                 setDateConflictMessage('');
               }
@@ -324,7 +328,7 @@ export const CalendarEntryForm: React.FC<CalendarEntryFormProps> = ({
 
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            退房日期 *
+            {t('checkOutDate')} *
           </label>
           <input
             type="date"
@@ -350,18 +354,18 @@ export const CalendarEntryForm: React.FC<CalendarEntryFormProps> = ({
             disabled={!formData.checkInDate}
           />
           {!formData.checkInDate && (
-            <p className="text-xs text-gray-500 mt-1">请先选择入住日期</p>
+            <p className="text-xs text-gray-500 mt-1">{t('selectCheckInFirst')}</p>
           )}
           {formData.checkInDate && getMaxCheckOutDate(formData.checkInDate) && (
             <p className="text-xs text-amber-600 mt-1">
-              ⚠️ 受已有入住影响，最晚可选退房日期为 {getMaxCheckOutDate(formData.checkInDate)}
+              {t('maxCheckOutHint')} {getMaxCheckOutDate(formData.checkInDate)}
             </p>
           )}
         </div>
 
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            入住人数 *
+            {t('guestCount')} *
           </label>
           <input
             type="number"
@@ -375,7 +379,7 @@ export const CalendarEntryForm: React.FC<CalendarEntryFormProps> = ({
 
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            清扫日期
+            {t('cleaningDate')}
           </label>
           <input
             type="date"
@@ -394,20 +398,20 @@ export const CalendarEntryForm: React.FC<CalendarEntryFormProps> = ({
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <p className="text-xs text-gray-500 mt-1">
-            默认使用退房日期作为清扫日期，必要时可手动调整
+            {t('cleaningDateHint')}
           </p>
         </div>
 
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            房东备注（可选）
+            {t('ownerNotes')}
           </label>
           <textarea
             value={formData.ownerNotes}
             onChange={(e) => setFormData({ ...formData, ownerNotes: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             rows={3}
-            placeholder="输入房东备注"
+            placeholder={t('ownerNotesPlaceholder')}
           />
         </div>
 
@@ -417,14 +421,14 @@ export const CalendarEntryForm: React.FC<CalendarEntryFormProps> = ({
             onClick={onCancel}
             className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
           >
-            取消
+            {t('cancel')}
           </button>
           <button
             type="submit"
             disabled={loading}
             className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
           >
-            {loading ? '保存中...' : '保存'}
+            {loading ? t('saving') : t('save')}
           </button>
         </div>
       </form>

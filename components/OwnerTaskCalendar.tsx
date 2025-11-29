@@ -8,6 +8,7 @@ import { TaskCalendarEvent, AvailableCleaner } from '@/types/calendar';
 import { TaskDetailPanel } from '@/components/TaskDetailPanel';
 import { supabase } from '@/lib/supabase';
 import { addDays, startOfWeek, endOfWeek, isBefore, isAfter, min, max, isSameDay, startOfDay, differenceInCalendarDays, format } from 'date-fns';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface OwnerTaskCalendarProps {
   className?: string;
@@ -124,6 +125,7 @@ function assignWeekLanes(segments: TaskSegment[]): Record<string, number> {
 export const OwnerTaskCalendar = forwardRef<{ refreshData: () => void }, OwnerTaskCalendarProps>(
   ({ className, onDataRefresh }, ref) => {
     const user = useUserStore(s => s.user);
+    const { t, locale } = useTranslation('calendar');
     const [currentDate, setCurrentDate] = useState(new Date());
     const [events, setEvents] = useState<TaskCalendarEvent[]>([]);
     const [cleaningTasks, setCleaningTasks] = useState<any[]>([]);
@@ -316,13 +318,15 @@ export const OwnerTaskCalendar = forwardRef<{ refreshData: () => void }, OwnerTa
     if (loading) {
       return (
         <div className={`flex items-center justify-center h-96 ${className}`}>
-          <div className="text-lg">加载中...</div>
+          <div className="text-lg">{t('loading')}</div>
         </div>
       );
     }
 
     const { grid: calendarGrid, weekStartDates } = getCalendarGrid(currentDate);
-    const monthName = currentDate.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long' });
+    // 根据当前语言格式化月份名称
+    const localeMap: Record<string, string> = { zh: 'zh-CN', en: 'en-US', ja: 'ja-JP' };
+    const monthName = currentDate.toLocaleDateString(localeMap[locale] || 'zh-CN', { year: 'numeric', month: 'long' });
     
     // 拆分所有任务为周段（只处理入住任务，清扫任务通过状态徽章显示）
     const allSegments = events.flatMap(event => {
@@ -340,19 +344,19 @@ export const OwnerTaskCalendar = forwardRef<{ refreshData: () => void }, OwnerTa
               onClick={goToPreviousMonth}
               className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
             >
-              上个月
+              {t('previousMonth')}
             </button>
             <button
               onClick={goToToday}
               className="px-3 py-1 bg-blue-500 text-white hover:bg-blue-600 rounded-md transition-colors"
             >
-              今天
+              {t('today')}
             </button>
             <button
               onClick={goToNextMonth}
               className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
             >
-              下个月
+              {t('nextMonth')}
             </button>
           </div>
         </div>
@@ -369,8 +373,16 @@ export const OwnerTaskCalendar = forwardRef<{ refreshData: () => void }, OwnerTa
           >
             {/* 星期标题 */}
             <div className="grid grid-cols-7 gap-1 mb-2">
-              {['日', '一', '二', '三', '四', '五', '六'].map(day => (
-                <div key={day} className="p-2 text-center font-medium text-gray-600 text-sm">
+              {[
+                t('weekDays.sun'),
+                t('weekDays.mon'),
+                t('weekDays.tue'),
+                t('weekDays.wed'),
+                t('weekDays.thu'),
+                t('weekDays.fri'),
+                t('weekDays.sat'),
+              ].map((day, index) => (
+                <div key={index} className="p-2 text-center font-medium text-gray-600 text-sm">
                   {day}
                 </div>
               ))}
@@ -486,12 +498,12 @@ export const OwnerTaskCalendar = forwardRef<{ refreshData: () => void }, OwnerTa
                           <div key={segment.id} style={{ gridColumn, gridRow }} className="px-0.5">
                             <div
                               className={`h-6 rounded border ${taskColor} relative cursor-pointer flex items-center px-2 transition-all duration-300`}
-                              title={`${segment.originalEvent.task.hotelName || '未知酒店'}`}
+                              title={`${segment.originalEvent.task.hotelName || t('unknownHotel')}`}
                               onClick={(e) => { e.stopPropagation(); handleTaskClick(segment.originalEvent); }}
                             >
                               {!(segment.originalEvent as any).isCleaningTask && (
                                 <div className={`truncate font-medium transition-all duration-300 ${isDetailExpanded ? 'text-[10px]' : 'text-xs'}`}>
-                                  {`${segment.originalEvent.task.hotelName || '未知酒店'}`}
+                                  {`${segment.originalEvent.task.hotelName || t('unknownHotel')}`}
                                 </div>
                               )}
 
@@ -545,7 +557,7 @@ export const OwnerTaskCalendar = forwardRef<{ refreshData: () => void }, OwnerTa
                 >
                   <div className="text-center px-4">
                     <div className="text-lg font-medium mb-2">📅</div>
-                    <div className="text-sm">点击日历中的任务以查看详情</div>
+                    <div className="text-sm">{t('clickToViewDetails')}</div>
                   </div>
                 </div>
               ) : (
@@ -554,7 +566,7 @@ export const OwnerTaskCalendar = forwardRef<{ refreshData: () => void }, OwnerTa
                     <button
                       onClick={() => setIsDetailExpanded(!isDetailExpanded)}
                       className="text-xs px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-md transition-all duration-200 flex items-center gap-1.5 shadow-sm hover:shadow"
-                      title={isDetailExpanded ? "收缩详情面板" : "展开详情面板"}
+                      title={isDetailExpanded ? t('collapseTooltip') : t('expandTooltip')}
                       style={{
                         fontSize: 'clamp(10px, 2vw, 12px)',
                         whiteSpace: 'nowrap',
@@ -562,7 +574,7 @@ export const OwnerTaskCalendar = forwardRef<{ refreshData: () => void }, OwnerTa
                       }}
                     >
                       <span>{isDetailExpanded ? '◀' : '▶'}</span>
-                      <span style={{ fontSize: 'inherit' }}>{isDetailExpanded ? '收缩' : '展开'}</span>
+                      <span style={{ fontSize: 'inherit' }}>{isDetailExpanded ? t('collapse') : t('expand')}</span>
                     </button>
                   </div>
                   <TaskDetailPanel 

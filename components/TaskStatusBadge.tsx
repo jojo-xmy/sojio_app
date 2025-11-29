@@ -1,6 +1,7 @@
 "use client";
 import { TaskStatus, TASK_STATUS_DISPLAY, TASK_STATUS_COLOR } from '@/types/task';
 import { FileEdit, Clock, Users, CheckCircle, Loader, CheckCircle2, Award, HelpCircle } from 'lucide-react';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface TaskStatusBadgeProps {
   status: TaskStatus;
@@ -27,7 +28,8 @@ export const TaskStatusBadge: React.FC<TaskStatusBadgeProps> = ({
   size = 'medium',
   className = ''
 }) => {
-  const displayName = TASK_STATUS_DISPLAY[status];
+  const { t } = useTranslation('taskStatus');
+  const displayName = t(status, TASK_STATUS_DISPLAY[status]);
   const color = TASK_STATUS_COLOR[status];
   const IconComponent = statusIcons[status] || HelpCircle;
 

@@ -103,7 +103,7 @@ export default function ManagerDashboard() {
           ref={calendarRef}
           className="w-full" 
           onDataRefresh={() => {
-            console.log('管理者日历数据已刷新');
+            console.log('管理员日历数据已刷新');
             // 移除这里的loadAllAttendanceStatus调用，避免循环刷新
           }}
         />

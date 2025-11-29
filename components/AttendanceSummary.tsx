@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Attendance } from '@/lib/attendance';
 import { supabase } from '@/lib/supabase';
 import { Users, CheckCircle2, LogOut, Clock } from 'lucide-react';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface AttendanceSummaryProps {
   assignedCleaners?: string[];
@@ -15,6 +16,8 @@ interface UserProfile {
 }
 
 export const AttendanceSummary: React.FC<AttendanceSummaryProps> = ({ assignedCleaners, attendances }) => {
+  const { t, locale } = useTranslation('taskDetail');
+  const { t: tAttendance } = useTranslation('attendanceSummary');
   const [userProfiles, setUserProfiles] = useState<UserProfile[]>([]);
   const checkedInRecords = attendances.filter(a => a.status === 'checked_in');
   const checkedOutRecords = attendances.filter(a => a.status === 'checked_out');
@@ -72,7 +75,7 @@ export const AttendanceSummary: React.FC<AttendanceSummaryProps> = ({ assignedCl
         borderBottom: '1px solid #f3f4f6'
       }}>
         <Users size={18} color="#6b7280" />
-        <span style={{ fontWeight: 600, fontSize: '15px', color: '#1f2937' }}>出勤状态</span>
+        <span style={{ fontWeight: 600, fontSize: '15px', color: '#1f2937' }}>{t('attendanceStatus')}</span>
       </div>
       
       {/* 统计概览 */}
@@ -97,7 +100,7 @@ export const AttendanceSummary: React.FC<AttendanceSummaryProps> = ({ assignedCl
             marginBottom: 4
           }}>
             <CheckCircle2 size={16} color="#059669" />
-            <span style={{ fontSize: '13px', color: '#059669', fontWeight: 500 }}>出勤</span>
+            <span style={{ fontSize: '13px', color: '#059669', fontWeight: 500 }}>{tAttendance('checkedInLabel')}</span>
           </div>
           <div style={{ 
             fontSize: '20px', 
@@ -123,7 +126,7 @@ export const AttendanceSummary: React.FC<AttendanceSummaryProps> = ({ assignedCl
             marginBottom: 4
           }}>
             <LogOut size={16} color="#2563eb" />
-            <span style={{ fontSize: '13px', color: '#2563eb', fontWeight: 500 }}>退勤</span>
+            <span style={{ fontSize: '13px', color: '#2563eb', fontWeight: 500 }}>{tAttendance('checkedOutLabel')}</span>
           </div>
           <div style={{ 
             fontSize: '20px', 
@@ -153,7 +156,7 @@ export const AttendanceSummary: React.FC<AttendanceSummaryProps> = ({ assignedCl
             marginBottom: 8 
           }}>
             <Clock size={14} color="#6b7280" />
-            <span>出勤记录</span>
+            <span>{tAttendance('checkInRecords')}</span>
           </div>
           {checkedInRecords.map(record => (
             <div key={record.id} style={{ 
@@ -174,12 +177,12 @@ export const AttendanceSummary: React.FC<AttendanceSummaryProps> = ({ assignedCl
               }} />
               <span style={{ fontWeight: 500 }}>{getUserName(record.user_id)}</span>
               <span style={{ color: '#6b7280' }}>
-                {record.check_in_time ? new Date(record.check_in_time).toLocaleString('zh-CN', {
+                {record.check_in_time ? new Date(record.check_in_time).toLocaleString(locale === 'zh' ? 'zh-CN' : locale === 'ja' ? 'ja-JP' : 'en-US', {
                   month: '2-digit',
                   day: '2-digit',
                   hour: '2-digit',
                   minute: '2-digit'
-                }) : '未记录'}
+                }) : tAttendance('notRecorded')}
               </span>
             </div>
           ))}
@@ -203,7 +206,7 @@ export const AttendanceSummary: React.FC<AttendanceSummaryProps> = ({ assignedCl
             marginBottom: 8 
           }}>
             <Clock size={14} color="#6b7280" />
-            <span>退勤记录</span>
+            <span>{tAttendance('checkOutRecords')}</span>
           </div>
           {checkedOutRecords.map(record => (
             <div key={record.id} style={{ 
@@ -224,12 +227,12 @@ export const AttendanceSummary: React.FC<AttendanceSummaryProps> = ({ assignedCl
               }} />
               <span style={{ fontWeight: 500 }}>{getUserName(record.user_id)}</span>
               <span style={{ color: '#6b7280' }}>
-                {record.check_out_time ? new Date(record.check_out_time).toLocaleString('zh-CN', {
+                {record.check_out_time ? new Date(record.check_out_time).toLocaleString(locale === 'zh' ? 'zh-CN' : locale === 'ja' ? 'ja-JP' : 'en-US', {
                   month: '2-digit',
                   day: '2-digit',
                   hour: '2-digit',
                   minute: '2-digit'
-                }) : '未记录'}
+                }) : tAttendance('notRecorded')}
               </span>
             </div>
           ))}
@@ -248,7 +251,7 @@ export const AttendanceSummary: React.FC<AttendanceSummaryProps> = ({ assignedCl
           fontStyle: 'italic'
         }}>
           <Clock size={16} style={{ marginRight: 6, opacity: 0.5 }} />
-          暂无打卡记录
+          {tAttendance('noRecords')}
         </div>
       )}
     </div>

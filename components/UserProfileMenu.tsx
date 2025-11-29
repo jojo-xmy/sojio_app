@@ -177,7 +177,7 @@ export const UserProfileMenu: React.FC = () => {
       case 'cleaner':
         return '清洁员';
       case 'manager':
-        return '管理者';
+        return '管理员';
       case 'owner':
         return '房东';
       default:

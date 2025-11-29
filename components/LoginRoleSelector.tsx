@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/userStore';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface UserRole {
   id: string;
@@ -23,6 +24,7 @@ export const LoginRoleSelector: React.FC<LoginRoleSelectorProps> = ({
 }) => {
   const router = useRouter();
   const { setUser } = useUserStore();
+  const { t } = useTranslation('loginRoleSelector');
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,10 +42,10 @@ export const LoginRoleSelector: React.FC<LoginRoleSelectorProps> = ({
         const data = await response.json();
         setRoles(data.roles);
       } else {
-        setError('获取角色列表失败');
+        setError(t('fetchRolesFailed'));
       }
     } catch (error) {
-      setError('获取角色列表失败');
+      setError(t('fetchRolesFailed'));
     } finally {
       setLoading(false);
     }
@@ -80,24 +82,24 @@ export const LoginRoleSelector: React.FC<LoginRoleSelectorProps> = ({
           setUser(data.user);
           router.push('/dashboard');
         } else {
-          setError('登录失败');
+          setError(t('loginFailed'));
         }
       } else {
-        setError('角色切换失败');
+        setError(t('switchRoleFailed'));
       }
     } catch (error) {
-      setError('登录失败');
+      setError(t('loginFailed'));
     }
   };
 
   const getRoleDisplayName = (role: string) => {
     switch (role) {
       case 'cleaner':
-        return '清洁员';
+        return t('cleaner');
       case 'manager':
-        return '管理者';
+        return t('manager');
       case 'owner':
-        return '房东';
+        return t('owner');
       default:
         return role;
     }
@@ -123,7 +125,7 @@ export const LoginRoleSelector: React.FC<LoginRoleSelectorProps> = ({
           animation: 'spin 1s linear infinite',
           margin: '0 auto 1rem'
         }} />
-        <p style={{ color: '#6b7280' }}>正在加载您的账号...</p>
+        <p style={{ color: '#6b7280' }}>{t('loading')}</p>
       </div>
     );
   }
@@ -162,7 +164,7 @@ export const LoginRoleSelector: React.FC<LoginRoleSelectorProps> = ({
             cursor: 'pointer'
           }}
         >
-          重新注册
+          {t('retryRegister')}
         </button>
       </div>
     );
@@ -185,10 +187,10 @@ export const LoginRoleSelector: React.FC<LoginRoleSelectorProps> = ({
           color: '#1f2937',
           marginBottom: '0.5rem'
         }}>
-          选择登录身份
+          {t('selectTitle')}
         </h1>
         <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
-          检测到您有 {roles.length} 个身份，请选择要登录的身份
+          {t('selectDescription').replace('{count}', roles.length.toString())}
         </p>
       </div>
 
@@ -216,7 +218,7 @@ export const LoginRoleSelector: React.FC<LoginRoleSelectorProps> = ({
             }}
           >
             <div style={{ fontWeight: '600', color: '#1f2937', marginBottom: '0.25rem' }}>
-              登入{getRoleDisplayName(role.role)}账号
+              {t('loginAs').replace('{role}', getRoleDisplayName(role.role))}
             </div>
             <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
               {role.name} ({role.katakana})
@@ -253,7 +255,7 @@ export const LoginRoleSelector: React.FC<LoginRoleSelectorProps> = ({
             e.currentTarget.style.background = '#10b981';
           }}
         >
-          注册新身份
+          {t('registerNew')}
         </button>
         <p style={{ 
           fontSize: '0.75rem', 
@@ -261,7 +263,7 @@ export const LoginRoleSelector: React.FC<LoginRoleSelectorProps> = ({
           marginTop: '0.5rem',
           marginBottom: '0'
         }}>
-          使用同一LINE账号注册另一个角色
+          {t('registerNewHint')}
         </p>
       </div>
     </div>

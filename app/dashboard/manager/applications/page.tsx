@@ -92,7 +92,7 @@ export default function ManagerApplicationsPage() {
   const getRoleDisplayName = (role: string) => {
     const roleNames = {
       owner: '房东',
-      manager: '管理者',
+      manager: '管理员',
       cleaner: '清洁员'
     };
     return roleNames[role as keyof typeof roleNames] || role;

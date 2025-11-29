@@ -3,6 +3,7 @@ import React from 'react';
 import { Attendance, checkIn, checkOut } from '@/lib/attendance';
 import { Button } from './Button';
 import { Clock, CheckCircle2, LogOut as LogOutIcon } from 'lucide-react';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface AttendanceActionsProps {
   taskId: string;
@@ -23,6 +24,7 @@ export const AttendanceActions: React.FC<AttendanceActionsProps> = ({
   onLoadingChange,
   onAfterUpdate
 }) => {
+  const { t, locale } = useTranslation('attendanceActions');
   const selfCheckIn = allAttendances.find(a => a.status === 'checked_in' && a.user_id === userId);
   const selfCheckOut = allAttendances.find(a => a.status === 'checked_out' && a.user_id === userId);
 
@@ -52,7 +54,7 @@ export const AttendanceActions: React.FC<AttendanceActionsProps> = ({
         border: '1px solid #e5e7eb'
       }}>
         <Button onClick={handleCheckIn} disabled={loading} variant="success" size="sm" className="responsive-text">
-          {loading ? '打卡中...' : '出勤打卡'}
+          {loading ? t('checking') : t('checkIn')}
         </Button>
         {selfCheckIn?.check_in_time && (
           <div style={{ 
@@ -64,7 +66,7 @@ export const AttendanceActions: React.FC<AttendanceActionsProps> = ({
             fontWeight: 500
           }}>
             <CheckCircle2 size={16} />
-            <span>已出勤：{new Date(selfCheckIn.check_in_time).toLocaleString('zh-CN', { 
+            <span>{t('checkedIn')}{new Date(selfCheckIn.check_in_time).toLocaleString(locale === 'zh' ? 'zh-CN' : locale === 'ja' ? 'ja-JP' : 'en-US', { 
               month: '2-digit', 
               day: '2-digit', 
               hour: '2-digit', 
@@ -97,7 +99,7 @@ export const AttendanceActions: React.FC<AttendanceActionsProps> = ({
             fontWeight: 500
           }}>
             <CheckCircle2 size={16} />
-            <span>已出勤：{new Date(selfCheckIn.check_in_time).toLocaleString('zh-CN', { 
+            <span>{t('checkedIn')}{new Date(selfCheckIn.check_in_time).toLocaleString(locale === 'zh' ? 'zh-CN' : locale === 'ja' ? 'ja-JP' : 'en-US', { 
               month: '2-digit', 
               day: '2-digit', 
               hour: '2-digit', 
@@ -106,7 +108,7 @@ export const AttendanceActions: React.FC<AttendanceActionsProps> = ({
           </div>
         )}
         <Button onClick={handleCheckOut} disabled={loading} variant="primary" size="sm" className="responsive-text">
-          {loading ? '打卡中...' : '退勤打卡'}
+          {loading ? t('checking') : t('checkOut')}
         </Button>
       </div>
     );
@@ -133,14 +135,14 @@ export const AttendanceActions: React.FC<AttendanceActionsProps> = ({
           fontWeight: 500
         }}>
           <CheckCircle2 size={16} />
-          <span>已出勤：{new Date(selfCheckIn.check_in_time).toLocaleString('zh-CN', { 
-            month: '2-digit', 
-            day: '2-digit', 
-            hour: '2-digit', 
-            minute: '2-digit' 
-          })}</span>
-        </div>
-      )}
+            <span>{t('checkedIn')}{new Date(selfCheckIn.check_in_time).toLocaleString(locale === 'zh' ? 'zh-CN' : locale === 'ja' ? 'ja-JP' : 'en-US', { 
+              month: '2-digit', 
+              day: '2-digit', 
+              hour: '2-digit', 
+              minute: '2-digit' 
+            })}</span>
+          </div>
+        )}
       {selfCheckOut?.check_out_time && (
         <div style={{ 
           display: 'flex', 
@@ -151,7 +153,7 @@ export const AttendanceActions: React.FC<AttendanceActionsProps> = ({
           fontWeight: 500
         }}>
           <LogOutIcon size={16} />
-          <span>已退勤：{new Date(selfCheckOut.check_out_time).toLocaleString('zh-CN', { 
+          <span>{t('checkedOut')}{new Date(selfCheckOut.check_out_time).toLocaleString(locale === 'zh' ? 'zh-CN' : locale === 'ja' ? 'ja-JP' : 'en-US', { 
             month: '2-digit', 
             day: '2-digit', 
             hour: '2-digit', 

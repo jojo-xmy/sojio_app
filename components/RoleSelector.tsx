@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useUserStore } from '@/store/userStore';
 import { useRouter } from 'next/navigation';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface UserRole {
   id: string;
@@ -23,6 +24,7 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
 }) => {
   const { user, setUser, clearUser, isInitialized } = useUserStore();
   const router = useRouter();
+  const { t } = useTranslation('roleSelector');
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -63,11 +65,11 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
         setRoles(data.roles || []);
         setHasFetchedRoles(true);
       } else {
-        setError('获取角色列表失败');
+        setError(t('fetchRolesFailed'));
       }
     } catch (error) {
       console.error('获取角色列表失败:', error);
-      setError('获取角色列表失败');
+      setError(t('fetchRolesFailed'));
     } finally {
       setLoading(false);
     }
@@ -99,16 +101,16 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
           body: JSON.stringify({ user: data.user })
         });
         if (!loginResponse.ok) {
-          throw new Error('写入登录cookie失败');
+          throw new Error(t('writeCookieFailed'));
         }
         setUser(data.user);
         router.push('/dashboard');
       } else {
-        setError('切换角色失败');
+        setError(t('switchRoleFailed'));
       }
     } catch (error) {
       console.error('切换角色失败:', error);
-      setError('切换角色失败');
+      setError(t('switchRoleFailed'));
     }
   };
 
@@ -125,11 +127,11 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
   const getRoleDisplayName = (role: string) => {
     switch (role) {
       case 'cleaner':
-        return '清洁员';
+        return t('cleaner');
       case 'manager':
-        return '管理者';
+        return t('manager');
       case 'owner':
-        return '房东';
+        return t('owner');
       default:
         return role;
     }
@@ -156,7 +158,7 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
         textAlign: 'center',
         color: '#6b7280'
       }}>
-        初始化中...
+        {t('initializing')}
       </div>
     );
   }
@@ -169,7 +171,7 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
         textAlign: 'center',
         color: '#6b7280'
       }}>
-        加载中...
+        {t('loading')}
       </div>
     );
   }
@@ -215,7 +217,7 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
             gap: '0.5rem'
           }}>
             <span style={{ fontSize: '1.25rem' }}>👤</span>
-            身份切换 ({roles.length}个身份)
+            {t('title')} ({roles.length}{t('rolesCount')})
           </h3>
           <div style={{ 
             display: 'flex', 
@@ -290,7 +292,7 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
               gap: '0.5rem'
             }}>
               <span style={{ fontSize: '1.25rem' }}>⚙️</span>
-              账号管理
+              {t('accountManagement')}
             </h3>
           )}
           <button
@@ -324,7 +326,7 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
             }}
           >
             <span style={{ fontSize: '1.125rem' }}>🚪</span>
-            退出登录
+            {t('logout')}
           </button>
         </div>
       )}
@@ -336,7 +338,7 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
           color: '#6b7280',
           textAlign: 'center'
         }}>
-          当前身份：{getRoleDisplayName(user?.role || '')}
+          {t('currentRole')}{getRoleDisplayName(user?.role || '')}
         </div>
       )}
     </div>

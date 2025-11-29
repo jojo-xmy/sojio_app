@@ -2,6 +2,8 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useUserStore } from '@/store/userStore';
+import { useTranslation } from '@/hooks/useTranslation';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 type UserRole = 'owner' | 'manager' | 'cleaner';
 
@@ -16,6 +18,7 @@ function RegisterContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, setUser } = useUserStore();
+  const { t, locale } = useTranslation('register');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [registrationData, setRegistrationData] = useState<RegistrationData | null>(null);
@@ -29,7 +32,7 @@ function RegisterContent() {
     const error = searchParams.get('error');
 
     if (error) {
-      setError('LINE授权失败，请重试');
+      setError(t('oauthFailed'));
       return;
     }
 
@@ -39,7 +42,7 @@ function RegisterContent() {
         lineUserId,
         name: displayName,
         avatar: pictureUrl || undefined,
-        role: 'cleaner', // 默认角色
+        role: 'cleaner', // 默认身份
       });
     }
   }, [searchParams]);
@@ -80,23 +83,23 @@ function RegisterContent() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || '注册失败');
+        throw new Error(errorData.error || t('registrationFailed'));
       }
 
       const result = await response.json();
       
       if (result.status === 'pending') {
         // 需要管理员审核
-        alert('注册申请已提交，等待管理员审核。审核通过后您将收到LINE通知。');
+        alert(t('registrationSubmitted'));
         router.push('/login');
       } else if (result.status === 'approved') {
         // 直接注册成功
-        alert('注册成功！');
+        alert(t('registrationSuccess'));
         router.push('/login');
       }
     } catch (error) {
-      console.error('注册失败:', error);
-      setError(error instanceof Error ? error.message : '注册失败，请重试');
+      console.error('Registration failed:', error);
+      setError(error instanceof Error ? error.message : t('registrationFailedRetry'));
     } finally {
       setLoading(false);
     }
@@ -128,7 +131,7 @@ function RegisterContent() {
             margin: '0 auto 1rem'
           }} />
           <p style={{ color: '#6b7280', fontSize: '1rem' }}>
-            正在获取LINE用户信息...
+            {t('fetchingUserInfo')}
           </p>
           
           <style jsx>{`
@@ -149,8 +152,17 @@ function RegisterContent() {
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        position: 'relative'
       }}>
+        <div style={{
+          position: 'absolute',
+          top: '1rem',
+          right: '1rem',
+          zIndex: 10
+        }}>
+          <LanguageSwitcher />
+        </div>
         <div style={{
           background: 'white',
           padding: '2rem',
@@ -166,10 +178,10 @@ function RegisterContent() {
               color: '#1f2937',
               marginBottom: '0.5rem'
             }}>
-              完成注册
+              {t('title')}
             </h1>
             <p style={{ color: '#6b7280', fontSize: '1rem' }}>
-              请确认您的信息并选择角色
+              {t('subtitle')}
             </p>
           </div>
 
@@ -177,7 +189,7 @@ function RegisterContent() {
             <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
               <img 
                 src={registrationData.avatar} 
-                alt="头像" 
+                alt={t('avatar')} 
                 style={{ 
                   width: '80px', 
                   height: '80px', 
@@ -196,23 +208,23 @@ function RegisterContent() {
                  borderRadius: '8px',
                  border: '1px solid #e5e7eb'
                }}>
-                 <div style={{ fontWeight: '600', marginBottom: '0.5rem' }}>用户信息</div>
+                 <div style={{ fontWeight: '600', marginBottom: '0.5rem' }}>{t('userInfo')}</div>
                  <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                   <div>姓名：{registrationData.name}</div>
-                   <div>LINE ID：{registrationData.lineUserId}</div>
+                   <div>{t('name')}{registrationData.name}</div>
+                   <div>{t('lineId')}{registrationData.lineUserId}</div>
                  </div>
                </div>
              </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
               <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600' }}>
-                选择角色 *
+                {t('selectRole')}
               </label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {[
-                  { value: 'cleaner', label: '清洁员', desc: '执行清洁任务' },
-                  { value: 'manager', label: '管理者', desc: '分配和管理任务' },
-                  { value: 'owner', label: '房东', desc: '查看任务完成情况' }
+                  { value: 'cleaner', label: t('roles.cleaner.label'), desc: t('roles.cleaner.desc') },
+                  { value: 'manager', label: t('roles.manager.label'), desc: t('roles.manager.desc') },
+                  { value: 'owner', label: t('roles.owner.label'), desc: t('roles.owner.desc') }
                 ].map((role) => (
                   <label key={role.value} style={{ 
                     display: 'flex', 
@@ -272,7 +284,7 @@ function RegisterContent() {
                 marginBottom: '1rem'
               }}
             >
-              {loading ? '提交中...' : '提交注册申请'}
+              {loading ? t('submitting') : t('submitRegistration')}
             </button>
 
             <button
@@ -289,7 +301,7 @@ function RegisterContent() {
                 cursor: 'pointer'
               }}
             >
-              返回登录
+              {t('backToLogin')}
             </button>
           </form>
         </div>
@@ -303,8 +315,17 @@ function RegisterContent() {
       display: 'flex', 
       alignItems: 'center', 
       justifyContent: 'center',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      position: 'relative'
     }}>
+      <div style={{
+        position: 'absolute',
+        top: '1rem',
+        right: '1rem',
+        zIndex: 10
+      }}>
+        <LanguageSwitcher />
+      </div>
       <div style={{
         background: 'white',
         padding: '2rem',
@@ -321,13 +342,13 @@ function RegisterContent() {
             color: '#1f2937',
             marginBottom: '0.5rem'
           }}>
-            SoJio Clean Hub
+            {t('welcomeTitle')}
           </h1>
           <p style={{ 
             color: '#6b7280', 
             fontSize: '1rem' 
           }}>
-            使用LINE账号注册SoJio清洁系统
+            {t('welcomeSubtitle')}
           </p>
         </div>
 
@@ -376,12 +397,12 @@ function RegisterContent() {
                 borderRadius: '50%',
                 animation: 'spin 1s linear infinite'
               }} />
-              授权中...
+              {t('authorizing')}
             </>
           ) : (
             <>
               <span style={{ fontSize: '1.25rem' }}>📱</span>
-              使用LINE注册
+              {t('registerWithLine')}
             </>
           )}
         </button>
@@ -393,12 +414,12 @@ function RegisterContent() {
           fontSize: '0.875rem',
           color: '#6b7280'
         }}>
-          <h3 style={{ marginBottom: '0.5rem', fontWeight: '600' }}>注册说明</h3>
+          <h3 style={{ marginBottom: '0.5rem', fontWeight: '600' }}>{t('instructions')}</h3>
           <ul style={{ textAlign: 'left', margin: 0, paddingLeft: '1rem' }}>
-            <li>使用LINE账号快速注册</li>
-            <li>选择适合的角色（清洁员/管理者/房东）</li>
-            <li>提交申请后等待管理员审核</li>
-            <li>审核通过后即可登录使用</li>
+            <li>{t('instruction1')}</li>
+            <li>{t('instruction2')}</li>
+            <li>{t('instruction3')}</li>
+            <li>{t('instruction4')}</li>
           </ul>
         </div>
 
@@ -411,7 +432,7 @@ function RegisterContent() {
               fontSize: '0.875rem'
             }}
           >
-            已有账号？立即登录
+            {t('hasAccount')}
           </a>
         </div>
 
@@ -426,13 +447,18 @@ function RegisterContent() {
   );
 }
 
+function SuspenseFallback() {
+  const { t } = useTranslation('register');
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center text-gray-600">{t('loading')}</div>
+    </div>
+  );
+}
+
 export default function RegisterPage() {
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center text-gray-600">加载中...</div>
-      </div>
-    }>
+    <Suspense fallback={<SuspenseFallback />}>
       <RegisterContent />
     </Suspense>
   );

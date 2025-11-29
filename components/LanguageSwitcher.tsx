@@ -34,12 +34,13 @@ export const LanguageSwitcher = () => {
   };
 
   return (
-    <div style={{ position: 'relative', display: 'inline-flex', gap: '0.35rem' }}>
+    <div style={{ position: 'relative', display: 'inline-flex', gap: '0.35rem' }} data-skip-translation="true">
       {quickLocales.map((item) => (
         <button
           key={item}
           onClick={() => handleLocaleSwitch(item)}
           aria-label={`${t('translation.switchTo')} ${localeMeta[item].label}`}
+          data-skip-translation="true"
           style={{
             width: '38px',
             height: '38px',
@@ -62,6 +63,7 @@ export const LanguageSwitcher = () => {
       <button
         onClick={toggleEngine}
         aria-label={t('translation.engineAria')}
+        data-skip-translation="true"
         style={{
           width: '38px',
           height: '38px',
@@ -81,6 +83,7 @@ export const LanguageSwitcher = () => {
 
       {engineOpen && (
         <div
+          data-skip-translation="true"
           style={{
             position: 'absolute',
             top: '48px',

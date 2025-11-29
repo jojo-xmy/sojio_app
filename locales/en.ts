@@ -348,8 +348,6 @@ const en = {
     cancel: 'Cancel',
     save: 'Save',
     saving: 'Saving...',
-    monthNames: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
-    weekDays: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
     editModeDescription: 'Edit Mode Description',
     legendDescription: 'Legend',
     blueBackground: 'Blue Background:',

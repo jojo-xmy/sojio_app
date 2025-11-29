@@ -348,8 +348,6 @@ const ja = {
     cancel: 'キャンセル',
     save: '保存',
     saving: '保存中...',
-    monthNames: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
-    weekDays: ['日', '月', '火', '水', '木', '金', '土'],
     editModeDescription: '編集モード説明',
     legendDescription: '凡例',
     blueBackground: '青背景：',

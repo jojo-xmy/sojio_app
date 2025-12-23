@@ -13,7 +13,7 @@ export const DEMO_USERS: Record<'owner' | 'manager' | 'cleaner', UserProfile> = 
   owner: {
     id: DEMO_OWNER_ID,
     line_user_id: DEMO_LINE_USER_ID,
-    name: '测试业主',
+    name: 'test owner',
     katakana: 'テストオーナー',
     avatar: undefined,
     role: 'owner',
@@ -24,7 +24,7 @@ export const DEMO_USERS: Record<'owner' | 'manager' | 'cleaner', UserProfile> = 
   manager: {
     id: DEMO_MANAGER_ID,
     line_user_id: DEMO_LINE_USER_ID,
-    name: '测试管理者',
+    name: 'test manager',
     katakana: 'テストマネージャー',
     avatar: undefined,
     role: 'manager',
@@ -35,7 +35,7 @@ export const DEMO_USERS: Record<'owner' | 'manager' | 'cleaner', UserProfile> = 
   cleaner: {
     id: DEMO_CLEANER_ID,
     line_user_id: DEMO_LINE_USER_ID,
-    name: '测试清洁员',
+    name: 'test cleaner',
     katakana: 'テストクリーナー',
     avatar: undefined,
     role: 'cleaner',
@@ -59,5 +59,4 @@ export function getDemoUserRoles(): UserProfile[] {
 export function getDemoUserByRole(role: 'owner' | 'manager' | 'cleaner'): UserProfile {
   return DEMO_USERS[role];
 }
-
 

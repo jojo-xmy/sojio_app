@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateJWTToken } from '@/lib/lineAuth';
-import { isDemoUser, DEMO_LINE_USER_ID } from '@/lib/demoUsers';
-import { initDemoData, checkDemoDataInitialized } from '@/lib/initDemoData';
+import { isDemoUser } from '@/lib/demoUsers';
+import { initDemoData } from '@/lib/initDemoData';
 
 // 通过选定的角色登录
 export async function POST(request: NextRequest) {
@@ -15,18 +15,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 如果是测试账号，自动初始化测试数据（如果尚未初始化）
+    // 如果是测试账号，自动初始化演示数据（失败也不中断登录）
     if (isDemoUser(user.line_user_id)) {
       try {
-        const initialized = await checkDemoDataInitialized();
-        if (!initialized) {
-          console.log('检测到测试账号首次登录，开始初始化测试数据...');
-          await initDemoData();
-          console.log('测试数据初始化完成');
-        }
+        await initDemoData();
       } catch (initError) {
         console.error('初始化测试数据失败（不影响登录）:', initError);
-        // 不阻止登录，即使初始化失败
       }
     }
 

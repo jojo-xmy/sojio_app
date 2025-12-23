@@ -6,7 +6,7 @@ import { LoginRoleSelector } from '@/components/LoginRoleSelector';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { useTranslation } from '@/hooks/useTranslation';
 import { MessageCircle, UserPlus, Loader2, Sparkles, ArrowLeft, AlertCircle, Play } from 'lucide-react';
-import { getDemoUserByRole, DEMO_LINE_USER_ID } from '@/lib/demoUsers';
+import { getDemoUserByRole } from '@/lib/demoUsers';
 
 function LoginContent() {
   const router = useRouter();
@@ -514,7 +514,7 @@ function LoginContent() {
           }}
         >
           <Play size={20} />
-          体验模式（无需登录）
+          ゲストモード（ログイン不要）
         </button>
 
         <div style={{ 

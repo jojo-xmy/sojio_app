@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { isDemoUser, getDemoUserRoles, DEMO_LINE_USER_ID } from '@/lib/demoUsers';
 
 // 获取用户的所有角色
 export async function GET(request: NextRequest) {
@@ -12,6 +13,22 @@ export async function GET(request: NextRequest) {
         { error: '缺少LINE用户ID' },
         { status: 400 }
       );
+    }
+
+    // 如果是测试账号，返回测试用户角色
+    if (isDemoUser(lineUserId)) {
+      const demoRoles = getDemoUserRoles();
+      return NextResponse.json({
+        lineUserId: DEMO_LINE_USER_ID,
+        roles: demoRoles.map(user => ({
+          id: user.id,
+          name: user.name,
+          katakana: user.katakana,
+          role: user.role,
+          avatar: user.avatar,
+          created_at: user.created_at
+        }))
+      });
     }
 
     const { data: userRoles, error } = await supabase
@@ -51,6 +68,30 @@ export async function POST(request: NextRequest) {
         { error: '缺少必要参数' },
         { status: 400 }
       );
+    }
+
+    // 如果是测试账号，返回对应的测试用户
+    if (isDemoUser(lineUserId)) {
+      const { getDemoUserByRole } = await import('@/lib/demoUsers');
+      const demoUser = getDemoUserByRole(role as 'owner' | 'manager' | 'cleaner');
+      
+      if (!demoUser) {
+        return NextResponse.json(
+          { error: '未找到该角色的测试用户' },
+          { status: 404 }
+        );
+      }
+
+      // 为返回的用户数据添加lineUserId字段
+      const userData = {
+        ...demoUser,
+        lineUserId: demoUser.line_user_id
+      };
+
+      return NextResponse.json({
+        success: true,
+        user: userData
+      });
     }
 
     // 查找指定角色的用户档案

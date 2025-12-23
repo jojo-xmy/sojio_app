@@ -5,14 +5,15 @@ import { useUserStore } from '@/store/userStore';
 import { LoginRoleSelector } from '@/components/LoginRoleSelector';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { useTranslation } from '@/hooks/useTranslation';
-import { MessageCircle, UserPlus, Loader2, Sparkles, ArrowLeft, AlertCircle } from 'lucide-react';
+import { MessageCircle, UserPlus, Loader2, Sparkles, ArrowLeft, AlertCircle, Play } from 'lucide-react';
+import { getDemoUserByRole, DEMO_LINE_USER_ID } from '@/lib/demoUsers';
 
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t: tLogin } = useTranslation('login');
   const { t: tCommon } = useTranslation();
-  const { user, isInitialized } = useUserStore();
+  const { user, isInitialized, setUser } = useUserStore();
   const [loadingLogin, setLoadingLogin] = useState(false);
   const [loadingRegister, setLoadingRegister] = useState(false);
   const [errorCode, setErrorCode] = useState<string | null>(null);
@@ -57,6 +58,37 @@ function LoginContent() {
     
     // 重定向到LINE OAuth授权页面进行注册
     window.location.href = '/api/auth/line?mode=register';
+  };
+
+  const handleDemoMode = async () => {
+    try {
+      setErrorCode(null);
+      // 默认以 Owner 身份进入体验模式
+      const demoUser = getDemoUserByRole('owner');
+      
+      // 调用登录接口设置 cookies
+      const response = await fetch('/api/auth/line/login-with-role', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user: demoUser
+        }),
+      });
+
+      if (response.ok) {
+        // 设置用户到 store
+        setUser(demoUser);
+        // 跳转到 dashboard
+        router.push('/dashboard');
+      } else {
+        setErrorCode('generic');
+      }
+    } catch (error) {
+      console.error('体验模式登录失败:', error);
+      setErrorCode('generic');
+    }
   };
 
   // 检查URL参数中是否有角色检测结果
@@ -399,7 +431,8 @@ function LoginContent() {
             justifyContent: 'center',
             gap: '0.65rem',
             transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-            boxShadow: loadingRegister ? 'none' : '0 18px 30px rgba(34, 197, 94, 0.28)'
+            boxShadow: loadingRegister ? 'none' : '0 18px 30px rgba(34, 197, 94, 0.28)',
+            marginBottom: '0.85rem'
           }}
           onMouseEnter={(e) => {
             if (!loadingRegister) {
@@ -423,6 +456,65 @@ function LoginContent() {
               {tLogin('lineRegister')}
             </>
           )}
+        </button>
+
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1rem',
+          marginBottom: '1.5rem',
+          marginTop: '0.5rem'
+        }}>
+          <div style={{
+            flex: 1,
+            height: '1px',
+            background: 'linear-gradient(90deg, transparent, #cbd5e1, transparent)'
+          }} />
+          <span style={{
+            fontSize: '0.875rem',
+            color: '#64748b',
+            fontWeight: 500
+          }}>
+            或
+          </span>
+          <div style={{
+            flex: 1,
+            height: '1px',
+            background: 'linear-gradient(90deg, transparent, #cbd5e1, transparent)'
+          }} />
+        </div>
+
+        <button
+          onClick={handleDemoMode}
+          style={{
+            width: '100%',
+            padding: '1.05rem 1.25rem',
+            background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '12px',
+            fontSize: '1rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.65rem',
+            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+            boxShadow: '0 18px 30px rgba(139, 92, 246, 0.3)',
+            marginBottom: '1.5rem'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 22px 40px rgba(139, 92, 246, 0.35)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 18px 30px rgba(139, 92, 246, 0.3)';
+          }}
+        >
+          <Play size={20} />
+          体验模式（无需登录）
         </button>
 
         <div style={{ 

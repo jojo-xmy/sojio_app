@@ -280,6 +280,10 @@ const en = {
       cancel: 'Cancel',
       save: 'Save',
     },
+    taskAcceptance: {
+      accept: 'Accept Task',
+      reject: 'Reject Task',
+    },
   },
   attendanceActions: {
     checkIn: 'Check In',

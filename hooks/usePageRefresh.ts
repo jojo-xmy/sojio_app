@@ -6,6 +6,8 @@ import { getCleanerTasks, getUserHotels, getHotelCalendarEntries, getCleanerAvai
 import { getAttendanceByTaskId, calculateTaskStatus } from '@/lib/attendance';
 import { TaskCalendarEvent } from '@/types/calendar';
 import { useUserStore } from '@/store/userStore';
+import { isDemoUser } from '@/lib/demoUsers';
+import { getTasksByUser } from '@/lib/services/taskService';
 
 // Hook for manager dashboard - handles calendar and task data
 export function useManagerDashboard() {
@@ -88,8 +90,38 @@ export function useCleanerTasks() {
     try {
       console.log('useCleanerTasks: 开始加载任务，用户ID:', user.id);
       setLoading(true);
-      const taskList = await getCleanerTasks(user.id.toString(), true);
-      console.log('useCleanerTasks: 成功加载任务，数量:', taskList.length);
+      let taskList = await getCleanerTasks(user.id.toString(), true);
+      console.log('useCleanerTasks: 通过 task_assignments 加载任务，数量:', taskList.length);
+
+      // 针对测试账号的回退逻辑：如果通过 task_assignments 查不到任务，
+      // 再根据 tasks.assigned_cleaners 直接查询任务，避免演示数据与真实流程差异导致列表为空。
+      if (taskList.length === 0 && isDemoUser(user.line_user_id)) {
+        console.log('useCleanerTasks: 测试账号回退到 tasks.assigned_cleaners 查询');
+        const directTasks = await getTasksByUser(user.id.toString());
+        taskList = directTasks.map((t) => ({
+          // 兼容 task_assignments 结构的最小字段集
+          id: t.id,
+          task_id: t.id,
+          tasks: {
+            id: t.id,
+            hotel_name: t.hotelName,
+            hotel_address: t.hotelAddress,
+            cleaning_date: t.cleaningDate,
+            check_in_date: t.checkInDate,
+            check_out_date: t.checkOutDate,
+            check_in_time: t.checkInTime,
+            status: t.status,
+            lock_password: t.lockPassword,
+            description: t.description,
+            note: t.note,
+            owner_notes: t.ownerNotes,
+            cleaner_notes: t.cleanerNotes,
+            manager_report_notes: t.managerReportNotes,
+          },
+        }));
+        console.log('useCleanerTasks: 通过 tasks.assigned_cleaners 加载任务，数量:', taskList.length);
+      }
+
       setTasks(taskList);
     } catch (error) {
       console.error('useCleanerTasks: 加载清洁员任务失败:', error);

@@ -280,6 +280,10 @@ const ja = {
       cancel: 'キャンセル',
       save: '保存',
     },
+    taskAcceptance: {
+      accept: 'タスクを受諾',
+      reject: 'タスクを辞退',
+    },
   },
   attendanceActions: {
     checkIn: '出勤打刻',

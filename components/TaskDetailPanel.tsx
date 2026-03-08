@@ -1099,7 +1099,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                   cursor: 'pointer' 
                 }}
               >
-                接受任务
+                {t('taskAcceptance.accept')}
               </button>
               <button
                 onClick={handleRejectTask}
@@ -1115,7 +1115,7 @@ export const TaskDetailPanel: React.FC<TaskDetailPanelProps> = ({ task, onAttend
                   cursor: 'pointer' 
                 }}
               >
-                拒绝任务
+                {t('taskAcceptance.reject')}
               </button>
             </div>
           ) : null,

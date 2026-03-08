@@ -280,6 +280,10 @@ const zh = {
       cancel: '取消',
       save: '保存',
     },
+    taskAcceptance: {
+      accept: '接受任务',
+      reject: '拒绝任务',
+    },
   },
   attendanceActions: {
     checkIn: '出勤打卡',

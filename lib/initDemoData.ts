@@ -242,3 +242,23 @@ export async function initDemoData(): Promise<{ success: boolean; error?: string
   }
 }
 
+/**
+ * 检查测试数据是否已初始化（通过固定的日历条目ID判断）
+ */
+export async function checkDemoDataInitialized(): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from('calendar_entries')
+      .select('id')
+      .eq('id', '00000000-0000-0000-0000-000000000301')
+      .maybeSingle();
+
+    if (error || !data) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+

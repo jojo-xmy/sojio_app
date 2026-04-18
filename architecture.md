@@ -1,171 +1,176 @@
-sojio-app/
-├── app/                              # Next.js 15 App Router 页面目录
-│   ├── (auth)/                      # 认证路由组
-│   │   ├── login/
-│   │   │   └── page.tsx
-│   │   └── register/
-│   │       └── page.tsx
-│   ├── admin/                       # 管理员页面
-│   │   └── registration-applications/
-│   │       └── page.tsx
-│   ├── dashboard/                   # 主面板（按角色重定向）
-│   │   ├── cleaner/                 # 清洁人员主界面
-│   │   │   ├── availability/
-│   │   │   │   └── page.tsx
-│   │   │   ├── tasks/
-│   │   │   │   └── page.tsx
-│   │   │   └── page.tsx
-│   │   ├── manager/                 # 管理者主界面
-│   │   │   ├── applications/
-│   │   │   │   └── page.tsx
-│   │   │   ├── hotels/
-│   │   │   │   └── page.tsx
-│   │   │   ├── schedule/
-│   │   │   │   └── page.tsx
-│   │   │   └── page.tsx
-│   │   ├── owner/                   # 业主主界面
-│   │   │   ├── hotels/
-│   │   │   │   ├── [hotelId]/
-│   │   │   │   │   └── calendar/
-│   │   │   │   │       └── page.tsx
-│   │   │   │   └── page.tsx
-│   │   │   └── page.tsx
-│   │   └── page.tsx                 # 仪表板入口（角色重定向）
-│   ├── task/                        # 任务详情页面
-│   │   └── [id]/
-│   │       └── page.tsx
-│   ├── api/                         # API 路由（Next.js API Routes）
-│   │   ├── admin/                   # 管理员 API
-│   │   │   ├── approve-my-manager/
-│   │   │   └── registration-applications/
-│   │   │       └── route.ts
-│   │   ├── auth/                    # 认证相关 API
-│   │   │   ├── line/                # LINE 认证
-│   │   │   │   ├── login-with-role/
-│   │   │   │   │   └── route.ts
-│   │   │   │   ├── profile/
-│   │   │   │   │   └── route.ts
-│   │   │   │   └── route.ts
-│   │   │   ├── register/
-│   │   │   │   └── route.ts
-│   │   │   └── user-roles/
-│   │   │       └── route.ts
-│   │   ├── cron/                    # 定时任务 API
-│   │   │   └── notifications/
-│   │   │       └── route.ts
-│   │   ├── line/                    # LINE Bot API
-│   │   │   ├── send-message/
-│   │   │   │   └── route.ts
-│   │   │   └── webhook/
-│   │   │       └── route.ts
-│   │   └── notifications/           # 通知 API
-│   │       └── send/
-│   │           └── route.ts
-│   ├── globals.css                  # 全局样式
-│   ├── layout.tsx                   # 全局布局
-│   └── page.tsx                     # 首页
-│
-├── components/                      # 可复用组件
-│   ├── providers/                   # Context Providers
-│   │   ├── LanguageProvider.tsx
-│   │   └── TranslationOrchestrator.tsx
-│   ├── AnchoredDetailPopover.tsx
-│   ├── AttachmentGallery.tsx
-│   ├── AttendanceActions.tsx
-│   ├── AttendanceSummary.tsx
-│   ├── Button.tsx
-│   ├── CalendarEntryForm.tsx
-│   ├── CleaningCompletionForm.tsx
-│   ├── ClearAuthButton.tsx
-│   ├── CustomTaskCalendar.tsx
-│   ├── DashboardHeader.tsx
-│   ├── HeaderButton.tsx
-│   ├── ImageUpload.tsx
-│   ├── LanguageSwitcher.tsx
-│   ├── LoginRoleSelector.tsx
-│   ├── LoginStatusCheck.tsx
-│   ├── MultiDateSelector.tsx
-│   ├── NotionStyleCalendar.tsx
-│   ├── OwnerTaskCalendar.tsx
-│   ├── RoleSelector.tsx
-│   ├── TaskActionButtons.tsx
-│   ├── TaskAssignmentModal.tsx
-│   ├── TaskCalendar.tsx
-│   ├── TaskCard.tsx
-│   ├── TaskCreateForm.tsx
-│   ├── TaskDetailPanel.tsx
-│   ├── TaskStatusBadge.tsx
-│   ├── UserProfileMenu.tsx
-│   └── UserStateInitializer.tsx
-│
-├── hooks/                           # 自定义 React Hooks
-│   ├── useCalendarEntry.ts
-│   ├── usePageRefresh.ts
-│   ├── useRefresh.ts
-│   └── useTranslation.ts
-│
-├── lib/                             # 通用工具函数和服务
-│   ├── services/                    # 业务逻辑服务层
-│   │   ├── assignmentService.ts    # 任务分配服务
-│   │   ├── calendarEntryService.ts  # 日历条目服务
-│   │   ├── managerHotelService.ts   # 管理者酒店服务
-│   │   └── taskService.ts           # 任务服务
-│   ├── attendance.ts                # 考勤相关工具
-│   ├── calendar.ts                  # 日历相关工具
-│   ├── hotelManagement.ts           # 酒店管理工具
-│   ├── lineAuth.ts                  # LINE 认证工具
-│   ├── notifications.ts             # 通知工具
-│   ├── notificationService.ts       # 通知服务
-│   ├── notificationTemplates.ts     # 通知模板
-│   ├── supabase.ts                  # Supabase 客户端初始化
-│   ├── taskCapabilities.ts          # 任务能力相关
-│   ├── tasks.ts                     # 任务相关工具
-│   ├── taskStatus.ts                # 任务状态管理
-│   ├── translationService.ts        # 翻译服务
-│   ├── upload.ts                    # 文件上传工具
-│   ├── useTask.ts                   # 任务 Hook
-│   └── utils.ts                     # 通用工具函数
-│
-├── store/                           # Zustand 全局状态管理
-│   └── userStore.ts                 # 用户状态存储
-│
-├── public/                          # 静态资源
-│   ├── favicon.ico
-│   └── SOJIO_LOGO.png
-│
-├── locales/                         # i18n 多语言文本
-│   ├── en.ts                        # 英语
-│   ├── ja.ts                        # 日语
-│   ├── zh.ts                        # 中文
-│   └── index.ts                     # 多语言导出
-│
-├── types/                           # TypeScript 类型定义
-│   ├── calendar.ts                  # 日历类型
-│   ├── hotel.ts                     # 酒店类型
-│   ├── task.ts                      # 任务类型
-│   └── user.ts                      # 用户类型
-│
-├── supabase/                        # Supabase 配置和迁移
-│   ├── migrations/                  # 数据库迁移文件
-│   │   ├── 005_optimize_calendar_task_trigger.sql
-│   │   ├── 006_cleanup_old_triggers.sql
-│   │   ├── 007_fix_calendar_task_trigger.sql
-│   │   ├── 008_enable_cascade_calendar_entry_delete.sql
-│   │   ├── 009_add_manager_report_notes_to_tasks.sql
-│   │   └── 010_create_manager_hotels_table.sql
-│   ├── cleaner_availability_data.js # 清洁人员可用性数据
-│   ├── config.toml                  # Supabase 配置
-│   ├── database_function.md         # 数据库函数文档
-│   ├── database_triggers.md         # 数据库触发器文档
-│   ├── schema.sql                   # 数据库架构
-│   └── tasks_data.js                # 任务数据
-│
-├── components.json                  # shadcn/ui 组件配置
-├── next.config.ts                   # Next.js 配置
-├── package.json                     # 项目依赖
-├── postcss.config.js                # PostCSS 配置
-├── tailwind.config.js               # Tailwind CSS 配置
-├── tsconfig.json                    # TypeScript 配置
-├── .env.local                       # 环境变量（含 Supabase key, LINE API key）
-└── README.md                        # 项目说明文档
+# SOJIO Architecture
+
+## 1. Purpose and Scope
+
+SOJIO is a web-based hotel cleaning operations platform built for small to medium hospitality teams.  
+The architecture is optimized for:
+
+- role-driven workflow orchestration (`owner`, `manager`, `cleaner`),
+- reliable task lifecycle management,
+- integration with LINE for identity and notifications,
+- secure data access via Supabase Row-Level Security (RLS).
+
+This document describes system boundaries, runtime components, data design principles, and operational constraints.
+
+## 2. System Context
+
+### External Systems
+
+- **LINE Platform**: login identity and outbound message delivery
+- **Supabase Postgres**: transactional data store and policy enforcement
+- **Vercel Runtime**: web hosting and API route execution
+
+### Primary User Roles
+
+- **Owner**: owns hotels, creates and supervises planning data
+- **Manager**: manages hotel operations and assignment execution
+- **Cleaner**: receives assignments, updates attendance, completes work
+- **Admin (internal path)**: reviews registration applications
+
+## 3. High-Level Architecture
+
+SOJIO follows a layered monolith approach with clear module boundaries:
+
+1. **Presentation Layer**
+   - Next.js App Router pages in `app/`
+   - Role-specific dashboards and task/calendar views
+2. **Application/API Layer**
+   - Route handlers in `app/api/`
+   - Authentication, notification, admin, and cron endpoints
+3. **Domain Service Layer**
+   - Business logic in `lib/services/` and domain utility modules in `lib/`
+4. **Data Layer**
+   - Supabase Postgres with relational schema and migration-driven evolution
+   - RLS policies for runtime authorization
+
+This structure keeps business logic reusable while maintaining a single deployable unit.
+
+## 4. Module Breakdown
+
+### 4.1 Frontend and Routing
+
+- `app/(auth)/`: login and registration entry points
+- `app/dashboard/`: role-routed workspaces (owner/manager/cleaner)
+- `app/task/[id]/`: task detail and execution context
+- `components/`: reusable visual and interaction units
+- `store/userStore.ts`: user state and role/session interaction state
+
+### 4.2 Backend API Routes
+
+- `app/api/auth/`: LINE auth, profile loading, role-based login paths
+- `app/api/admin/`: registration approvals and admin operations
+- `app/api/notifications/`: notification dispatch
+- `app/api/cron/notifications/`: scheduled notification jobs
+- `app/api/line/`: LINE webhook and messaging integration
+
+### 4.3 Domain Services
+
+- `taskService.ts`: task creation and lifecycle mutation
+- `assignmentService.ts`: assignment and acceptance flow
+- `calendarEntryService.ts`: reservation/cleaning planning linkage
+- `managerHotelService.ts`: manager-hotel authorization mapping
+- `notificationService.ts`: message generation and dispatch orchestration
+
+## 5. Data Architecture
+
+### Core Entities
+
+- **Identity and Roles**: `user_profiles`
+- **Organization Scope**: `hotels`, `manager_hotels`
+- **Planning**: `calendar_entries`, `cleaner_availability`
+- **Execution**: `tasks`, `task_assignments`, `attendance`, `task_images`
+- **Communication and Audit Trail**: `task_notifications`, `registration_applications`
+
+### Relationship Principles
+
+- A hotel has one owner and can have multiple managers through a mapping table.
+- Calendar entries represent planning events and can materialize into tasks.
+- A task can have multiple assignment records and notification events.
+- Images and attendance records are execution artifacts tied to task-level operations.
+
+## 6. Security Model
+
+### 6.1 Policy Enforcement
+
+Data access is governed by Postgres RLS policies and migration-defined grants.  
+The migration `011_harden_anon_with_guest_sandbox.sql` introduces:
+
+- privilege revocation and controlled DML-only grants,
+- removal of legacy permissive policies,
+- sandbox-only access for anonymous demo identities,
+- temporary fallback policies for `authenticated` role.
+
+### 6.2 Practical Security Notes
+
+- Anonymous access is intentionally constrained for demo workflows.
+- Production traffic should prioritize authenticated identity paths.
+- Policy reviews should be part of every schema or role-change migration.
+
+## 7. Runtime Flows
+
+### 7.1 Authentication and Authorization
+
+1. User authenticates via LINE integration.
+2. Profile/role is resolved from `user_profiles`.
+3. Route-level rendering and API access are role-filtered.
+4. Database-level RLS remains the final enforcement layer.
+
+### 7.2 Task Lifecycle
+
+1. Owner/manager creates planning data (`calendar_entries`) and/or tasks.
+2. Manager assigns cleaners (`task_assignments`).
+3. Cleaner updates acceptance/attendance/progress.
+4. Completion evidence is saved (`task_images`, status updates).
+5. Notifications are generated and sent through LINE-related pathways.
+
+## 8. Scalability and Maintainability
+
+### Current Strengths
+
+- Clear role segmentation in route and service structure
+- Migration-driven schema changes
+- Practical domain decomposition under a monolith model
+
+### Current Risks
+
+- Mixed key typing (`uuid` and `text`) in some tables introduces complexity
+- Notification reliability depends on API/cron operational consistency
+- Policy growth can become hard to audit without naming/version conventions
+
+### Recommended Engineering Improvements
+
+- Normalize all task/user references to consistent `uuid` typing
+- Add integration tests for auth, assignment, and notification flows
+- Introduce structured observability for cron and webhook pathways
+- Document policy intent next to each migration for review clarity
+
+## 9. Deployment and Operations
+
+- Runtime target: Vercel for web/API hosting
+- Database target: Supabase Postgres
+- Environment-managed secrets: LINE credentials, Supabase keys, JWT-related config
+- Operational requirement: strict separation between demo and production access semantics
+
+## 10. Repository Layout (Condensed)
+
+```text
+sojio_app/
+├── app/                 # Routes and API handlers
+├── components/          # UI components
+├── hooks/               # Custom hooks
+├── lib/                 # Domain/services/utilities
+├── store/               # Global state
+├── types/               # Type definitions
+├── locales/             # i18n resources
+└── supabase/            # Schema, migrations, policy docs
+```
+
+## 11. Architecture Decision Summary
+
+- **Architecture style**: modular monolith on Next.js
+- **Data authority**: Supabase Postgres with RLS
+- **Identity channel**: LINE-based login path
+- **Workflow center**: task lifecycle + assignment + notification coordination
+
+This architecture is appropriate for the current product stage and team size, while leaving clear upgrade paths for stronger testing, observability, and policy governance.
 

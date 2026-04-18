@@ -1,0 +1,228 @@
+| schemaname | tablename                 | rls_enabled | force_rls |
+| ---------- | ------------------------- | ----------- | --------- |
+| public     | attendance                | true        | false     |
+| public     | calendar_entries          | true        | false     |
+| public     | cleaner_availability      | true        | false     |
+| public     | hotels                    | true        | false     |
+| public     | manager_hotels            | true        | false     |
+| public     | registration_applications | true        | false     |
+| public     | task_assignments          | true        | false     |
+| public     | task_images               | true        | false     |
+| public     | task_notifications        | true        | false     |
+| public     | tasks                     | true        | false     |
+| public     | user_profiles             | true        | false     |
+
+| schemaname | tablename                 | policyname                       | permissive | roles    | cmd    | qual | with_check |
+| ---------- | ------------------------- | -------------------------------- | ---------- | -------- | ------ | ---- | ---------- |
+| public     | attendance                | Enable insert for all            | PERMISSIVE | {public} | INSERT | null | true       |
+| public     | attendance                | Enable read access for all users | PERMISSIVE | {public} | SELECT | true | null       |
+| public     | attendance                | Enable update for all            | PERMISSIVE | {public} | UPDATE | true | true       |
+| public     | attendance                | allow_all_delete                 | PERMISSIVE | {public} | DELETE | true | null       |
+| public     | attendance                | allow_all_insert                 | PERMISSIVE | {public} | INSERT | null | true       |
+| public     | attendance                | allow_all_select                 | PERMISSIVE | {public} | SELECT | true | null       |
+| public     | attendance                | allow_all_update                 | PERMISSIVE | {public} | UPDATE | true | true       |
+| public     | calendar_entries          | allow_all_delete                 | PERMISSIVE | {public} | DELETE | true | null       |
+| public     | calendar_entries          | allow_all_insert                 | PERMISSIVE | {public} | INSERT | null | true       |
+| public     | calendar_entries          | allow_all_select                 | PERMISSIVE | {public} | SELECT | true | null       |
+| public     | calendar_entries          | allow_all_update                 | PERMISSIVE | {public} | UPDATE | true | true       |
+| public     | cleaner_availability      | allow_all_delete                 | PERMISSIVE | {public} | DELETE | true | null       |
+| public     | cleaner_availability      | allow_all_insert                 | PERMISSIVE | {public} | INSERT | null | true       |
+| public     | cleaner_availability      | allow_all_select                 | PERMISSIVE | {public} | SELECT | true | null       |
+| public     | cleaner_availability      | allow_all_update                 | PERMISSIVE | {public} | UPDATE | true | true       |
+| public     | hotels                    | allow_all_delete                 | PERMISSIVE | {public} | DELETE | true | null       |
+| public     | hotels                    | allow_all_insert                 | PERMISSIVE | {public} | INSERT | null | true       |
+| public     | hotels                    | allow_all_select                 | PERMISSIVE | {public} | SELECT | true | null       |
+| public     | hotels                    | allow_all_update                 | PERMISSIVE | {public} | UPDATE | true | true       |
+| public     | manager_hotels            | allow_all_delete                 | PERMISSIVE | {public} | DELETE | true | null       |
+| public     | manager_hotels            | allow_all_insert                 | PERMISSIVE | {public} | INSERT | null | true       |
+| public     | manager_hotels            | allow_all_select                 | PERMISSIVE | {public} | SELECT | true | null       |
+| public     | manager_hotels            | allow_all_update                 | PERMISSIVE | {public} | UPDATE | true | true       |
+| public     | registration_applications | allow_all_delete                 | PERMISSIVE | {public} | DELETE | true | null       |
+| public     | registration_applications | allow_all_insert                 | PERMISSIVE | {public} | INSERT | null | true       |
+| public     | registration_applications | allow_all_select                 | PERMISSIVE | {public} | SELECT | true | null       |
+| public     | registration_applications | allow_all_update                 | PERMISSIVE | {public} | UPDATE | true | true       |
+| public     | task_assignments          | allow_all_delete                 | PERMISSIVE | {public} | DELETE | true | null       |
+| public     | task_assignments          | allow_all_insert                 | PERMISSIVE | {public} | INSERT | null | true       |
+| public     | task_assignments          | allow_all_select                 | PERMISSIVE | {public} | SELECT | true | null       |
+| public     | task_assignments          | allow_all_update                 | PERMISSIVE | {public} | UPDATE | true | true       |
+| public     | task_images               | Enable SELECT access for all     | PERMISSIVE | {public} | SELECT | true | null       |
+| public     | task_images               | Enable insert for all            | PERMISSIVE | {public} | INSERT | null | true       |
+| public     | task_images               | Enable update for all            | PERMISSIVE | {public} | UPDATE | true | true       |
+| public     | task_images               | allow_all_delete                 | PERMISSIVE | {public} | DELETE | true | null       |
+| public     | task_images               | allow_all_insert                 | PERMISSIVE | {public} | INSERT | null | true       |
+| public     | task_images               | allow_all_select                 | PERMISSIVE | {public} | SELECT | true | null       |
+| public     | task_images               | allow_all_update                 | PERMISSIVE | {public} | UPDATE | true | true       |
+| public     | task_notifications        | allow_all_delete                 | PERMISSIVE | {public} | DELETE | true | null       |
+| public     | task_notifications        | allow_all_insert                 | PERMISSIVE | {public} | INSERT | null | true       |
+| public     | task_notifications        | allow_all_select                 | PERMISSIVE | {public} | SELECT | true | null       |
+| public     | task_notifications        | allow_all_update                 | PERMISSIVE | {public} | UPDATE | true | true       |
+| public     | tasks                     | Enable insert for all            | PERMISSIVE | {public} | INSERT | null | true       |
+| public     | tasks                     | Enable read access for all       | PERMISSIVE | {public} | SELECT | true | null       |
+| public     | tasks                     | Enable update for all            | PERMISSIVE | {public} | UPDATE | true | true       |
+| public     | tasks                     | allow_all_delete                 | PERMISSIVE | {public} | DELETE | true | null       |
+| public     | tasks                     | allow_all_insert                 | PERMISSIVE | {public} | INSERT | null | true       |
+| public     | tasks                     | allow_all_select                 | PERMISSIVE | {public} | SELECT | true | null       |
+| public     | tasks                     | allow_all_update                 | PERMISSIVE | {public} | UPDATE | true | true       |
+| public     | user_profiles             | allow_all_delete                 | PERMISSIVE | {public} | DELETE | true | null       |
+| public     | user_profiles             | allow_all_insert                 | PERMISSIVE | {public} | INSERT | null | true       |
+| public     | user_profiles             | allow_all_select                 | PERMISSIVE | {public} | SELECT | true | null       |
+| public     | user_profiles             | allow_all_update                 | PERMISSIVE | {public} | UPDATE | true | true       |
+
+| table_schema | table_name                | grantee       | privilege_type |
+| ------------ | ------------------------- | ------------- | -------------- |
+| public       | attendance                | anon          | DELETE         |
+| public       | attendance                | anon          | INSERT         |
+| public       | attendance                | anon          | REFERENCES     |
+| public       | attendance                | anon          | SELECT         |
+| public       | attendance                | anon          | TRIGGER        |
+| public       | attendance                | anon          | TRUNCATE       |
+| public       | attendance                | anon          | UPDATE         |
+| public       | attendance                | authenticated | DELETE         |
+| public       | attendance                | authenticated | INSERT         |
+| public       | attendance                | authenticated | REFERENCES     |
+| public       | attendance                | authenticated | SELECT         |
+| public       | attendance                | authenticated | TRIGGER        |
+| public       | attendance                | authenticated | TRUNCATE       |
+| public       | attendance                | authenticated | UPDATE         |
+| public       | calendar_entries          | anon          | DELETE         |
+| public       | calendar_entries          | anon          | INSERT         |
+| public       | calendar_entries          | anon          | REFERENCES     |
+| public       | calendar_entries          | anon          | SELECT         |
+| public       | calendar_entries          | anon          | TRIGGER        |
+| public       | calendar_entries          | anon          | TRUNCATE       |
+| public       | calendar_entries          | anon          | UPDATE         |
+| public       | calendar_entries          | authenticated | DELETE         |
+| public       | calendar_entries          | authenticated | INSERT         |
+| public       | calendar_entries          | authenticated | REFERENCES     |
+| public       | calendar_entries          | authenticated | SELECT         |
+| public       | calendar_entries          | authenticated | TRIGGER        |
+| public       | calendar_entries          | authenticated | TRUNCATE       |
+| public       | calendar_entries          | authenticated | UPDATE         |
+| public       | cleaner_availability      | anon          | DELETE         |
+| public       | cleaner_availability      | anon          | INSERT         |
+| public       | cleaner_availability      | anon          | REFERENCES     |
+| public       | cleaner_availability      | anon          | SELECT         |
+| public       | cleaner_availability      | anon          | TRIGGER        |
+| public       | cleaner_availability      | anon          | TRUNCATE       |
+| public       | cleaner_availability      | anon          | UPDATE         |
+| public       | cleaner_availability      | authenticated | DELETE         |
+| public       | cleaner_availability      | authenticated | INSERT         |
+| public       | cleaner_availability      | authenticated | REFERENCES     |
+| public       | cleaner_availability      | authenticated | SELECT         |
+| public       | cleaner_availability      | authenticated | TRIGGER        |
+| public       | cleaner_availability      | authenticated | TRUNCATE       |
+| public       | cleaner_availability      | authenticated | UPDATE         |
+| public       | hotels                    | anon          | DELETE         |
+| public       | hotels                    | anon          | INSERT         |
+| public       | hotels                    | anon          | REFERENCES     |
+| public       | hotels                    | anon          | SELECT         |
+| public       | hotels                    | anon          | TRIGGER        |
+| public       | hotels                    | anon          | TRUNCATE       |
+| public       | hotels                    | anon          | UPDATE         |
+| public       | hotels                    | authenticated | DELETE         |
+| public       | hotels                    | authenticated | INSERT         |
+| public       | hotels                    | authenticated | REFERENCES     |
+| public       | hotels                    | authenticated | SELECT         |
+| public       | hotels                    | authenticated | TRIGGER        |
+| public       | hotels                    | authenticated | TRUNCATE       |
+| public       | hotels                    | authenticated | UPDATE         |
+| public       | manager_hotels            | anon          | DELETE         |
+| public       | manager_hotels            | anon          | INSERT         |
+| public       | manager_hotels            | anon          | REFERENCES     |
+| public       | manager_hotels            | anon          | SELECT         |
+| public       | manager_hotels            | anon          | TRIGGER        |
+| public       | manager_hotels            | anon          | TRUNCATE       |
+| public       | manager_hotels            | anon          | UPDATE         |
+| public       | manager_hotels            | authenticated | DELETE         |
+| public       | manager_hotels            | authenticated | INSERT         |
+| public       | manager_hotels            | authenticated | REFERENCES     |
+| public       | manager_hotels            | authenticated | SELECT         |
+| public       | manager_hotels            | authenticated | TRIGGER        |
+| public       | manager_hotels            | authenticated | TRUNCATE       |
+| public       | manager_hotels            | authenticated | UPDATE         |
+| public       | registration_applications | anon          | DELETE         |
+| public       | registration_applications | anon          | INSERT         |
+| public       | registration_applications | anon          | REFERENCES     |
+| public       | registration_applications | anon          | SELECT         |
+| public       | registration_applications | anon          | TRIGGER        |
+| public       | registration_applications | anon          | TRUNCATE       |
+| public       | registration_applications | anon          | UPDATE         |
+| public       | registration_applications | authenticated | DELETE         |
+| public       | registration_applications | authenticated | INSERT         |
+| public       | registration_applications | authenticated | REFERENCES     |
+| public       | registration_applications | authenticated | SELECT         |
+| public       | registration_applications | authenticated | TRIGGER        |
+| public       | registration_applications | authenticated | TRUNCATE       |
+| public       | registration_applications | authenticated | UPDATE         |
+| public       | task_assignments          | anon          | DELETE         |
+| public       | task_assignments          | anon          | INSERT         |
+| public       | task_assignments          | anon          | REFERENCES     |
+| public       | task_assignments          | anon          | SELECT         |
+| public       | task_assignments          | anon          | TRIGGER        |
+| public       | task_assignments          | anon          | TRUNCATE       |
+| public       | task_assignments          | anon          | UPDATE         |
+| public       | task_assignments          | authenticated | DELETE         |
+| public       | task_assignments          | authenticated | INSERT         |
+| public       | task_assignments          | authenticated | REFERENCES     |
+| public       | task_assignments          | authenticated | SELECT         |
+| public       | task_assignments          | authenticated | TRIGGER        |
+| public       | task_assignments          | authenticated | TRUNCATE       |
+| public       | task_assignments          | authenticated | UPDATE         |
+| public       | task_images               | anon          | DELETE         |
+| public       | task_images               | anon          | INSERT         |
+| public       | task_images               | anon          | REFERENCES     |
+| public       | task_images               | anon          | SELECT         |
+| public       | task_images               | anon          | TRIGGER        |
+| public       | task_images               | anon          | TRUNCATE       |
+| public       | task_images               | anon          | UPDATE         |
+| public       | task_images               | authenticated | DELETE         |
+| public       | task_images               | authenticated | INSERT         |
+| public       | task_images               | authenticated | REFERENCES     |
+| public       | task_images               | authenticated | SELECT         |
+| public       | task_images               | authenticated | TRIGGER        |
+| public       | task_images               | authenticated | TRUNCATE       |
+| public       | task_images               | authenticated | UPDATE         |
+| public       | task_notifications        | anon          | DELETE         |
+| public       | task_notifications        | anon          | INSERT         |
+| public       | task_notifications        | anon          | REFERENCES     |
+| public       | task_notifications        | anon          | SELECT         |
+| public       | task_notifications        | anon          | TRIGGER        |
+| public       | task_notifications        | anon          | TRUNCATE       |
+| public       | task_notifications        | anon          | UPDATE         |
+| public       | task_notifications        | authenticated | DELETE         |
+| public       | task_notifications        | authenticated | INSERT         |
+| public       | task_notifications        | authenticated | REFERENCES     |
+| public       | task_notifications        | authenticated | SELECT         |
+| public       | task_notifications        | authenticated | TRIGGER        |
+| public       | task_notifications        | authenticated | TRUNCATE       |
+| public       | task_notifications        | authenticated | UPDATE         |
+| public       | tasks                     | anon          | DELETE         |
+| public       | tasks                     | anon          | INSERT         |
+| public       | tasks                     | anon          | REFERENCES     |
+| public       | tasks                     | anon          | SELECT         |
+| public       | tasks                     | anon          | TRIGGER        |
+| public       | tasks                     | anon          | TRUNCATE       |
+| public       | tasks                     | anon          | UPDATE         |
+| public       | tasks                     | authenticated | DELETE         |
+| public       | tasks                     | authenticated | INSERT         |
+| public       | tasks                     | authenticated | REFERENCES     |
+| public       | tasks                     | authenticated | SELECT         |
+| public       | tasks                     | authenticated | TRIGGER        |
+| public       | tasks                     | authenticated | TRUNCATE       |
+| public       | tasks                     | authenticated | UPDATE         |
+| public       | user_profiles             | anon          | DELETE         |
+| public       | user_profiles             | anon          | INSERT         |
+| public       | user_profiles             | anon          | REFERENCES     |
+| public       | user_profiles             | anon          | SELECT         |
+| public       | user_profiles             | anon          | TRIGGER        |
+| public       | user_profiles             | anon          | TRUNCATE       |
+| public       | user_profiles             | anon          | UPDATE         |
+| public       | user_profiles             | authenticated | DELETE         |
+| public       | user_profiles             | authenticated | INSERT         |
+| public       | user_profiles             | authenticated | REFERENCES     |
+| public       | user_profiles             | authenticated | SELECT         |
+| public       | user_profiles             | authenticated | TRIGGER        |
+| public       | user_profiles             | authenticated | TRUNCATE       |
+| public       | user_profiles             | authenticated | UPDATE         |
+
+

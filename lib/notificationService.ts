@@ -1,4 +1,5 @@
-import { supabase } from './supabase';
+import 'server-only';
+import { supabaseServer } from './supabase-server';
 
 // 通知类型定义
 export interface TaskNotification {
@@ -16,7 +17,7 @@ export interface TaskNotification {
 
 // 创建通知记录
 export async function createNotification(notification: Omit<TaskNotification, 'id' | 'sent' | 'createdAt'>): Promise<TaskNotification> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseServer
     .from('task_notifications')
     .insert({
       task_id: notification.taskId,
@@ -41,7 +42,7 @@ export async function createNotification(notification: Omit<TaskNotification, 'i
 
 // 获取待发送的通知
 export async function getPendingNotifications(): Promise<TaskNotification[]> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseServer
     .from('task_notifications')
     .select('*')
     .eq('sent', false)
@@ -57,7 +58,7 @@ export async function getPendingNotifications(): Promise<TaskNotification[]> {
 
 // 标记通知为已发送
 export async function markNotificationAsSent(notificationId: string): Promise<void> {
-  const { error } = await supabase
+  const { error } = await supabaseServer
     .from('task_notifications')
     .update({
       sent: true,
@@ -177,7 +178,7 @@ function getBaseUrl(): string {
 
 // 查询用户的 LINE User ID
 async function getUserLineId(userId: string): Promise<string | null> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseServer
     .from('user_profiles')
     .select('line_user_id')
     .eq('id', userId)

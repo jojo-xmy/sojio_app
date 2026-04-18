@@ -1,4 +1,5 @@
-import { supabase } from './supabase';
+import 'server-only';
+import { supabaseServer } from './supabase-server';
 import jwt from 'jsonwebtoken';
 
 // LINE OAuth配置
@@ -135,7 +136,7 @@ export async function getLineUserProfile(accessToken: string): Promise<LineUserP
 
 // 创建或更新用户档案
 export async function createOrUpdateUserProfile(lineProfile: LineUserProfile): Promise<any> {
-  const { data: existingUser } = await supabase
+  const { data: existingUser } = await supabaseServer
     .from('user_profiles')
     .select('*')
     .eq('line_user_id', lineProfile.userId)
@@ -143,7 +144,7 @@ export async function createOrUpdateUserProfile(lineProfile: LineUserProfile): P
 
   if (existingUser) {
     // 更新现有用户
-    const { data, error } = await supabase
+    const { data, error } = await supabaseServer
       .from('user_profiles')
       .update({
         name: lineProfile.displayName,
@@ -158,7 +159,7 @@ export async function createOrUpdateUserProfile(lineProfile: LineUserProfile): P
     return data;
   } else {
     // 创建新用户
-    const { data, error } = await supabase
+    const { data, error } = await supabaseServer
       .from('user_profiles')
       .insert({
         line_user_id: lineProfile.userId,

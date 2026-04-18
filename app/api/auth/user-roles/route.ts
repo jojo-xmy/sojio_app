@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseServer } from '@/lib/supabase-server';
 import { isDemoUser, getDemoUserRoles, DEMO_LINE_USER_ID } from '@/lib/demoUsers';
 
 // 获取用户的所有角色
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const { data: userRoles, error } = await supabase
+    const { data: userRoles, error } = await supabaseServer
       .from('user_profiles')
       .select('id, name, katakana, role, avatar, created_at')
       .eq('line_user_id', lineUserId)
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 查找指定角色的用户档案
-    const { data: userProfile, error } = await supabase
+    const { data: userProfile, error } = await supabaseServer
       .from('user_profiles')
       .select('*')
       .eq('line_user_id', lineUserId)

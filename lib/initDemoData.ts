@@ -1,4 +1,5 @@
-import { supabase } from './supabase';
+import 'server-only';
+import { supabaseServer } from './supabase-server';
 import {
   DEMO_OWNER_ID,
   DEMO_MANAGER_ID,
@@ -14,7 +15,7 @@ export async function initDemoData(): Promise<{ success: boolean; error?: string
   try {
     // 0. 确保测试用户存在
     const testUsers = [DEMO_USERS.owner, DEMO_USERS.manager, DEMO_USERS.cleaner];
-    const { error: userError } = await supabase
+    const { error: userError } = await supabaseServer
       .from('user_profiles')
       .upsert(
         testUsers.map((user) => ({
@@ -54,7 +55,7 @@ export async function initDemoData(): Promise<{ success: boolean; error?: string
         updated_at: new Date().toISOString(),
       },
     ];
-    await supabase.from('hotels').upsert(hotels, { onConflict: 'id' });
+    await supabaseServer.from('hotels').upsert(hotels, { onConflict: 'id' });
 
     // 2. manager 酒店权限
     const managerHotels = [
@@ -69,7 +70,7 @@ export async function initDemoData(): Promise<{ success: boolean; error?: string
         created_at: new Date().toISOString(),
       },
     ];
-    await supabase.from('manager_hotels').upsert(managerHotels, { onConflict: 'manager_id,hotel_id' });
+    await supabaseServer.from('manager_hotels').upsert(managerHotels, { onConflict: 'manager_id,hotel_id' });
 
     // 日期准备
     const today = new Date();
@@ -121,11 +122,11 @@ export async function initDemoData(): Promise<{ success: boolean; error?: string
         updated_at: new Date().toISOString(),
       },
     ];
-    await supabase.from('calendar_entries').delete().in('id', calendarEntries.map((e) => e.id));
-    await supabase.from('calendar_entries').insert(calendarEntries);
+    await supabaseServer.from('calendar_entries').delete().in('id', calendarEntries.map((e) => e.id));
+    await supabaseServer.from('calendar_entries').insert(calendarEntries);
 
     // 先清理可能由触发器自动创建的任务，避免重复（按 calendar_entry_id 清理）
-    await supabase
+    await supabaseServer
       .from('tasks')
       .delete()
       .in('calendar_entry_id', calendarEntries.map((e) => e.id));
@@ -203,8 +204,8 @@ export async function initDemoData(): Promise<{ success: boolean; error?: string
         updated_at: new Date().toISOString(),
       },
     ];
-    await supabase.from('tasks').delete().in('id', tasks.map((t) => t.id));
-    await supabase.from('tasks').insert(tasks);
+    await supabaseServer.from('tasks').delete().in('id', tasks.map((t) => t.id));
+    await supabaseServer.from('tasks').insert(tasks);
 
     // 5. 任务分配记录
     const taskAssignments = [
@@ -225,14 +226,14 @@ export async function initDemoData(): Promise<{ success: boolean; error?: string
         assigned_at: new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(),
       },
     ];
-    await supabase
+    await supabaseServer
       .from('task_assignments')
       .delete()
       .in(
         'task_id',
         taskAssignments.map((a) => a.task_id),
       );
-    await supabase.from('task_assignments').insert(taskAssignments);
+    await supabaseServer.from('task_assignments').insert(taskAssignments);
 
     console.log('测试数据初始化成功');
     return { success: true };
@@ -247,7 +248,7 @@ export async function initDemoData(): Promise<{ success: boolean; error?: string
  */
 export async function checkDemoDataInitialized(): Promise<boolean> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseServer
       .from('calendar_entries')
       .select('id')
       .eq('id', '00000000-0000-0000-0000-000000000301')

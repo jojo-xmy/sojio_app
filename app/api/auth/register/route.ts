@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseServer } from '@/lib/supabase-server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
 
     // 检查用户是否已存在（同一LINE ID + 角色）
     try {
-      const { data: existingUser, error: checkError } = await supabase
+      const { data: existingUser, error: checkError } = await supabaseServer
         .from('user_profiles')
         .select('*')
         .eq('line_user_id', lineUserId)
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     // 尝试创建注册申请记录
     let registration = null;
     try {
-      const { data: regData, error: registrationError } = await supabase
+      const { data: regData, error: registrationError } = await supabaseServer
         .from('registration_applications')
         .insert({
           line_user_id: lineUserId,
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
     } else {
       // 直接创建用户档案
       try {
-        const { data: user, error: userError } = await supabase
+        const { data: user, error: userError } = await supabaseServer
           .from('user_profiles')
           .insert({
             line_user_id: lineUserId,
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
         // 如果注册申请存在，更新状态
         if (registration) {
           try {
-            await supabase
+            await supabaseServer
               .from('registration_applications')
               .update({ status: 'approved', approved_at: new Date().toISOString() })
               .eq('id', registration.id);

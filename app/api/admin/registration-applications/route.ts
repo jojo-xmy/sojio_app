@@ -1,10 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import jwt from 'jsonwebtoken';
+import { supabaseServer } from '@/lib/supabase-server';
+
+type AuthPayload = {
+  userId: string;
+  role: string;
+};
+
+function getReviewerFromRequest(request: NextRequest): AuthPayload | null {
+  const token = request.cookies.get('auth_token')?.value;
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!token || !jwtSecret) return null;
+
+  try {
+    const payload = jwt.verify(token, jwtSecret) as AuthPayload;
+    if (!payload?.userId || !payload?.role) return null;
+    return payload;
+  } catch (error) {
+    console.error('管理员审核鉴权失败:', error);
+    return null;
+  }
+}
 
 // 获取所有待审核的注册申请
 export async function GET(request: NextRequest) {
   try {
-    const { data: applications, error } = await supabase
+    const reviewer = getReviewerFromRequest(request);
+    if (!reviewer || !['owner', 'manager'].includes(reviewer.role)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { data: applications, error } = await supabaseServer
       .from('registration_applications')
       .select('*')
       .eq('status', 'pending')
@@ -33,9 +59,14 @@ export async function GET(request: NextRequest) {
 // 审核注册申请
 export async function POST(request: NextRequest) {
   try {
-    const { applicationId, action, reviewNotes, reviewerId } = await request.json();
+    const reviewer = getReviewerFromRequest(request);
+    if (!reviewer || !['owner', 'manager'].includes(reviewer.role)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    if (!applicationId || !action || !reviewerId) {
+    const { applicationId, action, reviewNotes } = await request.json();
+
+    if (!applicationId || !action) {
       return NextResponse.json(
         { error: '缺少必要参数' },
         { status: 400 }
@@ -50,7 +81,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 获取注册申请详情
-    const { data: application, error: fetchError } = await supabase
+    const { data: application, error: fetchError } = await supabaseServer
       .from('registration_applications')
       .select('*')
       .eq('id', applicationId)
@@ -71,11 +102,11 @@ export async function POST(request: NextRequest) {
     }
 
     // 更新注册申请状态
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseServer
       .from('registration_applications')
       .update({
         status: action,
-        reviewed_by: reviewerId,
+        reviewed_by: reviewer.userId,
         reviewed_at: new Date().toISOString(),
         review_notes: reviewNotes || null
       })
@@ -91,7 +122,7 @@ export async function POST(request: NextRequest) {
 
     if (action === 'approved') {
       // 创建用户档案
-      const { data: user, error: userError } = await supabase
+      const { data: user, error: userError } = await supabaseServer
         .from('user_profiles')
         .insert({
           line_user_id: application.line_user_id,

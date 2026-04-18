@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { processLineLogin, processLineRegistration, generateLineAuthUrl, parseState } from '@/lib/lineAuth';
-import { supabase } from '@/lib/supabase';
+import { supabaseServer } from '@/lib/supabase-server';
 
 // 处理LINE OAuth登录
 export async function GET(request: NextRequest) {
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
       console.log('LINE role check successful, user profile:', userProfile);
       
       // 检查该LINE用户是否已有注册的角色
-      const { data: existingRoles, error } = await supabase
+      const { data: existingRoles, error } = await supabaseServer
         .from('user_profiles')
         .select('id, name, katakana, role')
         .eq('line_user_id', userProfile.userId);

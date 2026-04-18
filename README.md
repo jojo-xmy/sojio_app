@@ -155,6 +155,20 @@ erDiagram
     TASKS ||--o{ TASK_NOTIFICATIONS : emits
 ```
 
+### Assignment Planning Logic (Manager + Cleaner Availability)
+
+This logic is intentionally modeled as an application-level decision flow rather than a strict FK-only relation in ER.
+The manager reviews cleaner availability and reservation/task timing before creating assignment records.
+
+```mermaid
+flowchart LR
+    CE[Calendar entries and task dates] --> M[Manager assignment decision]
+    CA[Cleaner availability by date/time] --> M
+    M --> TA[task_assignments records]
+    TA --> N[task_notifications]
+    TA --> C[Cleaner acceptance workflow]
+```
+
 ## Security Notes
 
 - Row-Level Security policies are actively managed in migrations.
@@ -181,9 +195,47 @@ Create `.env.local` manually before running the app, and define required Supabas
 
 Open `http://localhost:3000`.
 
+## API Surface Summary
+
+The current API surface is implemented through Next.js route handlers:
+
+- `GET /api/auth/line`
+  - LINE OAuth entry/callback handler
+  - Supports login, register, and role-check mode redirects
+- `POST /api/auth/line?action=logout`
+  - Clears authentication cookies and logs user out
+- `POST /api/auth/line/profile`
+  - Exchanges auth code and returns LINE profile payload
+- `GET /api/auth/user-roles`
+  - Returns all roles for a given `lineUserId`
+- `POST /api/auth/user-roles`
+  - Switches active role context for multi-role users
+- `POST /api/auth/line/login-with-role`
+  - Finalizes selected-role login and sets auth cookies
+- `POST /api/auth/register`
+  - Submits registration and creates profile or approval request
+- `GET /api/admin/registration-applications`
+  - Lists pending registration approvals (owner/manager authorized)
+- `POST /api/admin/registration-applications`
+  - Approves/rejects registration applications
+- `POST /api/notifications/send`
+  - Triggers pending notification delivery with API key protection
+- `GET /api/cron/notifications`
+  - Cron-triggered notification dispatch endpoint
+- `POST /api/line/webhook`
+  - Receives and verifies LINE webhook events
+- `POST /api/line/send-message`
+  - Sends direct LINE push messages
+
+For implementation details, inspect route handlers under `app/api/`.
+
 ## Architecture Documentation
 
 Detailed architecture and operational design are documented in `architecture.md`.
+
+## ADR (Architecture Decision Records)
+
+- `docs/adr/0001-adopt-nextjs-supabase-rls.md`: rationale for adopting Next.js + Supabase + RLS
 
 ## Roadmap (Engineering-Focused)
 

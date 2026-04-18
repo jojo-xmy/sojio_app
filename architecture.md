@@ -174,3 +174,7 @@ sojio_app/
 
 This architecture is appropriate for the current product stage and team size, while leaving clear upgrade paths for stronger testing, observability, and policy governance.
 
+## 12. ADR References
+
+- `docs/adr/0001-adopt-nextjs-supabase-rls.md`
+
